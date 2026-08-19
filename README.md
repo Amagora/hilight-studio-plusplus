@@ -97,6 +97,13 @@ you can't turn off from the UI:
 None of this needs configuring — it's just how the app behaves. When the array goes dark because of
 one of these limits, the app tells you exactly why (not just "nothing is happening").
 
+> **Want different limits?** HiLight Studio is open source. If you are comfortable building Android
+> apps, you can download the project, change the timing and safety values in your own copy, and build
+> your own APK.
+>
+> The version published here keeps the default limits because long, continuous use of the HiLight
+> LEDs has not been tested. Use custom limits carefully — you are responsible for your own build.
+
 ## Requirements
 
 - Pixel 11 Pro, Pro XL, or Pro Fold, on Android 17
