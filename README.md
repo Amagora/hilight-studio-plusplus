@@ -1,288 +1,112 @@
 # HiLight Studio
 
-Custom control of the Pixel 11 Pro / Pro XL / Pro Fold **HiLight** LED array: any colour, any
-pattern, always-on, random colours, and per-app rules.
+**Take full control of the HiLight light on your Pixel 11 Pro / Pro XL / Pro Fold.**
 
-Built and verified against a real device: `Pixel 11 Pro XL (kodiak)`, Android 17,
-build `CD1A.260714.001.A9`, SDK 37.
+Your phone already uses that little RGB array next to the camera for a couple of things — a
+colour for favourite callers, a glow while Gemini is listening. HiLight Studio unlocks the rest of
+it: any colour, animated patterns, a different look per app, and colours that light up only when
+you actually get a notification.
 
-> **Experimental hardware project.** This is for the Pixel 11 Pro, Pro XL, and Pro Fold on
-> Android 17 only. It relies on shell-level access provided by Shizuku or ADB; it does not bypass
-> Android security or work on a stock device by itself. Please read the LED safety limits before
-> enabling an always-on pattern.
+<p align="center">
+  <img src="docs/media/screen-live.png" alt="Live tab showing the HiLight array running a rainbow pattern on a real Pixel 11 Pro XL" width="360">
+</p>
+
+> **Who this is for.** Pixel 11 Pro, Pro XL, or Pro Fold owners on Android 17 who don't mind
+> running a one-time setup command. It doesn't unlock, root, or bypass anything on your phone — it
+> just uses a permission your phone already grants to plain USB debugging / Shizuku, the same way a
+> lot of "advanced" Android tools do.
 
 ---
 
-## What HiLight actually is
+## What you can do with it
 
-Findings from the device itself, not from the marketing pages:
-
-| Property | Value |
+| | |
 |---|---|
-| Hardware | **8 individually addressable RGB LEDs** in the array around the camera flash |
-| Framework type | `Light.LIGHT_TYPE_APPLICATION` (`10`), new in API 37 |
-| Light ids / ordinals | ids `1..8`, ordinals `0..7` (id `0` is the display backlight and is not exposed by `LightsManager`) |
-| Capabilities | `hasRgbControl() = true`, `hasBrightnessControl() = false`, `hasAnimationControl() = true` |
-| Min update period | `33 ms` per LED, i.e. ~30 fps |
-| HAL | `android.hardware.light` **AIDL version 3** (`vendor.google.lights-service`), AOSP ships v2 |
-| System feature name | `AmbientCue` — `/product/overlay/AmbientCueOverlay.apk`, plus `vendor.google.ambience_hub.*` HAL services |
-| Stock features | custom colour per favourite contact (Phone by Google, WhatsApp) and a Gemini listening/thinking/responding indicator |
+| 🎨 **Any colour, any pattern** | Solid, breathing, blinking, pulsing, a chase, a comet, a travelling wave, a full rainbow, random colours, or set each of the 8 LEDs individually. |
+| 📱 **A different look per app** | WhatsApp pulses green, Chrome glows blue while it's open, a keyword in a notification triggers its own colour — you decide, per app. |
+| 🔔 **Notification vs. always-on** | Set one look that's always on, and let notifications briefly override it with their own colour before returning. |
+| 🎭 **Presets** | Save a look you like, switch between saved looks with one tap, and export/import them to share with someone else running HiLight. |
+| 🖼️ **Match your wallpaper** | One tap pulls the colours straight from your current wallpaper theme. |
+| ⚙️ **Quick Settings tile** | Turn the whole thing on or off from the notification shade, without opening the app. |
+| 🌙 **Quiet hours & battery-aware** | Define a window where it stays dark (or just dims), and it automatically pauses below a battery level you choose. Also respects Do Not Disturb. |
+| 🛡️ **Can't be left on by accident** | Built-in limits mean it always turns itself off after a short while — see [Safety](#safety), below. |
 
-New public API in Android 17 (API 37), all in `android.hardware.lights`:
+## Screenshots
 
-- `ColorSequence` + `ColorSequence.Builder` — keyframed colour ramps (`addControlPoint(delayMs, color)`,
-  `INTERPOLATION_MODE_NONE` / `INTERPOLATION_MODE_LINEAR`)
-- `MultiLightEffect` + `Builder` — one `ColorSequence` per LED, with `setIterations()` and `setPreemptive()`
-- `LightsRequest.Builder.setEffect(...)`, `Light.hasAnimationControl()`, `Light.getMinUpdatePeriodMillis()`
+<table>
+<tr>
+<td width="33%"><img src="docs/media/screen-style.png" alt="Style tab: presets, pattern picker, and colour controls"></td>
+<td width="33%"><img src="docs/media/screen-apps.png" alt="Apps tab: per-app rules for WhatsApp and Chrome"></td>
+<td width="33%"><img src="docs/media/screen-setup.png" alt="Setup tab: auto-off timer, quiet hours, battery guard"></td>
+</tr>
+<tr>
+<td align="center"><sub><b>Style</b> — pick a look</sub></td>
+<td align="center"><sub><b>Apps</b> — per-app rules</sub></td>
+<td align="center"><sub><b>Setup</b> — safety & access</sub></td>
+</tr>
+</table>
 
-Underlying binder interface (`ILightsManager`): `getLights()`, `openSession(IBinder, int priority)`,
-`setLightStates(token, int[] ids, LightState[])`, `setLightEffect(token, MultiLightEffect)`,
-`getLightState(id)`, `getLightSequence(id)`, `closeSession(token)`.
+## Install
 
-### Why a privileged helper process is required
+You'll need one of two things to give the app permission to control the light — this is a one-time
+setup (repeated after each phone reboot). Pick whichever sounds easier.
 
-`android.permission.CONTROL_DEVICE_LIGHTS` is `signature|privileged` on this build, and
-`LightsService` enforces it on every call:
+### Option A — Shizuku (recommended, no computer after setup)
 
-```
-java.lang.SecurityException: Access denied, requires: android.permission.CONTROL_DEVICE_LIGHTS
-  at android.hardware.lights.ILightsManager$Stub.getLights_enforcePermission
-```
+1. Install [Shizuku](https://shizuku.rikka.app/) from the Play Store.
+2. Open Shizuku and start it via **Wireless debugging** (it walks you through pairing your phone
+   with itself — no computer needed).
+3. Install HiLight Studio and open it. On the **Setup** tab, tap **Request access** and allow it
+   when Shizuku asks.
 
-It is not a changeable permission, so `pm grant` refuses it, and the device is a retail unit with a
-locked bootloader (`ro.boot.flash.locked=1`, `verifiedbootstate=green`, no root) — there is no way to
-install an app as privileged.
+You'll need to start Shizuku again after every reboot, and reopen HiLight Studio afterwards. That's
+a one-time, on-device, ~30-second routine — no cable required.
 
-However `android.uid.shell` (uid 2000) **already holds it** (`granted=true`). So the rendering runs in
-a process owned by the shell UID. Everything else — UI, rules, notification listening — is a normal
-app.
+### Option B — ADB (one command from a computer)
 
----
+1. Enable **USB debugging** on your phone (Settings → About phone → tap Build number 7 times →
+   Developer options → USB debugging) and plug it into a computer.
+2. Install HiLight Studio on the phone.
+3. Run this command from your computer:
 
-## Architecture
+   ```bash
+   adb shell "CLASSPATH=$(adb shell pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &"
+   ```
 
-The renderer core (`core/src`) is shared, and there are two ways to get it into a shell-UID process.
+   The Setup tab has this exact command with a copy button, so you never need to type it out.
 
-```
-HiLight Studio (normal app)                    privileged renderer (uid 2000 = shell)
-┌─────────────────────────────────┐            ┌────────────────────────────────────┐
-│ Compose UI: Live/Ambient/Apps   │  binder    │ Shizuku: HiLightUserService        │
-│ NotificationTrigger (listener)  │ ─────────► │   com.hilight.studio:hilight       │
-│ ForegroundWatcher (UsageStats)  │            ├────────────────────────────────────┤
-│ Store: layering + rules         │  2 JSON    │ ADB: com.hilight.core.AdbHelper    │
-│ Transport: Auto/Shizuku/ADB     │ ◄────────► │   run from the installed APK       │
-└─────────────────────────────────┘  files     └────────────────────────────────────┘
-                                                shared core: Engine + Renderer + LightsBackend
-```
+Re-run this command after every phone reboot.
 
-**Shizuku transport (preferred, no computer).** Shizuku launches `HiLightUserService` into a shell-UID
-process (`daemon(true)`, so it outlives the UI) and the app holds a real binder to it — state is
-pushed straight in, no polling. Verified running as `shell` uid 2000.
+### After either option
 
-**ADB transport (fallback).** `AdbHelper` ships inside the APK, so a single command starts it with no
-file to push. Cross-UID binder is not usable there: a shell-UID process that touches a
-`ContentProvider` is killed by ActivityManager (verified), which rules out both a provider bridge and
-`ContentObserver` push. So that transport exchanges two small JSON files instead.
+In the Setup tab, grant **notification access** (needed so per-app rules can see which app
+notified you), then flip the **Live** switch. That's it.
 
-**File ownership rule that matters** for the ADB transport: on external storage a file keeps the UID
-of whoever created it. A file created by the shell is unreadable by the app, but the shell *can* write
-into a file the app owns. So the app creates the directory and both files, and the helper only ever
-overwrites in place.
+## Safety
 
-Only one renderer may drive the array at a time. When Shizuku is active the app writes
-`enabled:false` to the ADB state file so any leftover helper releases the session, and if Shizuku goes
-away the app re-pushes so the ADB helper takes over.
+The LED array wasn't designed to stay on for long stretches, so HiLight Studio enforces limits that
+you can't turn off from the UI:
 
-Output layering, highest first:
+- An always-on look **automatically switches off after 30 seconds** by default (you can raise this
+  up to 5 minutes, with a couple of warnings along the way).
+- Notification colours are capped even shorter, and cap out at 1 minute maximum.
+- However bright you set it, brightness **eases down automatically** if it's stayed lit
+  continuously for more than 10 seconds.
+- It won't stay lit more than **half the time** over any 10-minute stretch — it rests the rest.
 
-1. a finite notification alert
-2. an infinite "while this app is open" override
-3. the always-on ambient look
+None of this needs configuring — it's just how the app behaves. When the array goes dark because of
+one of these limits, the app tells you exactly why (not just "nothing is happening").
 
-Turning control off blanks the LEDs and closes the session, handing HiLight back to Android.
+## Requirements
 
----
+- Pixel 11 Pro, Pro XL, or Pro Fold, on Android 17
+- Shizuku, or a computer with `adb` for the one-time setup command
 
-## Install and run
+## Curious how it actually works?
 
-```bash
-./gradlew :app:installDebug
-```
-
-Then pick one of the two ways to start the renderer. The **Setup** tab shows the state of both and
-lets you choose Auto / Shizuku / ADB.
-
-### Option A — Shizuku, no computer
-
-1. Install [Shizuku](https://shizuku.rikka.app/).
-2. In Shizuku, use **Start via Wireless debugging** (pair once with the code from Developer options).
-3. In HiLight Studio's Setup tab, tap **Request access** and allow it in Shizuku's dialog.
-
-Shizuku has to be started again after each reboot — that is a property of adb access, not of this app.
-Everything after that is on-device.
-
-Order matters: **start Shizuku first, then open HiLight Studio.** Shizuku hands access to an app when
-that app's process starts, so a Shizuku started afterwards stays invisible until the app is reopened.
-(`ShizukuProvider.requestBinderForNonProviderProcess()` does not help — it only talks to the app's own
-provider.) The Setup card says as much when it finds Shizuku missing.
-
-### Option B — ADB, one command
-
-```bash
-adb shell "CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &"
-```
-
-Nothing is pushed — this runs the renderer classes out of the installed APK, so it keeps working after
-app updates. The Setup tab shows the same command with a copy button. `scripts/start-helper.sh` is the
-same thing with a liveness check. Re-run after a reboot.
-
-### Finally
-
-Grant notification access from the Setup tab (needed for per-app rules), optionally Usage access (only
-for "while this app is open" rules), then flip the **Live** switch to take over the LEDs.
-
-### Requirements
-
-- Pixel 11 Pro / Pro XL / Pro Fold on Android 17
-- USB debugging enabled
-- Android SDK with **platform 37** installed (the helper compiles against `android-37.1/android.jar`)
-
----
-
-## The device illustration
-
-The Live tab draws the phone's own back with HiLight lit by the same pattern maths the hardware runs.
-It is a vector reconstruction, not a bundled press image: Google's product renders are copyrighted, so
-shipping them in an app is not an option, and a drawing can be animated by the live frame data anyway.
-
-It follows `Build.MODEL`:
-
-| Model | Layout |
-|---|---|
-| Pixel 11 Pro / Pro XL | full-width camera bar, three lenses, HiLight at the right-hand end |
-| Pixel 11 Pro Fold | unfolded rear panel with the hinge seam, compact camera block top-left, HiLight inside it |
-| Pixel 11 (non-Pro) | camera bar with a plain flash, and the card says HiLight is Pro-only |
-| anything else | generic Pro-style layout |
-
-The framing is a close crop on the camera bar — only the top of the device is shown, running off the
-bottom of the card — which is how Google frames the feature in its own material.
-
-The array is drawn as one diffused disc rather than eight pinpoints, because the eight LEDs sit behind
-a single flash window. Each LED still contributes its own colour from its position inside the window,
-clipped to the window so the light keeps a crisp edge, so a chase or a rainbow visibly travels around
-the lamp.
-
-## Features
-
-**Ambient (always-on)** — Off, Solid, Gradient, Breathe, Blink, Pulse, Chase, Comet, Wave, Rainbow,
-Random colours, and Per-LED custom, plus brightness, rainbow spread, random interval / per-LED / fade /
-saturation, and per-LED colours with optional rotation.
-
-**Time per cycle** is how long one repetition of the animation takes, which means something different
-per pattern — one breath, one on-off pair, one flash and fade, one lap of the array, one trip through
-every hue. The app states the meaning under the slider, and hides the slider entirely for the patterns
-whose maths ignore it: Solid, Gradient, Off, Random colours (it has its own "change every" interval)
-and Per-LED custom (it has its own rotate control).
-
-**Per-app rules** — pick any installed app, or the **Any app** catch-all that covers everything without
-a rule of its own, then choose:
-- trigger: on notification, or while the app is open
-- pattern, fixed colour or a fresh random colour each time
-- an optional keyword, so only notifications mentioning it light the array
-- duration, time per cycle, brightness, and "only when the screen is off"
-
-Do Not Disturb is respected by default (read through the notification listener, which needs no extra
-permission).
-
-**Presets** — save the current look under a name, apply it with a tap, and move looks between devices:
-Export shares the whole set as JSON, Import merges a pasted document.
-
-**Wallpaper palette** — one tap fills the eight LEDs from the current Material You scheme, hues pushed
-to full saturation because container tones are too pale to read on an LED.
-
-**Random colours** — either one colour for the whole array or a different colour per LED, with
-optional smooth fading between picks.
-
-**Quick Settings tile** — take the array over or hand it back without opening the app; long-press opens
-the app. Add it from the Quick Settings edit screen ("From apps that you installed"). The subtitle
-reports the current look, or why the array is dark: *No renderer*, *Off*, *Timed out*, *Resting*.
-
-**Quiet hours and battery guard** — a window when the array stays dark, or optionally **dims** to a low
-brightness instead (crossing midnight is handled), and a pause below a battery threshold that is
-ignored while charging. There is also a global **only while the screen is off** switch, which suits the
-face-down case and saves power; the screen going off starts a fresh auto-off window, still bounded by
-the duty guard. Both override the master switch
-and hand the array back to the system rather than merely blanking it, so the system's own call and
-Gemini effects still work. The reason is shown in Live, in Setup, and in the tile's subtitle.
-
-**Safety state in Live** — a live countdown to auto-off plus duty usage, and a plain explanation when
-the array is dark because a limit kicked in, so it never looks like a fault.
-
-Brightness is applied by scaling RGB, because the hardware reports no brightness channel.
-
----
-
-## Verified on device
-
-- 8 LEDs enumerated with the capabilities in the table above
-- solid, per-LED rainbow, comet, wave, breathe, pulse and random rendering on the real hardware
-- alert layer expiring back to ambient, and an infinite override being cleared
-- UI → hardware: picking Solid violet at 70% produced `ff5635b2` on all 8 LEDs
-- notification path: a notification from a rule's package produced a green pulse within one frame
-- foreground path: opening Chrome produced solid `ff2979ff`, returning home restored ambient
-- animation keeps running with the screen off (`mState=DOZE`) — the face-down case
-- turning control off closes the session and blanks the array
-- Shizuku transport: user service starts as `shell` uid 2000 with 8 LEDs, binder connects, ambient and
-  notification alerts render with no adb helper running at all
-- ADB one-liner starts the renderer straight out of the installed APK
-- failover: killing the Shizuku server mid-animation is detected, state is re-pushed, and the ADB
-  helper picks the array up — never two sessions at once
-- Shizuku 13.6.0 (official release, signer `CN=Rikka`) used for all of the above
-
-## LED safety
-
-The array is not built for continuous use — stock HiLight only flashes for a moment — so the limits
-live in `Engine`, not in the UI, and no state document can opt out of them:
-
-| Guard | Default | Ceiling |
-|---|---|---|
-| Ambient auto-off | 30 s | 5 min, behind two warnings |
-| Per-app notification | 10 s | 1 min, behind two warnings |
-| Alert hard clamp | — | 60 s, whatever the app asks for |
-| Open-ended holds ("while open") | — | capped at the auto-off value |
-| Duty cycle | — | at most 50% of any 10-minute window |
-| Sustained brightness | — | eases to 55% after 10 s of unbroken light |
-
-Two details that matter:
-
-- **Only deliberate user action restarts the auto-off window.** A notification firing, a foreground
-  override, or the app being backgrounded all push state with `arm: false`, so the array cannot be
-  kept lit indefinitely in 30-second increments.
-- **Leaving the app kills a running test.** `onStop` clears the preview immediately and does not hand
-  ambient a fresh window on the way out.
-
-Verified on device: brightness taper visible as `ff4d50 → 8c2a2c`; auto-off blanking at exactly 30 s;
-duty guard tripping after 10 032 ms lit in a (temporarily shortened) 20 s window, resting, then
-resuming when the window rolled over; a notification playing without extending the ambient window; and
-a test stopping the moment the app went to the background.
-
-What still cannot be measured here: actual power draw and LED junction temperature. Android does not
-attribute either per-LED, so these figures are conservative by design rather than tuned to data.
-
-## Known limits
-
-- Privileged access has to be re-established after every reboot: either restart Shizuku (on-device,
-  ~30 s) or re-run the adb command. Nothing an installed app can do avoids this on a locked device.
-  A one-time setup would need either root or an unlocked bootloader (app in `/system/priv-app`).
-- If Shizuku is (re)started while HiLight Studio is already running, reopen the app so Shizuku can hand
-  it access. Shizuku's own "Authorized applications" count also resets when its server restarts, so it
-  may ask for approval again.
-- While our session is open the system's own HiLight effects (calls, Gemini) may be suppressed. The
-  Setup tab exposes the session **priority** so you can bias arbitration either way; the exact
-  arbitration rule in `LightsService` was not reverse-engineered.
-- Deep sleep suspends the CPU, so animations freeze at the last frame until the device wakes. Static
-  colours are unaffected.
-- Notification rules ignore ongoing notifications (media, progress) to avoid constant retriggering.
+The short version above is all you need to use it. If you want the low-level detail — how the app
+gets permission to touch the LEDs without root, the exact hardware API, and what's been verified on
+a real device — see [docs/TECHNICAL.md](docs/TECHNICAL.md).
 
 ## Contributing
 
