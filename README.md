@@ -52,7 +52,10 @@ you actually get a notification.
 
 ## Install
 
-You'll need one of two things to give the app permission to control the light — this is a one-time
+First, [download the latest experimental APK from GitHub Releases](https://github.com/DhananjayBhosale/hilight-studio/releases).
+Open it on your supported Pixel, then allow installs from your browser or file manager if Android asks.
+
+You'll then need one of two ways to give the app permission to control the light — this is a one-time
 setup (repeated after each phone reboot). Pick whichever sounds easier.
 
 ### Option A — Shizuku (recommended, no computer after setup)
@@ -71,7 +74,7 @@ a one-time, on-device, ~30-second routine — no cable required.
 1. Enable **USB debugging** on your phone (Settings → About phone → tap Build number 7 times →
    Developer options → USB debugging) and plug it into a computer.
 2. Install HiLight Studio on the phone.
-3. Run this command from your computer:
+3. Run this command from a macOS or Linux terminal (on Windows, use WSL):
 
    ```bash
    adb shell "CLASSPATH=$(adb shell pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &"
@@ -83,8 +86,8 @@ Re-run this command after every phone reboot.
 
 ### After either option
 
-In the Setup tab, grant **notification access** (needed so per-app rules can see which app
-notified you), then flip the **Live** switch. That's it.
+In the Setup tab, grant **notification access** when you want notification rules, and **Usage access**
+when you want a rule to run while an app is open. Then flip the **Live** switch. That's it.
 
 ## Safety
 
@@ -124,6 +127,14 @@ a real device — see [docs/TECHNICAL.md](docs/TECHNICAL.md).
 Issues and pull requests are welcome. Please include the exact Pixel model, Android build, renderer
 transport (Shizuku or ADB), and steps to reproduce for any hardware issue. Start with
 [CONTRIBUTING.md](CONTRIBUTING.md) for the local checks and scope guidelines.
+
+## Releasing
+
+Official, signed APKs are published through [GitHub Releases](https://github.com/DhananjayBhosale/hilight-studio/releases).
+The private signing key is never stored in this repository; maintainers should follow
+[docs/RELEASING.md](docs/RELEASING.md).
+
+See [CHANGELOG.md](CHANGELOG.md) for release-by-release changes.
 
 ## Security
 

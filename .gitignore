@@ -5,3 +5,10 @@ build/
 .idea/
 helper/build/
 .DS_Store
+
+# Release artifacts and local signing material belong outside the repository.
+*.apk
+*.aab
+*.jks
+*.keystore
+key.properties

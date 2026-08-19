@@ -9,12 +9,12 @@ android {
 
     defaultConfig {
         applicationId = "com.hilight.studio"
-    // HiLight is a Pixel 11 / Android 17 feature. Keeping this floor aligned with the
-    // supported hardware prevents installation on devices the renderer cannot support.
-    minSdk = 37
+        // HiLight is a Pixel 11 / Android 17 feature. Keeping this floor aligned with the
+        // supported hardware prevents installation on devices the renderer cannot support.
+        minSdk = 37
         targetSdk = 37
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
     }
 
     buildTypes {
@@ -53,4 +53,5 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
+    testImplementation("junit:junit:4.13.2")
 }

@@ -38,7 +38,7 @@ import kotlinx.coroutines.delay
 
 /** The one-liner that starts the ADB host straight out of the installed APK — nothing to push. */
 const val ADB_COMMAND =
-    "adb shell \"CLASSPATH=\$(pm path com.hilight.studio | head -1 | cut -d: -f2) " +
+    "adb shell \"CLASSPATH=${'$'}(adb shell pm path com.hilight.studio | head -1 | cut -d: -f2) " +
         "nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &\""
 
 @Composable

@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a reproducible problem with HiLight Studio.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include notification contents, personal data, or security vulnerabilities."
+  - type: input
+    id: device
+    attributes:
+      label: Pixel model
+      placeholder: Pixel 11 Pro / Pro XL / Pro Fold
+    validations:
+      required: true
+  - type: input
+    id: android-build
+    attributes:
+      label: Android build
+      placeholder: Android 17 build number
+    validations:
+      required: true
+  - type: dropdown
+    id: transport
+    attributes:
+      label: Renderer transport
+      options: [Shizuku, ADB]
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: Tell us exactly what you did and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Actual result
+    validations:
+      required: true

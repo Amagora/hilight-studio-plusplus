@@ -31,22 +31,23 @@ import org.json.JSONObject;
  */
 public final class Engine {
 
-    public static final long FRAME_MS = 33;
+    public static final long FRAME_MS = SafetyGuard.FRAME_MS;
 
     /** Hard ceiling for a single alert, whatever the app asks for. */
     public static final long ALERT_MAX_MS = 60_000;
     public static final long DEFAULT_AMBIENT_TIMEOUT_MS = 30_000;
 
     /** Duty-cycle guard: at most half of any ten-minute window may be lit. */
-    public static final long DUTY_WINDOW_MS = 10 * 60_000;
-    public static final double MAX_DUTY = 0.5;
+    public static final long DUTY_WINDOW_MS = SafetyGuard.DUTY_WINDOW_MS;
+    public static final double MAX_DUTY = SafetyGuard.MAX_DUTY;
     /** Sustained-current guard: taper brightness after this much unbroken light. */
-    public static final long TAPER_AFTER_MS = 10_000;
-    public static final long TAPER_RAMP_MS = 10_000;
-    public static final double TAPER_FLOOR = 0.55;
+    public static final long TAPER_AFTER_MS = SafetyGuard.TAPER_AFTER_MS;
+    public static final long TAPER_RAMP_MS = SafetyGuard.TAPER_RAMP_MS;
+    public static final double TAPER_FLOOR = SafetyGuard.TAPER_FLOOR;
 
     private final LightsBackend lights = new LightsBackend();
     private final Renderer renderer = new Renderer();
+    private final SafetyGuard safety = new SafetyGuard();
     private final Object lock = new Object();
 
     private Thread thread;
@@ -61,12 +62,6 @@ public final class Engine {
     private long ambientTimeoutMs = DEFAULT_AMBIENT_TIMEOUT_MS;
     private long ambientDeadline;
     private boolean ambientBlanked;
-
-    // hardware protection
-    private long windowStart = System.currentTimeMillis();
-    private long litMsInWindow;
-    private long continuousLitMs;
-    private boolean resting;
 
     public void start() throws Exception {
         lights.connect();
@@ -150,8 +145,8 @@ public final class Engine {
                 o.put("dim", dim);
                 o.put("ambientRemainingMs", Math.max(0, ambientDeadline - System.currentTimeMillis()));
                 o.put("ambientHeld", ambientBlanked);
-                o.put("resting", resting);
-                o.put("dutyPct", (int) (100.0 * litMsInWindow / (DUTY_WINDOW_MS * MAX_DUTY)));
+                o.put("resting", safety.isResting());
+                o.put("dutyPct", safety.dutyPercent());
                 o.put("version", 1);
             }
         } catch (Exception ignored) {
@@ -231,52 +226,6 @@ public final class Engine {
      * of the current window, and tapers brightness under sustained light.
      */
     private int[] protect(int[] frame, long now) {
-        if (now - windowStart >= DUTY_WINDOW_MS) {
-            windowStart = now;
-            litMsInWindow = 0;
-            if (resting) {
-                resting = false;
-                Log.i("duty window rolled over — array available again");
-            }
-        }
-
-        boolean lit = false;
-        for (int c : frame) {
-            if (((c >> 16 & 0xFF) + (c >> 8 & 0xFF) + (c & 0xFF)) > 12) {
-                lit = true;
-                break;
-            }
-        }
-
-        if (!lit) {
-            continuousLitMs = 0;
-            return frame;
-        }
-
-        // a dimmed window (quiet hours set to dim rather than dark) scales everything
-        if (dim < 0.999) {
-            int[] dimmed = new int[frame.length];
-            for (int i = 0; i < frame.length; i++) dimmed[i] = Renderer.scale(frame[i], dim);
-            frame = dimmed;
-        }
-
-        if (resting) return new int[]{0};
-
-        litMsInWindow += FRAME_MS;
-        continuousLitMs += FRAME_MS;
-
-        if (litMsInWindow > DUTY_WINDOW_MS * MAX_DUTY) {
-            resting = true;
-            Log.i("duty limit reached (" + litMsInWindow + "ms lit this window) — resting the array");
-            return new int[]{0};
-        }
-
-        if (continuousLitMs <= TAPER_AFTER_MS) return frame;
-
-        double over = Math.min(1.0, (continuousLitMs - TAPER_AFTER_MS) / (double) TAPER_RAMP_MS);
-        double scale = 1.0 - (1.0 - TAPER_FLOOR) * over;
-        int[] out = new int[frame.length];
-        for (int i = 0; i < frame.length; i++) out[i] = Renderer.scale(frame[i], scale);
-        return out;
+        return safety.apply(frame, now, dim);
     }
 }

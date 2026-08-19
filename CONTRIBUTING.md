@@ -11,6 +11,11 @@ Pro XL, and Pro Fold on Android 17.
    model, Android build, transport, and observed result in the pull request.
 4. Do not weaken the limits in `Engine` without an explicit safety rationale and device evidence.
 
+## Building from source
+
+Use Android Studio with Android SDK platform 37 and JDK 17. Run `./gradlew :app:build :app:lint` for
+a local build, or see [docs/RELEASING.md](docs/RELEASING.md) for the maintainer-only release process.
+
 ## Reporting bugs
 
 Include the Pixel model, Android build, whether Shizuku or ADB is used, the selected pattern, and

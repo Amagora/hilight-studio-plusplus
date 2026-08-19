@@ -2,8 +2,10 @@
 
 Please do not disclose security vulnerabilities in public issues.
 
-Report them privately to the repository owner through GitHub's private vulnerability reporting feature
-once the repository is published. Include affected versions, a minimal reproduction, and the impact.
+Use GitHub's **Report a vulnerability** button on this repository. Include affected versions, a
+minimal reproduction, and the impact. If that button is unavailable, do not disclose details in a
+public issue; contact [@DhananjayBhosale](https://github.com/DhananjayBhosale) privately through
+GitHub to arrange a secure channel.
 We will acknowledge reports and coordinate a fix before public disclosure.
 
 This application deliberately requires user-approved Shizuku or ADB shell access. Reports that show a
