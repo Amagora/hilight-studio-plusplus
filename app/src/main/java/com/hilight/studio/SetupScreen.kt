@@ -334,7 +334,7 @@ private fun postSelfTestNotification(ctx: Context) {
         android.app.Notification.Builder(ctx, "selftest")
             .setContentTitle("HiLight self test")
             .setContentText("If a rule exists for this app, the LEDs just fired")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.hilight_logo)
             .setAutoCancel(true)
             .build()
     )

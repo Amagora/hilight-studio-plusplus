@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/media/hilight-studio-logo.png" alt="HiLight Studio logo: a glowing RGB orb surrounded by eight LEDs" width="160">
+</p>
+
 # HiLight Studio
 
 **Take full control of the HiLight light on your Pixel 11 Pro / Pro XL / Pro Fold.**

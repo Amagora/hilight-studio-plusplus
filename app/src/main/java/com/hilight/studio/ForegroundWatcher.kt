@@ -76,7 +76,7 @@ class ForegroundWatcher : Service() {
         return Notification.Builder(this, CHANNEL)
             .setContentTitle("HiLight Studio")
             .setContentText("Watching for apps with light rules")
-            .setSmallIcon(android.R.drawable.ic_menu_view)
+            .setSmallIcon(R.drawable.hilight_logo)
             .setOngoing(true)
             .build()
     }
