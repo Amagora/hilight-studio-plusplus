@@ -168,9 +168,14 @@ attribute either per-LED, so these figures are conservative by design rather tha
 - If Shizuku is (re)started while HiLight Studio is already running, reopen the app so Shizuku can hand
   it access. Shizuku's own "Authorized applications" count also resets when its server restarts, so it
   may ask for approval again.
-- While our session is open the system's own HiLight effects (calls, Gemini) may be suppressed. The
-  Setup tab exposes the session **priority** so you can bias arbitration either way; the exact
-  arbitration rule in `LightsService` was not reverse-engineered.
+- While our session is open the system's own HiLight effects (calls, Gemini) are suppressed, so the
+  session is held only while there is actually something to show. The moment the array goes dark —
+  the auto-off deadline passing, an alert ending, the master switch going off — it is handed straight
+  back, and a rule firing reclaims it before the first frame. An all-black session left open beats
+  the system's own effects, and because the Shizuku renderer is a daemon that outlives the app, that
+  used to leave calls and Gemini dark until the phone was rebooted. The Setup tab still exposes the
+  session **priority** for the overlap while a look is genuinely running; the exact arbitration rule
+  in `LightsService` was not reverse-engineered.
 - Deep sleep suspends the CPU, so animations freeze at the last frame until the device wakes. Static
   colours are unaffected.
 - Notification rules ignore ongoing notifications (media, progress) to avoid constant retriggering.

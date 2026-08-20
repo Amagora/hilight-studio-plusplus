@@ -186,18 +186,9 @@ public final class Engine {
             int priority = state.optInt("priority", 0);
 
             if (!enabled) {
-                if (lights.isSessionOpen()) {
-                    lights.push(new int[]{0});          // blank before handing control back
-                    lights.closeSession();
-                    Log.i("released HiLight to the system");
-                }
+                release("released HiLight to the system");
                 noteDark(now());
                 return;
-            }
-
-            if (!lights.isSessionOpen() || priority != lights.sessionPriority()) {
-                if (lights.isSessionOpen()) lights.closeSession();
-                lights.openSession(priority);
             }
 
             long now = System.currentTimeMillis();
@@ -222,13 +213,21 @@ public final class Engine {
                     t = now;
                     break;
                 case BLANK:
-                    // blank the array but keep the session, so app rules still work
-                    lights.push(protect(new int[]{0}, now));
-                    Log.i("nothing left to show — array blanked");
+                    // Blank, then let go. Holding an all-black session would keep winning over the
+                    // system's own HiLight effects, so calls and Gemini would stay dark for as long
+                    // as this process lived — and it outlives the app, so only a reboot fixed it.
+                    if (lights.isSessionOpen()) lights.push(protect(new int[]{0}, now));
+                    release("nothing left to show — released HiLight to the system");
                     return;
-                default:                                    // IDLE: already dark, nothing to push
+                default:                                    // IDLE: dark, and already handed back
                     noteDark(now);
                     return;
+            }
+            // The session is taken only while there is something to show, and reopened on demand: a
+            // rule firing lands here and gets it back before the first frame.
+            if (!lights.isSessionOpen() || priority != lights.sessionPriority()) {
+                if (lights.isSessionOpen()) lights.closeSession();
+                lights.openSession(priority);
             }
             int[] frame = renderer.frame(cfg, t, Math.max(1, lights.ledCount()));
             lights.push(protect(frame, now));
@@ -253,6 +252,13 @@ public final class Engine {
      */
     private void noteDark(long now) {
         safety.apply(BLANK, now, dim);
+    }
+
+    /** Hands the array back to Android, if we are holding it. */
+    private void release(String why) {
+        if (!lights.isSessionOpen()) return;
+        lights.closeSession();
+        Log.i(why);
     }
 
     private static long now() {

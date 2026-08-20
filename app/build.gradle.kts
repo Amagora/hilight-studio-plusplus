@@ -1,7 +1,23 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+/**
+ * Release signing material, from `key.properties` at the repo root or the matching env vars.
+ *
+ * Both are outside version control (see .gitignore), so the keystore and its passwords never land in
+ * the repository. A clone without them still builds — the release APK just comes out unsigned.
+ */
+val releaseKeystore = Properties().apply {
+    val f = rootProject.file("key.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
+fun signingValue(key: String, env: String): String? =
+    releaseKeystore.getProperty(key) ?: System.getenv(env)
 
 android {
     namespace = "com.hilight.studio"
@@ -13,13 +29,29 @@ android {
         // supported hardware prevents installation on devices the renderer cannot support.
         minSdk = 37
         targetSdk = 37
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
+    }
+
+    signingConfigs {
+        create("release") {
+            val store = signingValue("storeFile", "HILIGHT_STORE_FILE")
+            if (store != null) {
+                storeFile = file(store)
+                storePassword = signingValue("storePassword", "HILIGHT_STORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "HILIGHT_KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "HILIGHT_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            // Public APKs use the permanent release certificate when signing material is present
+            // and remain non-debuggable. The stable certificate enables future in-place updates;
+            // Play Protect reputation checks are separate and are not guaranteed by signing alone.
+            signingConfig = signingConfigs.getByName("release").takeIf { it.storeFile != null }
         }
     }
 

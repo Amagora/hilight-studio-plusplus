@@ -4,6 +4,13 @@ All notable changes to HiLight Studio are documented here.
 
 ## [Unreleased]
 
+## [1.0.4-experimental] - 2026-08-20
+
+- Released the first APK signed with HiLight Studio's permanent release certificate, establishing
+  a stable update identity for future GitHub releases.
+- Released the HiLight session as soon as the array goes dark, so system effects such as calls and
+  Gemini can resume without waiting for the helper to stop or the phone to reboot.
+
 ## [1.0.3-experimental] - 2026-08-20
 
 - Fixed notification alerts that could leave the LEDs lit indefinitely, end early after an
