@@ -74,33 +74,65 @@ a one-time, on-device, ~30-second routine — no cable required.
 1. Enable **USB debugging** on your phone (Settings → About phone → tap Build number 7 times →
    Developer options → USB debugging) and plug it into a computer.
 2. Install HiLight Studio on the phone.
-3. Run this command from your computer.
+3. **Open HiLight Studio once** and leave it open. The app has to create the two files it uses to
+   talk to the renderer, so starting the renderer first and never opening the app gets you nowhere.
 
-   On **macOS**, **Linux**, or **PowerShell** — the single quotes matter, they let the phone resolve
-   its own app path:
+4. Run **both** lines from your computer. The first clears any renderer already holding the LEDs;
+   without it a leftover one keeps the array dark while everything still *reports* success.
+
+   On **macOS**, **Linux**, or **PowerShell** — the single quotes on the second line matter, they let
+   the phone resolve its own app path:
 
    ```bash
+   adb shell "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'"
    adb shell 'CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &'
    ```
 
-   On **Windows Command Prompt**, which has no single quotes, use double ones instead:
+   On **Windows Command Prompt**, which has no single quotes, the second line uses double ones:
 
    ```bat
+   adb shell "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'"
    adb shell "CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &"
    ```
 
-   The Setup tab has both, each with its own copy button, so you never need to type them out.
+   Command Prompt passes the pipe, parentheses, redirects, and `$()` through inside those double
+   quotes. The phone—not Windows—therefore resolves the installed app path.
 
-4. Check that it actually started:
+   The Setup tab has both pairs, each with its own copy button, so you never need to type them out.
+
+5. Check that it started:
 
    ```bash
    adb shell cat /data/local/tmp/hilight.log
    ```
 
-   You want a line like `connected: 8 HiLight LEDs`. An **empty** log means the renderer never
-   started — that is almost always the quoting, so try the other variant for your shell.
+   You want `connected: 8 HiLight LEDs`. An **empty** log means the renderer never started — that is
+   almost always the quoting, so try the other variant for your shell.
 
-Re-run the command after every phone reboot.
+6. In the app, flip the **Live** switch on, then go to **Style** and pick a look. A new install
+   starts with the always-on style set to *Off*, so the switch alone lights nothing.
+
+Re-run both lines after every phone reboot.
+
+### If the setup says it worked but the LEDs stay dark
+
+Almost always a second renderer holding the array. Only one may drive it, and a leftover one keeps
+pushing black — which wins, so the light stays off while the app still shows a connected renderer and
+an open session. It happens if you ran the start line twice, or used Shizuku earlier (its renderer is
+a daemon and outlives both Shizuku itself and this app being uninstalled).
+
+Count them, and expect exactly one:
+
+```bash
+adb shell dumpsys lights | grep -c "Session token="
+```
+
+More than one? Run the reset line above, then the start line again. You can also check the live
+colours the hardware is actually showing:
+
+```bash
+adb shell dumpsys lights
+```
 
 ### After either option
 

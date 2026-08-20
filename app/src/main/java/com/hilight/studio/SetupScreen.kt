@@ -36,7 +36,23 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 
-/** The one-liner that starts the ADB host straight out of the installed APK — nothing to push. */
+/**
+ * Clears any renderer already holding the array, before a new one is started.
+ *
+ * Only one renderer may drive the LEDs, but nothing stops a second from opening its own session, and
+ * a leftover one goes on pushing black — which wins over the live renderer, so the array stays dark
+ * while every status readout insists it is working. Two ways in: running the start command twice
+ * without a reboot, and a Shizuku user service, which is a daemon and survives both Shizuku being
+ * stopped and this app being uninstalled.
+ *
+ * One `pkill` with an alternation rather than two, because `-f` matches this very command line: the
+ * first `pkill` would kill the shell before the second could run. One pass signals every match
+ * including that shell, which is harmless when nothing follows it — hence a separate line from
+ * [ADB_COMMAND]. The quoting here is safe in both Windows shells and in sh.
+ */
+const val ADB_RESET =
+    "adb shell \"pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'\""
+
 /**
  * Starts the renderer out of the installed APK.
  *
@@ -46,15 +62,16 @@ import kotlinx.coroutines.delay
  * lands in CLASSPATH), and it cannot work in a Windows shell at all, where `head` and `cut` are
  * missing. All of those fail silently, with an empty log.
  *
- * Windows Command Prompt has no single quotes; [ADB_COMMAND_CMD] is the same thing with double ones,
- * which is safe there because cmd.exe leaves `$` alone.
+ * Windows Command Prompt has no single quotes; [ADB_COMMAND_CMD] is the same thing with double ones.
+ * Quoting keeps `|`, parentheses, redirects, and `&` away from cmd.exe, while cmd.exe leaves `$`
+ * alone, so the phone receives and expands the command substitution.
  */
-const val ADB_COMMAND =
+const val ADB_COMMAND = ADB_RESET + "\n" +
     "adb shell 'CLASSPATH=${'$'}(pm path com.hilight.studio | head -1 | cut -d: -f2) " +
         "nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &'"
 
-/** The same command for Windows Command Prompt, which does not understand single quotes. */
-const val ADB_COMMAND_CMD =
+/** The same pair for Windows Command Prompt, which does not understand single quotes. */
+const val ADB_COMMAND_CMD = ADB_RESET + "\n" +
     "adb shell \"CLASSPATH=${'$'}(pm path com.hilight.studio | head -1 | cut -d: -f2) " +
         "nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &\""
 
@@ -295,7 +312,10 @@ private fun ShizukuCard(store: Store, state: ShizukuBackend.State) {
 private fun AdbCard(ctx: Context) {
     PixelCard {
         SectionTitle("ADB")
-        Caption("Run with the phone plugged in. Nothing to push. Re-run after a reboot.")
+        Caption(
+            "Run both lines with the phone plugged in. Nothing to push. Re-run after a reboot — and " +
+                "the first line matters every time, since a leftover renderer keeps the array dark.",
+        )
         Text(
             ADB_COMMAND,
             style = MaterialTheme.typography.bodySmall,
