@@ -16,3 +16,8 @@ body:
       label: Proposed change
     validations:
       required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional. Describe any workaround you use today.

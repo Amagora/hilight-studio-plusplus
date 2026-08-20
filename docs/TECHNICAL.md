@@ -1,6 +1,6 @@
 # Technical deep dive
 
-This is the implementation detail that doesn't belong in the main [README](../README.md) — how
+This is the implementation detail that doesn't belong in the main [README](../README.md): how
 the renderer gets privileged access, what the hardware actually is, and what's been verified on a
 real device.
 
@@ -16,14 +16,14 @@ Findings from the device itself, not from the marketing pages:
 | Capabilities | `hasRgbControl() = true`, `hasBrightnessControl() = false`, `hasAnimationControl() = true` |
 | Min update period | `33 ms` per LED, i.e. ~30 fps |
 | HAL | `android.hardware.light` **AIDL version 3** (`vendor.google.lights-service`), AOSP ships v2 |
-| System feature name | `AmbientCue` — `/product/overlay/AmbientCueOverlay.apk`, plus `vendor.google.ambience_hub.*` HAL services |
+| System feature name | `AmbientCue`: `/product/overlay/AmbientCueOverlay.apk`, plus `vendor.google.ambience_hub.*` HAL services |
 | Stock features | custom colour per favourite contact (Phone by Google, WhatsApp) and a Gemini listening/thinking/responding indicator |
 
 New public API in Android 17 (API 37), all in `android.hardware.lights`:
 
-- `ColorSequence` + `ColorSequence.Builder` — keyframed colour ramps (`addControlPoint(delayMs, color)`,
+- `ColorSequence` + `ColorSequence.Builder`: keyframed colour ramps (`addControlPoint(delayMs, color)`,
   `INTERPOLATION_MODE_NONE` / `INTERPOLATION_MODE_LINEAR`)
-- `MultiLightEffect` + `Builder` — one `ColorSequence` per LED, with `setIterations()` and `setPreemptive()`
+- `MultiLightEffect` + `Builder`: one `ColorSequence` per LED, with `setIterations()` and `setPreemptive()`
 - `LightsRequest.Builder.setEffect(...)`, `Light.hasAnimationControl()`, `Light.getMinUpdatePeriodMillis()`
 
 Underlying binder interface (`ILightsManager`): `getLights()`, `openSession(IBinder, int priority)`,
@@ -41,11 +41,11 @@ java.lang.SecurityException: Access denied, requires: android.permission.CONTROL
 ```
 
 It is not a changeable permission, so `pm grant` refuses it, and the device is a retail unit with a
-locked bootloader (`ro.boot.flash.locked=1`, `verifiedbootstate=green`, no root) — there is no way to
+locked bootloader (`ro.boot.flash.locked=1`, `verifiedbootstate=green`, no root), so there is no way to
 install an app as privileged.
 
 However `android.uid.shell` (uid 2000) **already holds it** (`granted=true`). So the rendering runs in
-a process owned by the shell UID. Everything else — UI, rules, notification listening — is a normal
+a process owned by the shell UID. Everything else, including the UI, rules, and notification listener, is a normal
 app.
 
 ## Architecture
@@ -65,11 +65,11 @@ HiLight Studio (normal app)                    privileged renderer (uid 2000 = s
 ```
 
 **Shizuku transport (preferred, no computer).** Shizuku launches `HiLightUserService` into a shell-UID
-process (`daemon(true)`, so it outlives the UI) and the app holds a real binder to it — state is
+process (`daemon(true)`, so it outlives the UI) and the app holds a real binder to it. State is
 pushed straight in, no polling. Verified running as `shell` uid 2000.
 
-**ADB transport (fallback).** `AdbHelper` ships inside the APK, so a single command starts it with no
-file to push. Cross-UID binder is not usable there: a shell-UID process that touches a
+**ADB transport (fallback).** `AdbHelper` ships inside the APK, so the start command launches it with
+no file to push. Cross-UID binder is not usable there: a shell-UID process that touches a
 `ContentProvider` is killed by ActivityManager (verified), which rules out both a provider bridge and
 `ContentObserver` push. So that transport exchanges two small JSON files instead.
 
@@ -105,8 +105,8 @@ It follows `Build.MODEL`:
 | Pixel 11 (non-Pro) | camera bar with a plain flash, and the card says HiLight is Pro-only |
 | anything else | generic Pro-style layout |
 
-The framing is a close crop on the camera bar — only the top of the device is shown, running off the
-bottom of the card — which is how Google frames the feature in its own material.
+The framing is a close crop on the camera bar. Only the top of the device is shown, running off the
+bottom of the card, which is how Google frames the feature in its own material.
 
 The array is drawn as one diffused disc rather than eight pinpoints, because the eight LEDs sit behind
 a single flash window. Each LED still contributes its own colour from its position inside the window,
@@ -121,16 +121,16 @@ the lamp.
 - UI → hardware: picking Solid violet at 70% produced `ff5635b2` on all 8 LEDs
 - notification path: a notification from a rule's package produced a green pulse within one frame
 - foreground path: opening Chrome produced solid `ff2979ff`, returning home restored ambient
-- animation keeps running with the screen off (`mState=DOZE`) — the face-down case
+- animation keeps running with the screen off (`mState=DOZE`), including the face-down case
 - turning control off closes the session and blanks the array
 - Shizuku transport: user service starts as `shell` uid 2000 with 8 LEDs, binder connects, ambient and
   notification alerts render with no adb helper running at all
-- ADB one-liner starts the renderer straight out of the installed APK
+- ADB reset and start commands launch the renderer straight out of the installed APK
 - failover: killing the Shizuku server mid-animation is detected, state is re-pushed, and the ADB
-  helper picks the array up — never two sessions at once
+  helper picks the array up, with no overlap between sessions
 - Shizuku 13.6.0 (official release, signer `CN=Rikka`) used for all of the above
 
-## LED safety — implementation detail
+## LED safety implementation
 
 The safety guards summarised in the README live in `Engine`, not in the UI, so no state document can
 opt out of them:
@@ -139,10 +139,10 @@ opt out of them:
 |---|---|---|
 | Ambient auto-off | 30 s | 5 min, behind two warnings |
 | Per-app notification | 10 s | 1 min, behind two warnings |
-| Alert hard clamp | — | 60 s, whatever the app asks for |
-| Open-ended holds ("while open") | — | capped at the auto-off value |
-| Duty cycle | — | at most 50% of any 10-minute window |
-| Sustained brightness | — | eases to 55% after 10 s of unbroken light |
+| Alert hard clamp | Not configurable | 60 s, whatever the app asks for |
+| Open-ended holds ("while open") | Not configurable | capped at the auto-off value |
+| Duty cycle | Not configurable | at most 50% of any 10-minute window |
+| Sustained brightness | Not configurable | eases to 55% after 10 s of unbroken light |
 
 Two details that matter:
 
