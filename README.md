@@ -61,14 +61,14 @@ Restart Shizuku after each reboot, then reopen HiLight Studio.
 2. Install and open HiLight Studio once so it can create its state files.
 3. Run both commands below. The first stops any existing renderer. The second starts a fresh ADB helper.
 
-macOS, Linux, or PowerShell:
+macOS, Linux, or PowerShell (verified):
 
 ```bash
 adb shell "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'"
 adb shell 'CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &'
 ```
 
-Windows Command Prompt:
+Windows Command Prompt (Unverified):
 
 ```bat
 adb shell "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'"
