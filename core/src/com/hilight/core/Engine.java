@@ -71,9 +71,16 @@ public final class Engine {
         thread.start();
     }
 
+    /**
+     * Blanks the array and hands it back.
+     *
+     * Clearing `running` inside the lock matters: outside it, a tick that had already passed the
+     * `while (running)` check could run after the session was closed, reopen it and push a live
+     * frame, leaving the array lit by the very call that was meant to darken it.
+     */
     public void stop() {
-        running = false;
         synchronized (lock) {
+            running = false;
             lights.push(new int[]{0});
             lights.closeSession();
         }
@@ -97,7 +104,11 @@ public final class Engine {
             // Only a deliberate user action ("arm") may start a fresh window. Automatic pushes — an
             // alert firing, a foreground override, the app being backgrounded — must not, or the array
             // could be kept lit indefinitely in 30-second increments.
-            if (o.optBoolean("arm", true)) gate.armAmbient(System.currentTimeMillis(), ambientTimeoutMs);
+            //
+            // Defaulting to false matters: a document that omits the key must not arm. The app always
+            // sends it, but the bootstrap file the app drops for a not-yet-running helper is just
+            // {"enabled":false}, and defaulting to true let that open a window nobody asked for.
+            if (o.optBoolean("arm", false)) gate.armAmbient(System.currentTimeMillis(), ambientTimeoutMs);
             JSONObject a = o.optJSONObject("alert");
             if (a == null) {
                 if (alert != null) Log.i("alert cleared");
@@ -170,6 +181,7 @@ public final class Engine {
 
     private void tick() {
         synchronized (lock) {
+            if (!running) return;                   // stop() may have closed the session already
             boolean enabled = state.optBoolean("enabled", false);
             int priority = state.optInt("priority", 0);
 
@@ -179,6 +191,7 @@ public final class Engine {
                     lights.closeSession();
                     Log.i("released HiLight to the system");
                 }
+                noteDark(now());
                 return;
             }
 
@@ -210,10 +223,11 @@ public final class Engine {
                     break;
                 case BLANK:
                     // blank the array but keep the session, so app rules still work
-                    lights.push(new int[]{0});
+                    lights.push(protect(new int[]{0}, now));
                     Log.i("nothing left to show — array blanked");
                     return;
                 default:                                    // IDLE: already dark, nothing to push
+                    noteDark(now);
                     return;
             }
             int[] frame = renderer.frame(cfg, t, Math.max(1, lights.ledCount()));
@@ -228,4 +242,22 @@ public final class Engine {
     private int[] protect(int[] frame, long now) {
         return safety.apply(frame, now, dim);
     }
+
+    /**
+     * Tells the guard the array is dark on a frame that is not pushed.
+     *
+     * The sustained-light taper only unwinds when the guard is handed a dark frame, and the frames
+     * skipped while the array is already blank never reached it. Without this, a long ambient run
+     * left the taper pinned, so the next look came back at the taper floor no matter how long the
+     * array had actually been resting.
+     */
+    private void noteDark(long now) {
+        safety.apply(BLANK, now, dim);
+    }
+
+    private static long now() {
+        return System.currentTimeMillis();
+    }
+
+    private static final int[] BLANK = {0};
 }

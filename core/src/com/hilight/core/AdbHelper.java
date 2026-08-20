@@ -67,13 +67,25 @@ public final class AdbHelper {
         }
     }
 
+    /**
+     * Applies the state file whenever it has been rewritten.
+     *
+     * Any rewrite counts, even one whose bytes are unchanged: the document carries commands as well
+     * as state — "arm" restarts the auto-off window — so an identical re-push is a fresh instruction,
+     * not a no-op, and comparing contents would swallow it.
+     *
+     * The markers are recorded only once the read has produced something, so a read that loses the
+     * race with the writer and comes back empty is retried on the next poll instead of being
+     * discarded. (The old order recorded the file as seen first, which lost that update for good.)
+     */
     private void reloadIfChanged() {
         long m = stateFile.lastModified(), s = stateFile.length();
         if (m == stamp && s == size) return;
+        String raw = read(stateFile);
+        if (raw == null || raw.isEmpty()) return;       // leave the markers; try again next poll
         stamp = m;
         size = s;
-        String raw = read(stateFile);
-        if (raw != null && !raw.isEmpty()) engine.setState(raw);
+        engine.setState(raw);
     }
 
     private void writeStatus(long now) {

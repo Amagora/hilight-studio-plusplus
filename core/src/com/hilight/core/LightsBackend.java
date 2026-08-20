@@ -47,6 +47,34 @@ public final class LightsBackend {
         ids = new int[n];
         int k = 0;
         for (Light l : all) if (l.getType() == Light.LIGHT_TYPE_APPLICATION) ids[k++] = l.getId();
+        describe(all);
+    }
+
+    /**
+     * Logs what the framework reports about every light it hands us.
+     *
+     * Worth the few lines: it is the first thing needed to tell "this device has no addressable
+     * array" apart from "the renderer never got hold of it", which is otherwise guesswork from a bug
+     * report, and it is the only place these capabilities are observable — `dumpsys lights` shows
+     * ids and colours but nothing about control.
+     */
+    private void describe(List<Light> all) {
+        for (Light l : all) {
+            if (l.getType() != Light.LIGHT_TYPE_APPLICATION) continue;
+            String period;
+            try {
+                period = l.getMinUpdatePeriodMillis() + "ms";
+            } catch (Throwable t) {
+                period = "unknown";
+            }
+            Log.i("light id=" + l.getId()
+                    + " ordinal=" + l.getOrdinal()
+                    + " type=" + l.getType()
+                    + " rgb=" + l.hasRgbControl()
+                    + " brightness=" + l.hasBrightnessControl()
+                    + " animation=" + l.hasAnimationControl()
+                    + " minUpdatePeriod=" + period);
+        }
     }
 
     public int ledCount() { return ids.length; }
@@ -86,7 +114,10 @@ public final class LightsBackend {
             mSetLightStates.invoke(service, token, ids, st);
         } catch (Exception e) {
             Log.w("setLightStates failed: " + e);
-            sessionOpen = false;
+            // Tell the service the session is over before dropping the local flag. A transient
+            // binder failure does not mean the far side closed anything, and simply forgetting the
+            // session here left the caller reopening a token the service still held open.
+            closeSession();
         }
     }
 }
