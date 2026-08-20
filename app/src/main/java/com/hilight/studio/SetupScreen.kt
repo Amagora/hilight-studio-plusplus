@@ -37,8 +37,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 
 /** The one-liner that starts the ADB host straight out of the installed APK — nothing to push. */
+/**
+ * Starts the renderer out of the installed APK.
+ *
+ * Single quotes matter: they stop the desktop shell touching `$(...)`, so the *phone* resolves the
+ * APK path with its own `pm`. Substituting on the desktop instead makes the command shell-specific —
+ * it needs a second `adb shell`, it breaks on any adb that ends lines with CRLF (the trailing return
+ * lands in CLASSPATH), and it cannot work in a Windows shell at all, where `head` and `cut` are
+ * missing. All of those fail silently, with an empty log.
+ *
+ * Windows Command Prompt has no single quotes; [ADB_COMMAND_CMD] is the same thing with double ones,
+ * which is safe there because cmd.exe leaves `$` alone.
+ */
 const val ADB_COMMAND =
-    "adb shell \"CLASSPATH=${'$'}(adb shell pm path com.hilight.studio | head -1 | cut -d: -f2) " +
+    "adb shell 'CLASSPATH=${'$'}(pm path com.hilight.studio | head -1 | cut -d: -f2) " +
+        "nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &'"
+
+/** The same command for Windows Command Prompt, which does not understand single quotes. */
+const val ADB_COMMAND_CMD =
+    "adb shell \"CLASSPATH=${'$'}(pm path com.hilight.studio | head -1 | cut -d: -f2) " +
         "nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &\""
 
 @Composable
@@ -292,10 +309,18 @@ private fun AdbCard(ctx: Context) {
                 )
                 .padding(14.dp),
         )
+        Caption(
+            "Works in Terminal on macOS and Linux, and in PowerShell. In Windows Command Prompt, " +
+                "copy the cmd.exe version instead — it has no single quotes.",
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(onClick = { copy(ctx, ADB_COMMAND, "Command copied") }) { ButtonLabel("Copy") }
-            TextButton(onClick = { share(ctx, ADB_COMMAND) }) { ButtonLabel("Send to computer") }
+            TextButton(onClick = { copy(ctx, ADB_COMMAND_CMD, "cmd.exe version copied") }) {
+                ButtonLabel("Copy for cmd.exe")
+            }
         }
+        Caption("It worked if the array responds. Nothing printed means it did not start.")
+        TextButton(onClick = { share(ctx, ADB_COMMAND) }) { ButtonLabel("Send to computer") }
     }
 }
 

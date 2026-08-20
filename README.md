@@ -74,15 +74,33 @@ a one-time, on-device, ~30-second routine — no cable required.
 1. Enable **USB debugging** on your phone (Settings → About phone → tap Build number 7 times →
    Developer options → USB debugging) and plug it into a computer.
 2. Install HiLight Studio on the phone.
-3. Run this command from a macOS or Linux terminal (on Windows, use WSL):
+3. Run this command from your computer.
+
+   On **macOS**, **Linux**, or **PowerShell** — the single quotes matter, they let the phone resolve
+   its own app path:
 
    ```bash
-   adb shell "CLASSPATH=$(adb shell pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &"
+   adb shell 'CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &'
    ```
 
-   The Setup tab has this exact command with a copy button, so you never need to type it out.
+   On **Windows Command Prompt**, which has no single quotes, use double ones instead:
 
-Re-run this command after every phone reboot.
+   ```bat
+   adb shell "CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &"
+   ```
+
+   The Setup tab has both, each with its own copy button, so you never need to type them out.
+
+4. Check that it actually started:
+
+   ```bash
+   adb shell cat /data/local/tmp/hilight.log
+   ```
+
+   You want a line like `connected: 8 HiLight LEDs`. An **empty** log means the renderer never
+   started — that is almost always the quoting, so try the other variant for your shell.
+
+Re-run the command after every phone reboot.
 
 ### After either option
 
