@@ -48,6 +48,7 @@ public final class Engine {
     private final LightsBackend lights = new LightsBackend();
     private final Renderer renderer = new Renderer();
     private final SafetyGuard safety = new SafetyGuard();
+    private final OutputGate gate = new OutputGate();
     private final Object lock = new Object();
 
     private Thread thread;
@@ -56,12 +57,10 @@ public final class Engine {
     private JSONObject state = new JSONObject();
     private JSONObject alert;
     private long alertId = -1;
-    private long alertStart, alertEnd;
+    private boolean lastFrameWasAlert;
 
     private double dim = 1.0;
     private long ambientTimeoutMs = DEFAULT_AMBIENT_TIMEOUT_MS;
-    private long ambientDeadline;
-    private boolean ambientBlanked;
 
     public void start() throws Exception {
         lights.connect();
@@ -98,34 +97,30 @@ public final class Engine {
             // Only a deliberate user action ("arm") may start a fresh window. Automatic pushes — an
             // alert firing, a foreground override, the app being backgrounded — must not, or the array
             // could be kept lit indefinitely in 30-second increments.
-            if (o.optBoolean("arm", true)) armAmbient();
+            if (o.optBoolean("arm", true)) gate.armAmbient(System.currentTimeMillis(), ambientTimeoutMs);
             JSONObject a = o.optJSONObject("alert");
             if (a == null) {
                 if (alert != null) Log.i("alert cleared");
                 alert = null;
                 alertId = -1;
+                // clears the blank latch too, so a cancelled alert cannot leave the array lit
+                gate.clearAlert();
                 renderer.reset();
             } else {
                 long id = a.optLong("id", -1);
                 if (id != alertId) {
                     alertId = id;
                     alert = a;
-                    alertStart = System.currentTimeMillis();
                     long asked = a.optLong("durationMs", 4000);
                     // an open-ended alert (a "while this app is open" hold) still gets the global cap
                     long dur = asked <= 0 ? ambientTimeoutMs : Math.min(asked, ALERT_MAX_MS);
-                    alertEnd = alertStart + dur;
+                    gate.startAlert(System.currentTimeMillis(), dur);
                     renderer.reset();
                     Log.i("alert " + id + " " + a.optString("pattern", "pulse") + " for " + dur + "ms"
                             + (dur != asked ? " (asked " + asked + ", capped)" : ""));
                 }
             }
         }
-    }
-
-    private void armAmbient() {
-        ambientDeadline = System.currentTimeMillis() + ambientTimeoutMs;
-        ambientBlanked = false;
     }
 
     public String status() {
@@ -143,8 +138,8 @@ public final class Engine {
                 o.put("alertId", alertId);
                 o.put("timeoutMs", ambientTimeoutMs);
                 o.put("dim", dim);
-                o.put("ambientRemainingMs", Math.max(0, ambientDeadline - System.currentTimeMillis()));
-                o.put("ambientHeld", ambientBlanked);
+                o.put("ambientRemainingMs", gate.ambientRemainingMs(System.currentTimeMillis()));
+                o.put("ambientHeld", gate.isAmbientHeld());
                 o.put("resting", safety.isResting());
                 o.put("dutyPct", safety.dutyPercent());
                 o.put("version", 1);
@@ -193,28 +188,33 @@ public final class Engine {
             }
 
             long now = System.currentTimeMillis();
+            OutputGate.Layer layer = gate.next(now);
+
+            if (lastFrameWasAlert && layer != OutputGate.Layer.ALERT) {
+                alert = null;
+                renderer.reset();
+                // deliberately no re-arm here: an alert must not extend the ambient window
+            }
+            lastFrameWasAlert = layer == OutputGate.Layer.ALERT;
+
             JSONObject cfg;
             long t;
-            if (alert != null && now < alertEnd) {
-                cfg = alert;
-                t = now - alertStart;
-            } else {
-                if (alert != null) {
-                    alert = null;
-                    renderer.reset();
-                    // deliberately no re-arm here: an alert must not extend the ambient window
-                }
-                if (now > ambientDeadline) {
-                    // the safety timeout: blank the array but keep the session, so app rules still work
-                    if (!ambientBlanked) {
-                        ambientBlanked = true;
-                        lights.push(new int[]{0});
-                        Log.i("ambient timed out after " + ambientTimeoutMs + "ms — array blanked");
-                    }
+            switch (layer) {
+                case ALERT:
+                    cfg = alert;
+                    t = gate.alertElapsed(now);
+                    break;
+                case AMBIENT:
+                    cfg = state.optJSONObject("ambient");
+                    t = now;
+                    break;
+                case BLANK:
+                    // blank the array but keep the session, so app rules still work
+                    lights.push(new int[]{0});
+                    Log.i("nothing left to show — array blanked");
                     return;
-                }
-                cfg = state.optJSONObject("ambient");
-                t = now;
+                default:                                    // IDLE: already dark, nothing to push
+                    return;
             }
             int[] frame = renderer.frame(cfg, t, Math.max(1, lights.ledCount()));
             lights.push(protect(frame, now));

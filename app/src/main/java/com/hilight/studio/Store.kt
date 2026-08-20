@@ -96,7 +96,10 @@ class Store private constructor(private val app: Context) {
 
     /** Package of the app whose FOREGROUND rule is currently held, if any. */
     private var foregroundOverride: Pair<String, JSONObject>? = null
-    private var revertRunnable: Runnable? = null
+
+    /** True while a notification alert is still meant to be on the array. */
+    private var alertHeld = false
+    private var alertExpiry: Runnable? = null
 
     init {
         Bridge.ensureFiles(app)
@@ -112,12 +115,21 @@ class Store private constructor(private val app: Context) {
         app.registerReceiver(
             object : android.content.BroadcastReceiver() {
                 override fun onReceive(c: Context?, i: Intent?) {
-                    refreshSuppression(armOnRelease = i?.action == Intent.ACTION_SCREEN_OFF)
+                    if (i?.action == Intent.ACTION_SCREEN_OFF) {
+                        refreshSuppression(armOnRelease = true)
+                        return
+                    }
+                    // The screen coming on, or the phone being unlocked, means the notification has
+                    // been seen — a rule's colour has no one left to tell, so drop it now instead of
+                    // burning the rest of its window.
+                    cancelAlert()
+                    refreshSuppression()
                 }
             },
             android.content.IntentFilter().apply {
                 addAction(Intent.ACTION_SCREEN_ON)
                 addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_USER_PRESENT)
             },
         )
         // Whenever Shizuku appears or disappears, re-push: a new user service starts stateless, and
@@ -312,13 +324,31 @@ class Store private constructor(private val app: Context) {
             ),
             arm = false,               // a notification must not extend the ambient window
         )
-        revertRunnable?.let { main.removeCallbacks(it) }
-        // the renderer self-expires the alert; this only restores a held foreground override
-        if (foregroundOverride != null) {
-            val r = Runnable { pushCurrent(arm = false) }
-            revertRunnable = r
-            main.postDelayed(r, rule.durationMs.toLong() + 150)
+        // The renderer self-expires the alert, but the app tracks the window too: an unlock has to be
+        // able to cut it short, and a held foreground override has to be restored underneath it.
+        alertHeld = true
+        alertExpiry?.let { main.removeCallbacks(it) }
+        val r = Runnable {
+            alertHeld = false
+            alertExpiry = null
+            pushCurrent(arm = false)
         }
+        alertExpiry = r
+        main.postDelayed(r, rule.durationMs.toLong() + 150)
+    }
+
+    /**
+     * Drops a notification alert that is still running, restoring whatever sits underneath it.
+     *
+     * Called when the user turns the screen on or unlocks: the alert exists to be noticed, so once it
+     * has been there is nothing to keep lit. No-op when no alert is in flight.
+     */
+    fun cancelAlert() {
+        alertExpiry?.let { main.removeCallbacks(it) }
+        alertExpiry = null
+        if (!alertHeld) return
+        alertHeld = false
+        pushCurrent(arm = false)       // seeing a notification must not extend the ambient window
     }
 
     /** Holds a look for as long as [pkg] is in the foreground. */
