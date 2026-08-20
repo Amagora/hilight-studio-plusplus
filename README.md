@@ -32,7 +32,7 @@ you actually get a notification.
 | 🎭 **Presets** | Save a look you like, switch between saved looks with one tap, and export/import them to share with someone else running HiLight. |
 | 🖼️ **Match your wallpaper** | One tap pulls the colours straight from your current wallpaper theme. |
 | ⚙️ **Quick Settings tile** | Turn the whole thing on or off from the notification shade, without opening the app. |
-| 🌙 **Quiet hours & battery-aware** | Define a window where it stays dark (or just dims), and it automatically pauses below a battery level you choose. Also respects Do Not Disturb. |
+| 🌙 **Quiet hours & battery-aware** | Define a window where it stays dark (or just dims). It pauses itself in Battery Saver, and below a battery level you choose. Also respects Do Not Disturb. |
 | 🛡️ **Can't be left on by accident** | Built-in limits mean it always turns itself off after a short while — see [Safety](#safety), below. |
 
 ## Screenshots
@@ -103,6 +103,14 @@ you can't turn off from the UI:
 
 None of this needs configuring — it's just how the app behaves. When the array goes dark because of
 one of these limits, the app tells you exactly why (not just "nothing is happening").
+
+There are also two battery rules, both of which you *can* change in the Setup tab:
+
+- it pauses while **Battery Saver** is on, at any level
+- it pauses below **10%** — move the slider anywhere from 5% to 50%, or switch the rule off
+
+Charging lifts the level rule, so a phone on the charger lights up whatever its percentage. If the
+array is dark and you can't see why, the Live tab names the reason.
 
 > **Want different limits?** HiLight Studio is open source. If you are comfortable building Android
 > apps, you can download the project, change the timing and safety values in your own copy, and build

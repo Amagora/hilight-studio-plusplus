@@ -131,6 +131,7 @@ fun LiveScreen(store: Store) {
                 when (it) {
                     Suppression.QUIET_HOURS -> "Quiet hours: the array stays dark until your window ends."
                     Suppression.LOW_BATTERY -> "Battery is low, so the array is paused. Charging resumes it."
+                    Suppression.POWER_SAVER -> "Battery Saver is on, so the array is paused."
                     Suppression.SCREEN_ON -> "Set to light only while the screen is off."
                 }
             )

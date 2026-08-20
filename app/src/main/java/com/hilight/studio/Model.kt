@@ -181,12 +181,17 @@ data class Preset(val name: String, val ambient: Ambient) {
 /** Why the array is being held dark despite the master switch being on. */
 enum class Suppression(val short: String) {
     QUIET_HOURS("Quiet hours"),
-    LOW_BATTERY("Battery saver"),
+    LOW_BATTERY("Low battery"),
+    POWER_SAVER("Battery Saver"),
     SCREEN_ON("Screen-off only"),
 }
 
 /** Nothing may run indefinitely: these are the ceilings the UI enforces. */
 object Limits {
+    /** Battery level at or below which the array pauses, unless the user moves it. */
+    const val BATTERY_DEFAULT_PCT = 10
+    const val BATTERY_MIN_PCT = 5
+    const val BATTERY_MAX_PCT = 50
     const val AMBIENT_DEFAULT_MS = 30_000
     const val AMBIENT_MAX_MS = 300_000          // 5 minutes, behind two warnings
     const val RULE_DEFAULT_MS = 10_000

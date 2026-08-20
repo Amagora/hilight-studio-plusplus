@@ -66,8 +66,13 @@ class Store private constructor(private val app: Context) {
     private val _batteryGuard = MutableStateFlow(prefs.getBoolean("batteryGuard", true))
     val batteryGuard: StateFlow<Boolean> = _batteryGuard.asStateFlow()
 
-    private val _batteryMinPct = MutableStateFlow(prefs.getInt("batteryMinPct", 20))
+    private val _batteryMinPct =
+        MutableStateFlow(prefs.getInt("batteryMinPct", Limits.BATTERY_DEFAULT_PCT))
     val batteryMinPct: StateFlow<Int> = _batteryMinPct.asStateFlow()
+
+    /** Pause whenever Android's own Battery Saver is on, whatever the level. */
+    private val _saverGuard = MutableStateFlow(prefs.getBoolean("saverGuard", true))
+    val saverGuard: StateFlow<Boolean> = _saverGuard.asStateFlow()
 
     private val _respectDnd = MutableStateFlow(prefs.getBoolean("respectDnd", true))
     val respectDnd: StateFlow<Boolean> = _respectDnd.asStateFlow()
@@ -111,25 +116,33 @@ class Store private constructor(private val app: Context) {
                 main.postDelayed(this, 30_000)
             }
         })
-        // screen state changes too fast for the 30s tick to be the only watcher
+        // Screen and power state both change far too fast for the 30s tick to be the only watcher —
+        // waiting half a minute to notice a charger makes the guards look like faults.
         app.registerReceiver(
             object : android.content.BroadcastReceiver() {
                 override fun onReceive(c: Context?, i: Intent?) {
-                    if (i?.action == Intent.ACTION_SCREEN_OFF) {
-                        refreshSuppression(armOnRelease = true)
-                        return
+                    when (i?.action) {
+                        Intent.ACTION_SCREEN_OFF -> refreshSuppression(armOnRelease = true)
+                        Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> {
+                            // The screen coming on, or the phone being unlocked, means the
+                            // notification has been seen — a rule's colour has no one left to tell,
+                            // so drop it now instead of burning the rest of its window.
+                            cancelAlert()
+                            refreshSuppression()
+                        }
+                        // plugging in, unplugging, or toggling Battery Saver: re-check, but a power
+                        // event is not the user looking at the phone, so any alert keeps running
+                        else -> refreshSuppression()
                     }
-                    // The screen coming on, or the phone being unlocked, means the notification has
-                    // been seen — a rule's colour has no one left to tell, so drop it now instead of
-                    // burning the rest of its window.
-                    cancelAlert()
-                    refreshSuppression()
                 }
             },
             android.content.IntentFilter().apply {
                 addAction(Intent.ACTION_SCREEN_ON)
                 addAction(Intent.ACTION_SCREEN_OFF)
                 addAction(Intent.ACTION_USER_PRESENT)
+                addAction(Intent.ACTION_POWER_CONNECTED)
+                addAction(Intent.ACTION_POWER_DISCONNECTED)
+                addAction(android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
             },
         )
         // Whenever Shizuku appears or disappears, re-push: a new user service starts stateless, and
@@ -208,11 +221,19 @@ class Store private constructor(private val app: Context) {
 
     fun setBatteryGuard(enabled: Boolean, minPct: Int = _batteryMinPct.value) {
         _batteryGuard.value = enabled
-        _batteryMinPct.value = minPct.coerceIn(5, 50)
+        _batteryMinPct.value = minPct.coerceIn(Limits.BATTERY_MIN_PCT, Limits.BATTERY_MAX_PCT)
         prefs.edit()
             .putBoolean("batteryGuard", enabled)
             .putInt("batteryMinPct", _batteryMinPct.value)
             .apply()
+        refreshSuppression()
+        pushCurrent()
+    }
+
+    fun setSaverGuard(v: Boolean) {
+        _saverGuard.value = v
+        prefs.edit().putBoolean("saverGuard", v).apply()
+        refreshSuppression()
         pushCurrent()
     }
 
@@ -436,16 +457,23 @@ class Store private constructor(private val app: Context) {
     private fun screenOn(): Boolean =
         app.getSystemService(android.os.PowerManager::class.java)?.isInteractive ?: true
 
-    /** Why the array must stay dark right now, or null. */
-    private fun suppressionNow(): Suppression? {
-        if (_screenOffOnly.value && screenOn()) return Suppression.SCREEN_ON
-        // a dimmed quiet window is not a suppression: it still lights, just far lower
-        if (_quietEnabled.value && !_quietDim.value && inQuietWindow(nowMinutes())) {
-            return Suppression.QUIET_HOURS
-        }
-        if (_batteryGuard.value && batteryPct() <= _batteryMinPct.value) return Suppression.LOW_BATTERY
-        return null
-    }
+    /** Android's own Battery Saver, which the user turns on to make the battery last. */
+    private fun powerSaveMode(): Boolean =
+        app.getSystemService(android.os.PowerManager::class.java)?.isPowerSaveMode ?: false
+
+    /** Why the array must stay dark right now, or null. The rules live in [GuardState]. */
+    private fun suppressionNow(): Suppression? = GuardState(
+        screenOffOnly = _screenOffOnly.value,
+        screenOn = screenOn(),
+        quietEnabled = _quietEnabled.value,
+        quietDim = _quietDim.value,
+        inQuietWindow = inQuietWindow(nowMinutes()),
+        saverGuard = _saverGuard.value,
+        powerSaveMode = powerSaveMode(),
+        batteryGuard = _batteryGuard.value,
+        batteryPct = batteryPct(),
+        batteryMinPct = _batteryMinPct.value,
+    ).suppression()
 
     /** Scale applied to every frame — below 1 only inside a dimmed quiet window. */
     private fun dimFactor(): Float =

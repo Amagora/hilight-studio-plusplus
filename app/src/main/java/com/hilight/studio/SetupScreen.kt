@@ -56,6 +56,7 @@ fun SetupScreen(store: Store) {
     val quietEnd by store.quietEnd.collectAsStateWithLifecycle()
     val batteryGuard by store.batteryGuard.collectAsStateWithLifecycle()
     val batteryMinPct by store.batteryMinPct.collectAsStateWithLifecycle()
+    val saverGuard by store.saverGuard.collectAsStateWithLifecycle()
     val suppression by store.suppression.collectAsStateWithLifecycle()
     val respectDnd by store.respectDnd.collectAsStateWithLifecycle()
     val quietDim by store.quietDim.collectAsStateWithLifecycle()
@@ -127,15 +128,16 @@ fun SetupScreen(store: Store) {
             }
         }
         ToggleRow("Respect Do Not Disturb", respectDnd) { store.setRespectDnd(it) }
+        ToggleRow("Pause in Battery Saver", saverGuard) { store.setSaverGuard(it) }
         ToggleRow("Pause on low battery", batteryGuard) { store.setBatteryGuard(it) }
         if (batteryGuard) {
             PixelSlider(
                 "Pause below",
                 batteryMinPct.toFloat(),
-                5f..50f,
+                Limits.BATTERY_MIN_PCT.toFloat()..Limits.BATTERY_MAX_PCT.toFloat(),
                 { store.setBatteryGuard(true, it.toInt()) },
             ) { "${it.toInt()}%" }
-            Caption("Ignored while charging.")
+            Caption("Ignored while charging. Battery Saver pauses it either way.")
         }
     }
 
