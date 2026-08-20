@@ -41,9 +41,24 @@ Control the eight-LED HiLight array on Pixel 11 Pro devices.
 
 ## Install
 
-Download the APK from the [latest GitHub prerelease](https://github.com/DhananjayBhosale/hilight-studio/releases), open it on a supported Pixel, and allow installation from your browser or file manager if Android asks.
+For now, install HiLight Studio with ADB. Play Protect may block direct installs from a browser or file manager because the app uses notification access for LED alerts.
 
-The published APK is an experimental developer build signed with a debug certificate. It is not a Play Store or production-signed release.
+1. Download the signed APK from the [latest GitHub prerelease](https://github.com/DhananjayBhosale/hilight-studio/releases) to your computer.
+2. Connect a supported Pixel with USB debugging enabled and approve the computer on the phone.
+3. From the folder containing the APK, run:
+
+```bash
+adb install -r HiLight-Studio-v1.0.4-experimental-signed.apk
+```
+
+If you previously installed v1.0.3 or an older debug-signed build, uninstall it once before installing v1.0.4 because the signing certificates are different:
+
+```bash
+adb uninstall com.hilight.studio
+adb install HiLight-Studio-v1.0.4-experimental-signed.apk
+```
+
+The published APK is an experimental release signed with HiLight Studio's permanent release certificate. Future signed releases can update v1.0.4 normally.
 
 HiLight Studio needs shell-level access to the Android lights service. Choose one setup method below. Access must be restored after every reboot.
 
