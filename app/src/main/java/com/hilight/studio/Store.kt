@@ -102,8 +102,15 @@ class Store private constructor(private val app: Context) {
     /** Package of the app whose FOREGROUND rule is currently held, if any. */
     private var foregroundOverride: Pair<String, JSONObject>? = null
 
-    /** True while a notification alert is still meant to be on the array. */
-    private var alertHeld = false
+    /**
+     * The notification alert still meant to be on the array, if any.
+     *
+     * Held so that [pushCurrent] can put it back into every document it sends. Without it, any
+     * unrelated push during an alert — a foreground rule matching, or the user moving a slider —
+     * replaced the top layer with the one below and cut the alert short. Re-sending the same alert
+     * id does not restart it: the renderer only resets its clock when the id changes.
+     */
+    private var activeAlert: JSONObject? = null
     private var alertExpiry: Runnable? = null
 
     init {
@@ -323,19 +330,21 @@ class Store private constructor(private val app: Context) {
 
     // ------------------------------------------------------------------ light output
 
-    /** Ambient (plus any held foreground override) — no transient alert. */
-    fun pushCurrent(arm: Boolean = true) = send(_enabled.value, foregroundOverride?.second, arm)
+    /** The highest layer that should currently be showing: alert, else override, else ambient. */
+    fun pushCurrent(arm: Boolean = true) =
+        send(_enabled.value, activeAlert ?: foregroundOverride?.second, arm)
 
     /** Fires a one-shot alert, then falls back to the override/ambient layer. */
     fun fireAlert(rule: AppRule) {
         if (!_enabled.value) return
-        // screen-off-only must not block an alert that arrives while the screen happens to be on if
-        // the user did not ask for that; only real suppressions block
-        if (suppressionNow() != null) return
+        // Quiet hours and the battery rules silence a flash; the global "only while the screen is
+        // off" switch does not. That switch governs the always-on look, and letting it block here
+        // killed every per-app colour for as long as the screen was on. Per-rule
+        // AppRule.onlyWhenScreenOff is how a rule asks to flash only on a dark screen.
+        if (guardState().alertSuppression() != null) return
         val color = if (rule.randomColor) randomColor() else rule.color
-        send(
-            true,
-            Bridge.alertJson(
+        holdAlert(
+            alert = Bridge.alertJson(
                 id = Bridge.nextAlertId(),
                 pattern = rule.pattern,
                 color = color,
@@ -343,19 +352,43 @@ class Store private constructor(private val app: Context) {
                 speedMs = rule.speedMs,
                 brightness = rule.brightness,
             ),
+            durationMs = rule.durationMs,
             arm = false,               // a notification must not extend the ambient window
+            preview = null,
         )
-        // The renderer self-expires the alert, but the app tracks the window too: an unlock has to be
-        // able to cut it short, and a held foreground override has to be restored underneath it.
-        alertHeld = true
+    }
+
+    /**
+     * Takes the transient top layer, for [durationMs], and schedules its release.
+     *
+     * A notification alert and a Test preview share this one slot because the renderer has one too;
+     * whichever arrives last owns it. The renderer self-expires the alert, but the app tracks the
+     * window as well so an unlock can cut it short and so [pushCurrent] can keep re-sending the layer
+     * that should actually be on top.
+     */
+    private fun holdAlert(alert: JSONObject, durationMs: Int, arm: Boolean, preview: Ambient?) {
+        activeAlert = alert
+        alertIsPreview = preview != null
+        _previewLook.value = preview
+        // A preview is a deliberate "show me this now", so it lights the array even with the master
+        // switch off, which is what the Test buttons have always done. Notification alerts get here
+        // only once fireAlert has confirmed the switch is on.
+        send(_enabled.value || preview != null, alert, arm)
         alertExpiry?.let { main.removeCallbacks(it) }
         val r = Runnable {
-            alertHeld = false
             alertExpiry = null
-            pushCurrent(arm = false)
+            releaseAlert()
         }
         alertExpiry = r
-        main.postDelayed(r, rule.durationMs.toLong() + 150)
+        main.postDelayed(r, durationMs.toLong() + 150)
+    }
+
+    /** Drops the top layer and re-pushes whatever sits underneath it. */
+    private fun releaseAlert() {
+        activeAlert = null
+        alertIsPreview = false
+        _previewLook.value = null
+        pushCurrent(arm = false)       // handing the layer back must not extend the ambient window
     }
 
     /**
@@ -365,11 +398,10 @@ class Store private constructor(private val app: Context) {
      * has been there is nothing to keep lit. No-op when no alert is in flight.
      */
     fun cancelAlert() {
+        if (activeAlert == null) return
         alertExpiry?.let { main.removeCallbacks(it) }
         alertExpiry = null
-        if (!alertHeld) return
-        alertHeld = false
-        pushCurrent(arm = false)       // seeing a notification must not extend the ambient window
+        releaseAlert()
     }
 
     /** Holds a look for as long as [pkg] is in the foreground. */
@@ -393,40 +425,40 @@ class Store private constructor(private val app: Context) {
         pushCurrent(arm = false)       // opening an app must not extend the ambient window either
     }
 
-    /** True while a Test-button preview is on the array. */
-    private var previewAlertId: Long? = null
+    /** True while the top layer is a Test-button preview rather than a notification alert. */
+    private var alertIsPreview = false
 
     /** The look currently being tested, so the hero can show it instead of the ambient look. */
     private val _previewLook = MutableStateFlow<Ambient?>(null)
     val previewLook: StateFlow<Ambient?> = _previewLook.asStateFlow()
-    private var previewClear: Runnable? = null
 
     /** One-off preview used by the Test buttons. */
     fun preview(pattern: Pattern, color: Int, speedMs: Int, brightness: Float, durationMs: Int = 4000) {
-        val id = Bridge.nextAlertId()
-        previewAlertId = id
-        send(true, Bridge.alertJson(id, pattern, color, durationMs, speedMs, brightness), arm = true)
-
-        _previewLook.value = Ambient(
-            pattern = pattern, color = color, speedMs = speedMs, brightness = brightness,
+        holdAlert(
+            alert = Bridge.alertJson(
+                Bridge.nextAlertId(), pattern, color, durationMs, speedMs, brightness,
+            ),
+            durationMs = durationMs,
+            arm = true,                // the user asked for this one, so it may open a window
+            preview = Ambient(
+                pattern = pattern, color = color, speedMs = speedMs, brightness = brightness,
+            ),
         )
-        previewClear?.let { main.removeCallbacks(it) }
-        val clear = Runnable { _previewLook.value = null }
-        previewClear = clear
-        main.postDelayed(clear, durationMs.toLong())
     }
 
     /**
      * Kills a running preview. Called when the app leaves the foreground: a test the user started by
      * hand must never outlive the screen they started it from.
+     *
+     * Only a preview. A notification alert is exactly what should keep running once the app is out of
+     * sight, so backgrounding must leave it alone.
      */
     fun stopPreview() {
-        previewClear?.let { main.removeCallbacks(it) }
-        _previewLook.value = null
-        if (previewAlertId == null) return
-        previewAlertId = null
+        if (!alertIsPreview) return
+        alertExpiry?.let { main.removeCallbacks(it) }
+        alertExpiry = null
         // clears the test immediately, and does not hand ambient a fresh window on the way out
-        pushCurrent(arm = false)
+        releaseAlert()
     }
 
     /** Battery level from the sticky broadcast — no receiver to keep alive. */
@@ -461,8 +493,8 @@ class Store private constructor(private val app: Context) {
     private fun powerSaveMode(): Boolean =
         app.getSystemService(android.os.PowerManager::class.java)?.isPowerSaveMode ?: false
 
-    /** Why the array must stay dark right now, or null. The rules live in [GuardState]. */
-    private fun suppressionNow(): Suppression? = GuardState(
+    /** Everything the guards need, sampled now. The rules themselves live in [GuardState]. */
+    private fun guardState(): GuardState = GuardState(
         screenOffOnly = _screenOffOnly.value,
         screenOn = screenOn(),
         quietEnabled = _quietEnabled.value,
@@ -473,7 +505,10 @@ class Store private constructor(private val app: Context) {
         batteryGuard = _batteryGuard.value,
         batteryPct = batteryPct(),
         batteryMinPct = _batteryMinPct.value,
-    ).suppression()
+    )
+
+    /** Why the array must stay dark right now, or null. */
+    private fun suppressionNow(): Suppression? = guardState().suppression()
 
     /** Scale applied to every frame — below 1 only inside a dimmed quiet window. */
     private fun dimFactor(): Float =
@@ -503,30 +538,48 @@ class Store private constructor(private val app: Context) {
     }
 
     private fun send(enabled: Boolean, alert: JSONObject?, arm: Boolean = true) {
-        if (alert == null) previewAlertId = null
         // quiet hours and the battery guard override the master switch, and hand the array back to
         // the system rather than merely blanking it, so the system's own alerts still work
-        val suppressed = suppressionNow()
-        _suppression.value = suppressed
+        val guards = guardState()
+        val suppressed = guards.suppression()
+        _suppression.value = suppressed          // the UI still explains the always-on look
+        // A transient top layer — a notification flash or a Test preview — lights through the global
+        // "only while the screen is off" switch, because that switch is about the always-on look.
+        // Every other reason to stay dark still applies to it. A foreground "while this app is open"
+        // override is not transient and gets no such exemption.
+        val blocked = if (activeAlert != null) guards.alertSuppression() else suppressed
         val json = Bridge.stateJson(
-            enabled && suppressed == null,
+            enabled && blocked == null,
             _priority.value, _ambient.value, alert, _ambientTimeoutMs.value, arm, dimFactor(),
         )
         val active = backend()
         active.push(json)
-        // If Shizuku is driving, make sure a helper left running from an adb session lets go of the
-        // light array instead of fighting us for it.
-        if (active.transport == Transport.SHIZUKU) {
-            Bridge.writeState(
-                app,
-                Bridge.stateJson(
-                    false, _priority.value, _ambient.value, null, _ambientTimeoutMs.value, arm,
-                    dimFactor(),
-                ),
-            )
-        }
+        standDown(active.transport)
         _activeTransport.value = active.transport
         refreshStatus()
+    }
+
+    /**
+     * Tells whichever renderer is *not* driving to let the array go.
+     *
+     * Only one may hold a session. Both directions matter: an adb helper left over from an earlier
+     * session has to release when Shizuku takes over, and a Shizuku user service — which runs as a
+     * daemon and outlives the app — has to release when the user switches to the adb helper.
+     * Standing only the helper down left both processes driving the same eight LEDs.
+     *
+     * Never armed: being told to stand down is not a user action, and an armed window left behind
+     * here would still be open if this renderer later became the one driving.
+     */
+    private fun standDown(driving: Transport) {
+        val idle = Bridge.stateJson(
+            false, _priority.value, _ambient.value, null, _ambientTimeoutMs.value,
+            arm = false, dim = dimFactor(),
+        )
+        if (driving == Transport.SHIZUKU) {
+            Bridge.writeState(app, idle)
+        } else if (shizuku.state.value == ShizukuBackend.State.CONNECTED) {
+            shizuku.push(idle)
+        }
     }
 
     fun refreshStatus() {

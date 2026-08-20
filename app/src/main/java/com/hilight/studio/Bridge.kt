@@ -64,6 +64,14 @@ object Bridge {
             if (alert != null) put("alert", alert)
         }.toString()
 
+    /**
+     * Replaces the state document the ADB helper polls.
+     *
+     * Synchronized because the scratch file has one fixed name: two threads could each write it and
+     * then rename, so whichever payload lost the write race was the one promoted and the other push
+     * vanished. Only this app writes the state file, so serialising here is enough.
+     */
+    @Synchronized
     fun writeState(ctx: Context, json: String) {
         // Never let a bridge failure take the UI down with it.
         runCatching {

@@ -10,6 +10,7 @@ import android.content.Intent
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
+import android.os.Looper
 
 /**
  * Applies FOREGROUND rules: while a chosen app is on screen, HiLight holds that app's look.
@@ -21,16 +22,33 @@ class ForegroundWatcher : Service() {
 
     private lateinit var thread: HandlerThread
     private lateinit var handler: Handler
+    private val main = Handler(Looper.getMainLooper())
     private val store by lazy { Store.get(this) }
     private var lastPkg: String? = null
+
+    /**
+     * Set on the main thread when the service is going away.
+     *
+     * The poll below queries UsageStats over binder, so a tick can still be in flight when the
+     * service is destroyed — `removeCallbacksAndMessages` cannot recall one that already started.
+     * Checking this on the main thread, where the override is also cleared, keeps a late tick from
+     * re-applying an override with no watcher left alive to ever clear it.
+     */
+    private var stopped = false
 
     private val tick = object : Runnable {
         override fun run() {
             val pkg = currentForegroundPackage()
             if (pkg != null && pkg != lastPkg) {
                 lastPkg = pkg
-                val rule = store.ruleFor(pkg, Trigger.FOREGROUND)
-                store.setForegroundOverride(if (rule != null) pkg else null, rule)
+                // Store is a main-thread object: every other caller mutates it from there, and its
+                // override field and file writes are not synchronized.
+                main.post {
+                    if (!stopped) {
+                        val rule = store.ruleFor(pkg, Trigger.FOREGROUND)
+                        store.setForegroundOverride(if (rule != null) pkg else null, rule)
+                    }
+                }
             }
             handler.postDelayed(this, POLL_MS)
         }
@@ -45,9 +63,10 @@ class ForegroundWatcher : Service() {
     }
 
     override fun onDestroy() {
+        stopped = true
         handler.removeCallbacksAndMessages(null)
         thread.quitSafely()
-        store.setForegroundOverride(null, null)
+        main.post { store.setForegroundOverride(null, null) }
         super.onDestroy()
     }
 

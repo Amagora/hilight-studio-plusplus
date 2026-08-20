@@ -25,6 +25,22 @@ data class GuardState(
     /** Why the array must stay dark right now, or null if it may light. */
     fun suppression(): Suppression? {
         if (screenOffOnly && screenOn) return Suppression.SCREEN_ON
+        return alertSuppression()
+    }
+
+    /**
+     * Why a per-app notification flash must not fire right now, or null if it may.
+     *
+     * Everything [suppression] covers except the global "only while the screen is off" switch. That
+     * switch is about the always-on look: it says when a glow is worth having, not that the phone
+     * should stop telling you things. Letting it silence alerts made every per-app colour dead for
+     * as long as the screen was on, and left each rule's own screen-off checkbox — the control that
+     * actually means "only flash when I can't see the screen" — with nothing to do.
+     *
+     * Quiet hours and the two battery rules do still hold: being dark at 3am, or on a nearly flat
+     * phone, is the entire point of them.
+     */
+    fun alertSuppression(): Suppression? {
         // a dimmed quiet window is not a suppression: it still lights, just far lower
         if (quietEnabled && !quietDim && inQuietWindow) return Suppression.QUIET_HOURS
         // Battery Saver is a direct request to stop spending power on extras, so it outranks the

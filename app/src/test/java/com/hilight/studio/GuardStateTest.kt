@@ -86,6 +86,50 @@ class GuardStateTest {
         )
     }
 
+    // ---------------------------------------------------------------- notification flashes
+
+    @Test
+    fun `the screen-off-only switch darkens the always-on look but not a flash`() {
+        val s = GuardState(screenOffOnly = true, screenOn = true)
+        assertEquals(Suppression.SCREEN_ON, s.suppression())
+        assertNull(s.alertSuppression())
+    }
+
+    @Test
+    fun `quiet hours silence a flash too`() {
+        val s = GuardState(quietEnabled = true, inQuietWindow = true)
+        assertEquals(Suppression.QUIET_HOURS, s.alertSuppression())
+    }
+
+    @Test
+    fun `battery saver silences a flash too`() {
+        assertEquals(
+            Suppression.POWER_SAVER,
+            GuardState(powerSaveMode = true).alertSuppression(),
+        )
+    }
+
+    @Test
+    fun `a flat battery silences a flash too`() {
+        assertEquals(
+            Suppression.LOW_BATTERY,
+            GuardState(batteryPct = 2).alertSuppression(),
+        )
+    }
+
+    @Test
+    fun `a dimmed quiet window still lets a flash through`() {
+        val s = GuardState(quietEnabled = true, quietDim = true, inQuietWindow = true)
+        assertNull(s.alertSuppression())
+    }
+
+    @Test
+    fun `screen on plus a real reason still silences a flash`() {
+        // the exemption is for the screen switch alone, not a blanket pass
+        val s = GuardState(screenOffOnly = true, screenOn = true, powerSaveMode = true)
+        assertEquals(Suppression.POWER_SAVER, s.alertSuppression())
+    }
+
     @Test
     fun `quiet hours outrank battery saver`() {
         assertEquals(

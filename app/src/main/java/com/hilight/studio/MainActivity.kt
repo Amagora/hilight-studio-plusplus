@@ -51,7 +51,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -107,10 +110,16 @@ private fun App(store: Store) {
     val haptics = LocalHapticFeedback.current
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            store.refreshStatus()
-            delay(1500)
+    // Tied to the lifecycle, not just the composition: a plain LaunchedEffect keeps its coroutine
+    // running once the activity stops, so this polled the helper over binder and file I/O every 1.5s
+    // in the background, for a screen nobody was looking at.
+    val owner = LocalLifecycleOwner.current
+    LaunchedEffect(owner) {
+        owner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                store.refreshStatus()
+                delay(1500)
+            }
         }
     }
 
