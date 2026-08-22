@@ -29,8 +29,8 @@ android {
         // supported hardware prevents installation on devices the renderer cannot support.
         minSdk = 37
         targetSdk = 37
-        versionCode = 6
-        versionName = "1.0.5"
+        versionCode = 7
+        versionName = "1.0.6"
     }
 
     signingConfigs {
@@ -47,7 +47,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            optimization {
+                enable = true
+            }
             // Public APKs use the permanent release certificate when signing material is present
             // and remain non-debuggable. The stable certificate enables future in-place updates;
             // Play Protect reputation checks are separate and are not guaranteed by signing alone.
@@ -86,4 +88,7 @@ dependencies {
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
     testImplementation("junit:junit:4.13.2")
+    // Android's org.json methods are framework stubs in local JVM tests; this supplies the real
+    // implementation for preference/state round-trip tests and is not packaged in the APK.
+    testImplementation("org.json:json:20240303")
 }

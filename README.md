@@ -19,12 +19,15 @@ Control the eight-LED HiLight array on Pixel 11 Pro devices.
 
 - Solid colours and animated patterns across all eight LEDs
 - Per-app rules for foreground use and notifications
+- Customisable microphone and camera activity rules, with any built-in animation and colour, for any
+  app or one selected app
 - Per-contact rules: a colour for one person or one chat, picked from the chats HiLight has seen
 - Saved presets with import and export
 - Wallpaper-derived colours and a Quick Settings tile
 - Quiet hours, Do Not Disturb, Battery Saver, and low-battery controls
 - English and Japanese, selectable per app from Android's own language settings
-- Renderer access through Shizuku or an ADB-started helper, with no root required
+- Automatic root access when available, with Shizuku and ADB as fallbacks
+- Manual update checks against the project's GitHub releases
 
 ## Screenshots
 
@@ -50,19 +53,25 @@ For now, install HiLight Studio with ADB. Play Protect may block direct installs
 3. From the folder containing the APK, run:
 
 ```bash
-adb install -r HiLight-Studio-v1.0.5-experimental-signed.apk
+adb install -r HiLight-Studio-v1.0.6-experimental-signed.apk
 ```
 
 If you previously installed v1.0.3 or an older debug-signed build, uninstall it once before installing a permanently signed release because the signing certificates are different:
 
 ```bash
 adb uninstall com.hilight.studio
-adb install HiLight-Studio-v1.0.5-experimental-signed.apk
+adb install HiLight-Studio-v1.0.6-experimental-signed.apk
 ```
 
-The published APK is an experimental release signed with HiLight Studio's permanent release certificate. v1.0.5 updates v1.0.4 normally, and future signed releases can do the same.
+The published APK is an experimental release signed with HiLight Studio's permanent release certificate. v1.0.6 updates v1.0.5 normally, and future signed releases can do the same.
 
-HiLight Studio needs shell-level access to the Android lights service. Choose one setup method below. Access must be restored after every reboot.
+HiLight Studio needs privileged access to the Android lights service. The renderer must be restarted after every reboot.
+
+### Root
+
+If the phone is rooted, open HiLight Studio and turn it on. The app detects root automatically and
+uses it instead of Shizuku or ADB. Approve the one-time request from your root manager when it
+appears; no other setup is needed.
 
 ### Shizuku
 
@@ -116,7 +125,10 @@ adb shell dumpsys lights | grep -c "Session token="
 
 There should be exactly one. If there are more, run the reset command and then the start command again.
 
-After either setup method, grant **Notification access** for notification rules and **Usage access** for foreground-app rules. Turn on **Live**, then choose a look in **Style**. A new installation starts with its always-on style set to **Off**.
+After setup, grant **Notification access** for notification rules and **Usage access** for
+foreground-app rules. Privacy activity rules observe Android's active microphone or camera state in
+the privileged renderer and do not need either permission. Turn on **Live**, then choose a look in
+**Style**. A new installation starts with its always-on style set to **Off**.
 
 ## Safety limits
 
@@ -124,6 +136,8 @@ The renderer enforces these limits even if app state is edited:
 
 - Ambient effects stop after 30 seconds by default and can be raised to 5 minutes.
 - Notification effects are limited to 1 minute.
+- Privacy activity rules run only while the microphone or camera remains active. Their default rhythm
+  is 10 seconds on, 10 seconds off, with a 1-minute maximum per continuous use.
 - Sustained brightness tapers after 10 seconds of continuous light.
 - The array can be active for at most half of any 10-minute window.
 - Battery Saver, low-battery, quiet-hours, screen-state, and Do Not Disturb rules can pause output.
@@ -134,7 +148,12 @@ See [Technical details](docs/TECHNICAL.md) for the renderer architecture, hardwa
 
 ## Privacy
 
-HiLight Studio has no internet permission, analytics, account system, or telemetry. App rules and presets stay on the device. Notification and usage access are optional and are used locally for the rules you enable.
+HiLight Studio has no analytics, account system, or telemetry. It uses the internet only when you
+tap **Check for updates** under Setup, which fetches public release information from GitHub. No app
+rules, notification data, or settings are sent. App rules and presets stay on the device.
+Notification and usage access are optional and are used locally for the rules you enable. Privacy
+activity rules observe only whether Android reports the microphone or camera as active; HiLight never
+reads or records audio, video, or their contents.
 
 Per-contact rules read the sender's name from the notification itself, so they need no contacts permission — picking a contact by hand uses the system picker, which hands over only the row you tap. HiLight remembers the names of chats it has seen so the picker needs no typing; that list is stored on the device, is capped, and can be cleared at any time with **Forget remembered chats** under Setup. Message text is never stored, never logged, and never included in anything the notification inspector copies or shares.
 

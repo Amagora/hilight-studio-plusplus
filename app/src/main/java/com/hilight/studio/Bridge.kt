@@ -4,13 +4,14 @@ import android.content.Context
 import android.os.SystemClock
 import android.util.Log
 import org.json.JSONObject
+import org.json.JSONArray
 import java.io.File
 
 /**
  * File channel used by the ADB transport.
  *
- * Cross-UID binder is not available there: the helper runs as the adb shell UID (2000) so that it can
- * hold CONTROL_DEVICE_LIGHTS, and a shell process that touches a ContentProvider gets killed by
+ * Cross-UID binder is not available there: the helper runs as the adb shell UID (2000), or as uid 0
+ * for the root transport, and a shell process that touches a ContentProvider gets killed by
  * ActivityManager. So state and status are exchanged as two small JSON files. (The Shizuku transport
  * has a real binder and does not use any of this.)
  */
@@ -52,15 +53,25 @@ object Bridge {
         arm: Boolean = true,
         /** scales every frame, ambient and alert alike — used by dimmed quiet hours */
         dim: Float = 1f,
+        privacyRules: List<PrivacyRule> = emptyList(),
+        privacyObserverEnabled: Boolean = false,
+        privacyOutputEnabled: Boolean = privacyObserverEnabled,
+        stateRevision: Long = 0,
     ): String =
         JSONObject().apply {
-            put("v", 1)
+            put("v", 2)
+            put("stateRevision", stateRevision)
             put("enabled", enabled)
             put("priority", priority)
             put("ambientTimeoutMs", ambientTimeoutMs)
             put("arm", arm)
             put("dim", dim.toDouble())
             put("ambient", ambient.toJson())
+            put("privacyObserverEnabled", privacyObserverEnabled)
+            put("privacyOutputEnabled", privacyOutputEnabled)
+            put("privacyRules", JSONArray().also { out ->
+                privacyRules.filter { it.enabled }.forEach { out.put(it.toRendererJson()) }
+            })
             if (alert != null) put("alert", alert)
         }.toString()
 
@@ -98,6 +109,8 @@ object Bridge {
                 alive = age in -5_000..4_000,
                 ageMs = age,
                 pid = o.optInt("pid", -1),
+                uid = o.optInt("uid", -1),
+                owner = o.optString("owner", "adb"),
                 ledCount = o.optInt("ledCount", 0),
                 sessionOpen = o.optBoolean("session", false),
                 mode = o.optString("mode", "-"),
@@ -105,6 +118,10 @@ object Bridge {
                 ambientHeld = o.optBoolean("ambientHeld", false),
                 resting = o.optBoolean("resting", false),
                 dutyPct = o.optInt("dutyPct", 0),
+                appliedStateRevision = o.optLong("appliedStateRevision", 0),
+                privacyObserverEnabled = o.optBoolean("privacyObserverEnabled", false),
+                privacyObserverState = o.optString("privacyObserverState", "stopped"),
+                privacyPhase = o.optString("privacyPhase", "inactive"),
             )
         } catch (t: Throwable) {
             Log.w(TAG, "unreadable status", t)
@@ -120,6 +137,7 @@ object Bridge {
         durationMs: Int,
         speedMs: Int,
         brightness: Float,
+        source: AlertSource,
     ): JSONObject = JSONObject().apply {
         put("id", id)
         put("pattern", pattern.key)
@@ -127,6 +145,7 @@ object Bridge {
         put("durationMs", durationMs)
         put("speedMs", speedMs)
         put("brightness", brightness.toDouble())
+        put("source", source.key)
         put("spread", true)
         put("randomIntervalMs", 500)
         put("randomPerLed", true)
