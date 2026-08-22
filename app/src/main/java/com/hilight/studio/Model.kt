@@ -122,9 +122,42 @@ data class AppRule(
     val onlyWhenScreenOff: Boolean = false,
     /** only fire when the title or text contains this, case-insensitive; empty means anything */
     val keyword: String = "",
+    /**
+     * Per-conversation rules — "green when Sujay messages on WhatsApp".
+     *
+     * [conversationKey] is the notification's `shortcutId`, the stable per-chat id. It is filled in
+     * the first time a matching notification is seen, even for a rule created from the contact
+     * picker, after which renaming the contact can no longer break the rule. [conversationName] is
+     * the fallback for apps that set no shortcutId, and what the card shows.
+     */
+    val conversationKey: String? = null,
+    val conversationName: String? = null,
+    /** also fire when this person speaks inside a group, not only in their own chat */
+    val includeGroups: Boolean = false,
+    /**
+     * Whether the chat this rule was made from is itself a group.
+     *
+     * Carried on the rule rather than looked up, because the learned-chat list is capped and a rule
+     * made from the contact picker was never in it at all — so the card had no way to tell a group
+     * from a person, and the editor could not explain why the "also in groups" switch is irrelevant
+     * for a rule that already names a group.
+     */
+    val conversationIsGroup: Boolean = false,
 ) {
     /** The catch-all rule, which matches any app without one of its own. */
     val isCatchAll: Boolean get() = pkg == ANY_APP
+
+    /** True for a rule scoped to one chat rather than to a whole app. */
+    val isConversationRule: Boolean
+        get() = !conversationKey.isNullOrBlank() || !conversationName.isNullOrBlank()
+
+    /**
+     * Identity for storage.
+     *
+     * Package plus trigger used to be enough, but an app can now hold several rules — one per
+     * conversation, plus a plain one for everything else — so the conversation has to be part of it.
+     */
+    val id: String get() = "$pkg|${trigger.name}|${conversationKey ?: conversationName ?: ""}"
 
     fun toPrefsJson(): JSONObject = JSONObject().apply {
         put("pkg", pkg)
@@ -139,6 +172,10 @@ data class AppRule(
         put("brightness", brightness.toDouble())
         put("onlyWhenScreenOff", onlyWhenScreenOff)
         put("keyword", keyword)
+        conversationKey?.let { put("conversationKey", it) }
+        conversationName?.let { put("conversationName", it) }
+        put("includeGroups", includeGroups)
+        put("conversationIsGroup", conversationIsGroup)
     }
 
     companion object {
@@ -159,6 +196,10 @@ data class AppRule(
             brightness = o.optDouble("brightness", 1.0).toFloat(),
             onlyWhenScreenOff = o.optBoolean("onlyWhenScreenOff", false),
             keyword = o.optString("keyword", ""),
+            conversationKey = o.optString("conversationKey", "").takeIf { it.isNotEmpty() },
+            conversationName = o.optString("conversationName", "").takeIf { it.isNotEmpty() },
+            includeGroups = o.optBoolean("includeGroups", false),
+            conversationIsGroup = o.optBoolean("conversationIsGroup", false),
         )
     }
 }

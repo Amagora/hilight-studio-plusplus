@@ -4,6 +4,21 @@ All notable changes to HiLight Studio are documented here.
 
 ## [Unreleased]
 
+- Added **per-contact rules**: a colour for one person or one chat, so a message from a chosen contact
+  lights the array differently from everything else in the same app. Works with WhatsApp, Google
+  Messages, Telegram, Signal, Slack, Discord and anything else that names the sender in its
+  notification, and needs no permission beyond the notification access the app already asks for.
+- Chats are never typed in. HiLight offers the chats it has already seen, the system contact picker,
+  or a "learn the next message" mode that captures the name exactly as the app writes it. A rule
+  remembers the chat's stable id on first sighting, so renaming a contact no longer breaks it.
+- Added a **notification inspector** under Setup, which shows what HiLight reads from each
+  notification and can be copied or shared to explain why a rule is not firing. Message text is never
+  shown and never exported.
+- Added **Forget remembered chats** under Setup, which clears the remembered chat names without
+  touching existing rules.
+- Rule cards now show when a rule last matched, so a rule that never fires is visibly a rule that
+  never matched rather than an array that is broken.
+
 ## [1.0.4-experimental] - 2026-08-20
 
 - Released the first APK signed with HiLight Studio's permanent release certificate, establishing

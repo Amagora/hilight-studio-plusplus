@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -99,6 +100,9 @@ fun SetupScreen(store: Store) {
 
     var notifAccess by remember { mutableStateOf(hasNotificationAccess(ctx)) }
     var usageAccess by remember { mutableStateOf(ForegroundWatcher.hasUsageAccess(ctx)) }
+    var inspecting by remember { mutableStateOf(false) }
+    var forgetting by remember { mutableStateOf(false) }
+    val conversations by store.conversations.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -207,6 +211,22 @@ fun SetupScreen(store: Store) {
         FilledTonalButton(
             onClick = { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
         ) { ButtonLabel("Open notification access") }
+        Caption("Shows what HiLight reads from each notification. No message text.")
+        TextButton(onClick = { inspecting = true }) { ButtonLabel("Notification inspector") }
+        // The chat picker's convenience comes from a list of real contact names held on the device,
+        // so there has to be a way to be rid of it without uninstalling. Rules keep their own copy of
+        // the name they match on, so clearing this list leaves working rules working.
+        Caption(
+            if (conversations.isEmpty()) {
+                "No chats remembered yet. Chats are listed here so per-contact rules need no typing."
+            } else {
+                "${conversations.size} chat names remembered on this device, so per-contact rules " +
+                    "need no typing. Existing rules keep working if you clear them."
+            }
+        )
+        if (conversations.isNotEmpty()) {
+            TextButton(onClick = { forgetting = true }) { ButtonLabel("Forget remembered chats") }
+        }
     }
 
     PixelCard {
@@ -239,6 +259,36 @@ fun SetupScreen(store: Store) {
         PixelSlider("Priority", priority.toFloat(), -10f..10f, { store.setPriority(it.toInt()) }) {
             it.toInt().toString()
         }
+    }
+
+    if (inspecting) {
+        NotificationInspectorDialog(store) { inspecting = false }
+    }
+
+    if (forgetting) {
+        AlertDialog(
+            onDismissRequest = { forgetting = false },
+            shape = MaterialTheme.shapes.extraLarge,
+            title = { Text("Forget remembered chats?") },
+            text = {
+                Text(
+                    "The list the per-contact picker offers is cleared. Rules you have already made " +
+                        "keep working, and chats are remembered again as messages arrive.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        store.forgetConversations()
+                        forgetting = false
+                    },
+                ) { ButtonLabel("Forget them") }
+            },
+            dismissButton = {
+                TextButton(onClick = { forgetting = false }) { ButtonLabel("Keep them") }
+            },
+        )
     }
 }
 
