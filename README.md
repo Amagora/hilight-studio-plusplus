@@ -50,17 +50,17 @@ For now, install HiLight Studio with ADB. Play Protect may block direct installs
 3. From the folder containing the APK, run:
 
 ```bash
-adb install -r HiLight-Studio-v1.0.4-experimental-signed.apk
+adb install -r HiLight-Studio-v1.0.5-experimental-signed.apk
 ```
 
-If you previously installed v1.0.3 or an older debug-signed build, uninstall it once before installing v1.0.4 because the signing certificates are different:
+If you previously installed v1.0.3 or an older debug-signed build, uninstall it once before installing a permanently signed release because the signing certificates are different:
 
 ```bash
 adb uninstall com.hilight.studio
-adb install HiLight-Studio-v1.0.4-experimental-signed.apk
+adb install HiLight-Studio-v1.0.5-experimental-signed.apk
 ```
 
-The published APK is an experimental release signed with HiLight Studio's permanent release certificate. Future signed releases can update v1.0.4 normally.
+The published APK is an experimental release signed with HiLight Studio's permanent release certificate. v1.0.5 updates v1.0.4 normally, and future signed releases can do the same.
 
 HiLight Studio needs shell-level access to the Android lights service. Choose one setup method below. Access must be restored after every reboot.
 

@@ -4,6 +4,8 @@ All notable changes to HiLight Studio are documented here.
 
 ## [Unreleased]
 
+## [1.0.5-experimental] - 2026-08-22
+
 - Added **Japanese**. Every user-visible string moved out of the code and into resources, and the app
   now declares its languages, so Android's own per-app language picker can show HiLight in Japanese
   while the rest of the phone stays in English.
