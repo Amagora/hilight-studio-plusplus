@@ -23,6 +23,7 @@ Control the eight-LED HiLight array on Pixel 11 Pro devices.
 - Saved presets with import and export
 - Wallpaper-derived colours and a Quick Settings tile
 - Quiet hours, Do Not Disturb, Battery Saver, and low-battery controls
+- English and Japanese, selectable per app from Android's own language settings
 - Renderer access through Shizuku or an ADB-started helper, with no root required
 
 ## Screenshots

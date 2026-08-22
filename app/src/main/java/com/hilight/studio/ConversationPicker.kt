@@ -55,6 +55,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -136,18 +138,32 @@ fun knownConversation(rule: AppRule, known: List<ConversationRef>): Conversation
  * Deliberately coarse. The only question these lines answer is whether a rule is alive or quietly
  * broken, and to the minute is plenty for that — while an exact timestamp invites the reader to work
  * out arithmetic they do not care about.
+ *
+ * Composable because the wording is now resources, and the counted forms are plurals: English
+ * inflects the unit where Japanese does not, and no amount of concatenation gets both right. Both
+ * call sites are already composables, so this costs them nothing.
+ *
+ * The counts are worked out before the branch that uses them, which is safe because each is only
+ * read where the branch above it has already bounded it — and a missing stamp is caught first, so
+ * the nonsense difference it would produce is never measured.
  */
+@Composable
 fun relativeAgo(stampMs: Long, nowMs: Long = System.currentTimeMillis()): String {
-    if (stampMs <= 0L) return "a while ago"
     val diff = nowMs - stampMs
-    val hours = diff / 3_600_000L
-    val days = diff / 86_400_000L
+    val minutes = (diff / 60_000L).toInt()
+    val hours = (diff / 3_600_000L).toInt()
+    val days = (diff / 86_400_000L).toInt()
     return when {
-        diff < 60_000L -> "just now"             // also covers a clock that has moved backwards
-        diff < 3_600_000L -> "${diff / 60_000L} min ago"
-        hours < 24L -> if (hours == 1L) "1 hour ago" else "$hours hours ago"
-        days < 7L -> if (days == 1L) "yesterday" else "$days days ago"
-        else -> "over a week ago"
+        stampMs <= 0L -> stringResource(R.string.chat_ago_unknown)
+        // also covers a clock that has moved backwards
+        diff < 60_000L -> stringResource(R.string.chat_ago_just_now)
+        diff < 3_600_000L -> pluralStringResource(R.plurals.chat_ago_minutes, minutes, minutes)
+        hours < 24 -> pluralStringResource(R.plurals.chat_ago_hours, hours, hours)
+        // One day is a word rather than a count, and not every language can express that as the
+        // "one" form of a plural, so it stays a branch here and a string of its own.
+        days == 1 -> stringResource(R.string.chat_ago_yesterday)
+        days < 7 -> pluralStringResource(R.plurals.chat_ago_days, days, days)
+        else -> stringResource(R.string.chat_ago_over_a_week)
     }
 }
 
@@ -183,20 +199,22 @@ fun RuleScopeDialog(appLabel: String, onDismiss: () -> Unit, onPick: (RuleScope)
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.extraLarge,
-        confirmButton = { TextButton(onClick = onDismiss) { ButtonLabel("Cancel") } },
-        title = { Text("What should this rule cover?") },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { ButtonLabel(stringResource(R.string.common_cancel)) }
+        },
+        title = { Text(stringResource(R.string.chat_scope_title)) },
         text = {
             Column {
                 ScopeRow(
                     icon = Icons.Rounded.Apps,
-                    title = "All notifications from $appLabel",
-                    subtitle = "Any chat, any sender.",
+                    title = stringResource(R.string.chat_scope_whole_app, appLabel),
+                    subtitle = stringResource(R.string.chat_scope_whole_app_hint),
                     onClick = { onPick(RuleScope.WHOLE_APP) },
                 )
                 ScopeRow(
                     icon = Icons.Rounded.Person,
-                    title = "One contact or chat",
-                    subtitle = "A colour for them alone, chosen from the chats HiLight has seen.",
+                    title = stringResource(R.string.chat_scope_one_chat),
+                    subtitle = stringResource(R.string.chat_scope_one_chat_hint),
                     onClick = { onPick(RuleScope.ONE_CHAT) },
                 )
             }
@@ -366,8 +384,10 @@ fun ConversationPickerDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.extraLarge,
-        confirmButton = { TextButton(onClick = onDismiss) { ButtonLabel("Cancel") } },
-        title = { Text("Choose a chat") },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { ButtonLabel(stringResource(R.string.common_cancel)) }
+        },
+        title = { Text(stringResource(R.string.chat_picker_title)) },
         text = {
             // One LazyColumn for everything: it is the only scroller here, which keeps the sections
             // and the list of chats out of the nested-scrolling trap.
@@ -376,7 +396,7 @@ fun ConversationPickerDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
-                    Caption("Which chat in $appLabel this rule watches.")
+                    Caption(stringResource(R.string.chat_picker_intro, appLabel))
                 }
 
                 item {
@@ -450,12 +470,10 @@ fun ConversationPickerDialog(
                         )
                     }
                     item {
-                        Caption(
-                            "No chats to list yet: HiLight has not seen a message from $appLabel."
-                        )
+                        Caption(stringResource(R.string.chat_no_chats_yet, appLabel))
                     }
                 } else {
-                    item { Caption("Chats HiLight has seen, newest first.") }
+                    item { Caption(stringResource(R.string.chat_seen_list_header)) }
                     // No item keys: two chats can share a name with no id between them, and a
                     // duplicate key is a crash rather than a cosmetic problem.
                     items(chats) { chat ->
@@ -472,16 +490,13 @@ fun ConversationPickerDialog(
 
                 if (contactFailed) {
                     item {
-                        Caption("That contact had no name to read. Try one of the other two ways.")
+                        Caption(stringResource(R.string.chat_contact_no_name))
                     }
                 }
 
                 if (unusable) {
                     item {
-                        Caption(
-                            "That chat has no name HiLight can compare and no stable id either, so a " +
-                                "rule for it could never fire. A rule for the whole app still works."
-                        )
+                        Caption(stringResource(R.string.chat_unusable))
                     }
                 }
             }
@@ -494,21 +509,15 @@ fun ConversationPickerDialog(
 private fun PickerActions(waiting: Boolean, onLearn: () -> Unit, onContacts: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = onLearn, enabled = !waiting, modifier = Modifier.fillMaxWidth()) {
-            ButtonLabel("Learn the next message")
+            ButtonLabel(stringResource(R.string.chat_learn_next))
         }
-        Caption(
-            "The surest way. The name comes from a real notification, so it is exactly what HiLight " +
-                "compares against later."
-        )
+        Caption(stringResource(R.string.chat_learn_next_hint))
         FilledTonalButton(onClick = onContacts, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Rounded.Contacts, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            ButtonLabel("Pick from contacts")
+            ButtonLabel(stringResource(R.string.chat_pick_contact))
         }
-        Caption(
-            "Opens the system picker, so HiLight reads only the contact you tap and never your " +
-                "address book. If the app shows a different name for them, the rule can miss."
-        )
+        Caption(stringResource(R.string.chat_pick_contact_hint))
     }
 }
 
@@ -523,33 +532,30 @@ private fun PickerActions(waiting: Boolean, onLearn: () -> Unit, onContacts: () 
  */
 @Composable
 private fun NoAccessBlock(onOpenSettings: () -> Unit, onStop: (() -> Unit)?) {
-    LivePill("Not listening", ok = false)
+    LivePill(stringResource(R.string.chat_not_listening), ok = false)
     Text(
-        "HiLight cannot watch for the next message yet.",
+        stringResource(R.string.chat_no_access_title),
         style = MaterialTheme.typography.bodyLarge,
     )
-    Caption(
-        "Without notification access HiLight sees no notifications at all, and Android withdraws " +
-            "that access on its own once an app has gone unused for a while."
-    )
+    Caption(stringResource(R.string.chat_no_access_body))
     Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
-        ButtonLabel("Open notification access")
+        ButtonLabel(stringResource(R.string.chat_open_notification_access))
     }
     if (onStop != null) {
-        TextButton(onClick = onStop) { ButtonLabel("Stop waiting") }
+        TextButton(onClick = onStop) { ButtonLabel(stringResource(R.string.chat_stop_waiting)) }
     }
 }
 
 /** Shown while [Store.startLearning] is armed and no message has arrived yet. */
 @Composable
 private fun WaitingBlock(appLabel: String, onStop: () -> Unit) {
-    LivePill("Listening", ok = true)
+    LivePill(stringResource(R.string.chat_listening), ok = true)
     Text(
-        "Waiting for the next message from $appLabel…",
+        stringResource(R.string.chat_waiting, appLabel),
         style = MaterialTheme.typography.bodyLarge,
     )
-    Caption("Open the chat you want and send something, or wait for them to write.")
-    TextButton(onClick = onStop) { ButtonLabel("Stop waiting") }
+    Caption(stringResource(R.string.chat_waiting_hint))
+    TextButton(onClick = onStop) { ButtonLabel(stringResource(R.string.chat_stop_waiting)) }
 }
 
 /** Shown once [Store.learned] has a chat, so the user can confirm it is the right one. */
@@ -561,19 +567,23 @@ private fun CapturedBlock(ref: ConversationRef?, onUse: () -> Unit, onAgain: () 
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            "Captured: $name — use this?",
+            stringResource(R.string.chat_captured, name),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f, fill = false),
         )
-        if (ref?.isGroup == true) ConversationBadge("Group")
+        if (ref?.isGroup == true) ConversationBadge(stringResource(R.string.chat_badge_group))
     }
     Caption(
-        if (ref?.key != null) "This chat came with a stable id, so renaming it will not break the rule."
-        else "No chat id came with it, so the rule will match on the name."
+        if (ref?.key != null) stringResource(R.string.chat_captured_has_id)
+        else stringResource(R.string.chat_captured_no_id)
     )
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Button(onClick = onUse, modifier = Modifier.weight(1f)) { ButtonLabel("Use this chat") }
-        TextButton(onClick = onAgain, modifier = Modifier.weight(1f)) { ButtonLabel("Wait for another") }
+        Button(onClick = onUse, modifier = Modifier.weight(1f)) {
+            ButtonLabel(stringResource(R.string.chat_use_this))
+        }
+        TextButton(onClick = onAgain, modifier = Modifier.weight(1f)) {
+            ButtonLabel(stringResource(R.string.chat_wait_another))
+        }
     }
 }
 
@@ -606,9 +616,9 @@ private fun ConversationRow(ref: ConversationRef, onPick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                if (ref.isGroup) ConversationBadge("Group")
+                if (ref.isGroup) ConversationBadge(stringResource(R.string.chat_badge_group))
             }
-            Caption("Last message ${relativeAgo(ref.lastSeenMs)}")
+            Caption(stringResource(R.string.chat_last_message, relativeAgo(ref.lastSeenMs)))
         }
     }
 }

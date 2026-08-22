@@ -54,12 +54,25 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+/**
+ * A rule's name as it should read now, rather than as it was stored.
+ *
+ * The catch-all rule has no app to be named after, so its label is written when the rule is created —
+ * which means a rule made while the phone was in Japanese would keep its Japanese name after a switch
+ * back to English, and the other way round. Resolving it at display time costs nothing and makes the
+ * stored label irrelevant for the one rule whose label was never really data.
+ */
+@Composable
+fun ruleLabel(rule: AppRule): String =
+    if (rule.isCatchAll) stringResource(R.string.rules_any_app) else rule.label
 
 private data class InstalledApp(val pkg: String, val label: String, val info: ApplicationInfo?)
 
@@ -75,13 +88,13 @@ fun AppRulesScreen(store: Store) {
     var editing by remember { mutableStateOf<AppRule?>(null) }
 
     PixelCard(tone = 2) {
-        SectionTitle("Per-app rules")
-        Caption("Choose an app, then what HiLight does when it notifies you — or while it is open.")
-        Caption("Messaging apps go one step further: a colour for a single contact or chat.")
+        SectionTitle(stringResource(R.string.rules_section_title))
+        Caption(stringResource(R.string.rules_intro_apps))
+        Caption(stringResource(R.string.rules_intro_messaging))
         Button(onClick = { picking = true }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Rounded.Add, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            ButtonLabel("Add app rule")
+            ButtonLabel(stringResource(R.string.rules_add))
         }
     }
 
@@ -250,13 +263,13 @@ private fun RuleCard(
                 }
                 Column {
                     if (perChat) {
-                        Caption(rule.label)
+                        Caption(ruleLabel(rule))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Text(
-                                rule.conversationName ?: rule.label,
+                                rule.conversationName ?: ruleLabel(rule),
                                 style = MaterialTheme.typography.titleMedium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -270,24 +283,40 @@ private fun RuleCard(
                             // which is exactly what conversationIsGroup was added to prevent.
                             when {
                                 chat?.isGroup == true || rule.conversationIsGroup ->
-                                    ConversationBadge("Group")
+                                    ConversationBadge(stringResource(R.string.chat_badge_group))
 
-                                rule.includeGroups -> ConversationBadge("Groups too")
+                                rule.includeGroups ->
+                                    ConversationBadge(stringResource(R.string.rules_badge_groups_too))
                             }
                         }
                     } else {
-                        Text(rule.label, style = MaterialTheme.typography.titleMedium)
+                        Text(ruleLabel(rule), style = MaterialTheme.typography.titleMedium)
                     }
+                    // One format string rather than three fragments joined with a separator: the
+                    // order of "what it looks like" and "when it fires" is not the same in every
+                    // language, and neither is the punctuation between them.
                     Caption(
-                        (if (rule.randomColor) "Random colour" else rule.pattern.label) + " · " +
-                            if (rule.trigger == Trigger.NOTIFICATION) "on notification" else "while open"
+                        stringResource(
+                            R.string.rules_card_summary,
+                            if (rule.randomColor) stringResource(R.string.rules_random_colour)
+                            else stringResource(rule.pattern.labelRes),
+                            if (rule.trigger == Trigger.NOTIFICATION)
+                                stringResource(R.string.rules_trigger_notification_short)
+                            else stringResource(R.string.rules_trigger_foreground_short),
+                        )
                     )
                     if (rule.trigger == Trigger.NOTIFICATION) {
                         // "Matched", not "fired": the match is recorded even when a guard — quiet
                         // hours, the battery floor, the master switch — swallowed the flash, and
                         // "your rule matched but quiet hours ate it" is the more useful answer.
                         Caption(
-                            lastMatchedMs?.let { "Last matched ${relativeAgo(it)}" } ?: "Not matched yet"
+                            if (lastMatchedMs != null) {
+                                stringResource(
+                                    R.string.rules_last_matched, relativeAgo(lastMatchedMs),
+                                )
+                            } else {
+                                stringResource(R.string.rules_not_matched_yet)
+                            }
                         )
                     }
                 }
@@ -312,9 +341,15 @@ private fun RuleCard(
             heightDp = 34,
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FilledTonalButton(onClick = onEdit, modifier = Modifier.weight(1f)) { ButtonLabel("Edit") }
-            FilledTonalButton(onClick = onTest, modifier = Modifier.weight(1f)) { ButtonLabel("Test") }
-            TextButton(onClick = onDelete, modifier = Modifier.weight(1f)) { ButtonLabel("Delete") }
+            FilledTonalButton(onClick = onEdit, modifier = Modifier.weight(1f)) {
+                ButtonLabel(stringResource(R.string.common_edit))
+            }
+            FilledTonalButton(onClick = onTest, modifier = Modifier.weight(1f)) {
+                ButtonLabel(stringResource(R.string.common_test))
+            }
+            TextButton(onClick = onDelete, modifier = Modifier.weight(1f)) {
+                ButtonLabel(stringResource(R.string.common_delete))
+            }
         }
     }
 }
@@ -337,17 +372,23 @@ private fun AppPickerDialog(onDismiss: () -> Unit, onPick: (InstalledApp) -> Uni
         }
     }
 
+    // The catch-all is not an installed app, so its name is HiLight's own word for it rather than
+    // something the package manager can be asked for — and it travels into the rule as the label.
+    val anyAppLabel = stringResource(R.string.rules_any_app)
+
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.extraLarge,
-        confirmButton = { TextButton(onClick = onDismiss) { ButtonLabel("Cancel") } },
-        title = { Text("Choose an app") },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { ButtonLabel(stringResource(R.string.common_cancel)) }
+        },
+        title = { Text(stringResource(R.string.rules_picker_title)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    label = { Text("Search") },
+                    label = { Text(stringResource(R.string.rules_picker_search)) },
                     shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -359,7 +400,7 @@ private fun AppPickerDialog(onDismiss: () -> Unit, onPick: (InstalledApp) -> Uni
                             Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    onPick(InstalledApp(AppRule.ANY_APP, "Any app", null))
+                                    onPick(InstalledApp(AppRule.ANY_APP, anyAppLabel, null))
                                 }
                                 .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -369,8 +410,8 @@ private fun AppPickerDialog(onDismiss: () -> Unit, onPick: (InstalledApp) -> Uni
                                 Icon(Icons.Rounded.Apps, contentDescription = null)
                             }
                             Column {
-                                Text("Any app", style = MaterialTheme.typography.bodyLarge)
-                                Caption("Catch-all for apps without their own rule")
+                                Text(anyAppLabel, style = MaterialTheme.typography.bodyLarge)
+                                Caption(stringResource(R.string.rules_any_app_caption))
                             }
                         }
                     }
@@ -449,12 +490,23 @@ private fun RuleEditorDialog(
         shape = MaterialTheme.shapes.extraLarge,
         title = {
             Text(
-                if (r.isConversationRule) "${r.label} › ${r.conversationName.orEmpty()}"
-                else r.label
+                if (r.isConversationRule) {
+                    stringResource(
+                        R.string.rules_editor_title_chat,
+                        ruleLabel(r),
+                        r.conversationName.orEmpty(),
+                    )
+                } else {
+                    ruleLabel(r)
+                }
             )
         },
-        confirmButton = { Button(onClick = { onSave(r) }) { ButtonLabel("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { ButtonLabel("Cancel") } },
+        confirmButton = {
+            Button(onClick = { onSave(r) }) { ButtonLabel(stringResource(R.string.common_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { ButtonLabel(stringResource(R.string.common_cancel)) }
+        },
         text = {
             Column(
                 Modifier
@@ -477,17 +529,21 @@ private fun RuleEditorDialog(
                     // A per-chat rule is resolved from a posted notification, so "while open" has
                     // nothing to read a sender out of. Offering it here would only let the user
                     // build a rule that can never match.
-                    Caption("Per-chat rules fire on notifications.")
+                    Caption(stringResource(R.string.rules_per_chat_notifications_only))
                     ConversationMatchNote(
                         edited = r,
                         stored = rule,
                         onForgetKey = { r = r.copy(conversationKey = null) },
                     )
                 } else {
+                    // Both labels are read before the selector rather than inside its label lambda,
+                    // which is a plain function and so cannot reach a resource itself.
+                    val onNotification = stringResource(R.string.rules_trigger_notification)
+                    val whileOpen = stringResource(R.string.rules_trigger_foreground)
                     SegmentedSelector(
                         options = listOf(Trigger.NOTIFICATION, Trigger.FOREGROUND),
                         selected = r.trigger,
-                        label = { if (it == Trigger.NOTIFICATION) "On notification" else "While open" },
+                        label = { if (it == Trigger.NOTIFICATION) onNotification else whileOpen },
                         onSelect = { r = r.copy(trigger = it) },
                     )
                 }
@@ -498,7 +554,9 @@ private fun RuleEditorDialog(
                     onSelect = { r = r.copy(pattern = it) },
                 )
 
-                ToggleRow("Random colour each time", r.randomColor) { r = r.copy(randomColor = it) }
+                ToggleRow(
+                    stringResource(R.string.rules_random_colour_each_time), r.randomColor,
+                ) { r = r.copy(randomColor = it) }
                 if (!r.randomColor) {
                     ColorPicker(r.color, { r = r.copy(color = it) })
                 }
@@ -506,66 +564,66 @@ private fun RuleEditorDialog(
                 if (r.trigger == Trigger.NOTIFICATION) {
                     if (r.isConversationRule) {
                         if (chatIsGroup) {
-                            Caption("This chat is a group, so anything posted in it fires the rule.")
+                            Caption(stringResource(R.string.rules_chat_is_group))
                         } else {
-                            ToggleRow("Also when they post in a group", r.includeGroups) {
+                            ToggleRow(
+                                stringResource(R.string.rules_include_groups), r.includeGroups,
+                            ) {
                                 r = r.copy(includeGroups = it)
                             }
-                            Caption(
-                                "Left off, only their own chat lights this colour, so the group " +
-                                    "chatter they are part of stays dark."
-                            )
+                            Caption(stringResource(R.string.rules_include_groups_hint))
                         }
                     }
                     OutlinedTextField(
                         value = r.keyword,
                         onValueChange = { r = r.copy(keyword = it) },
-                        label = { Text("Only if it mentions (optional)") },
+                        label = { Text(stringResource(R.string.rules_keyword_label)) },
                         singleLine = true,
                         shape = MaterialTheme.shapes.medium,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     GatedDurationSlider(
-                        label = "Show for",
+                        label = stringResource(R.string.rules_show_for),
                         valueMs = r.durationMs,
                         minMs = 2_000,
                         safeMaxMs = Limits.WARN_ABOVE_MS,
                         extendedMaxMs = Limits.RULE_MAX_MS,
-                        unlockLabel = "Allow up to 1 minute",
-                        warnFirst = "Longer than 30 seconds?" to
-                            "Every notification from this app would light the array for that long, " +
-                                "which costs battery and is far beyond what stock HiLight does.",
-                        warnSecond = "Are you sure?" to
-                            "A busy app can fire often, so the LEDs may end up lit most of the time. " +
-                                "You can turn this back down at any time.",
+                        unlockLabel = stringResource(R.string.rules_allow_one_minute),
+                        warnFirst = stringResource(R.string.rules_duration_warn_first_title) to
+                            stringResource(R.string.rules_duration_warn_first_body),
+                        warnSecond = stringResource(R.string.rules_duration_warn_second_title) to
+                            stringResource(R.string.rules_duration_warn_second_body),
                         onChange = { r = r.copy(durationMs = it) },
                     )
-                    ToggleRow("Only when the screen is off", r.onlyWhenScreenOff) {
+                    ToggleRow(
+                        stringResource(R.string.rules_only_screen_off), r.onlyWhenScreenOff,
+                    ) {
                         r = r.copy(onlyWhenScreenOff = it)
                     }
                 }
                 if (r.pattern.usesSpeed) {
-                    PixelSlider("Time per cycle", r.speedMs.toFloat(), 150f..5000f, {
-                        r = r.copy(speedMs = it.toInt())
-                    }) { formatDuration(it.toInt()) }
-                    r.pattern.cycleMeaning?.let { Caption(it) }
+                    PixelSlider(
+                        stringResource(R.string.rules_time_per_cycle),
+                        r.speedMs.toFloat(),
+                        150f..5000f,
+                        { r = r.copy(speedMs = it.toInt()) },
+                    ) { formatDuration(it.toInt()) }
+                    r.pattern.cycleMeaningRes?.let { Caption(stringResource(it)) }
                 }
-                PixelSlider("Brightness", r.brightness, 0.05f..1f, {
-                    r = r.copy(brightness = it)
-                }) { "${(it * 100).toInt()}%" }
+                PixelSlider(
+                    stringResource(R.string.rules_brightness), r.brightness, 0.05f..1f,
+                    { r = r.copy(brightness = it) },
+                ) { stringResource(R.string.common_percent, (it * 100).toInt()) }
 
                 FilledTonalButton(onClick = { onTest(r) }, modifier = Modifier.fillMaxWidth()) {
-                    ButtonLabel("Test on the LEDs")
+                    ButtonLabel(stringResource(R.string.rules_test_on_leds))
                 }
 
                 // Last in the column, so it is the final thing read before Save. The save is not
                 // blocked: replacing a rule is sometimes exactly what the user means, and there is
                 // no way to keep both while they share an id. Only the silence was the problem.
                 if (replacesAnother) {
-                    Caption(
-                        "An existing rule for this app already covers that, and saving will replace " +
-                            "its settings with these."
-                    )
+                    Caption(stringResource(R.string.rules_replace_warning))
                 }
             }
         },
@@ -592,10 +650,9 @@ private fun ConversationMatchNote(edited: AppRule, stored: AppRule, onForgetKey:
 
     Caption(
         when {
-            hasKey -> "Matched by chat id, which survives the chat being renamed."
-            keyDropped -> "The stored chat id is dropped when you save, and a fresh one is learned " +
-                "the next time that chat messages."
-            else -> "Matched by name, so renaming the chat in ${edited.label} can stop it matching."
+            hasKey -> stringResource(R.string.rules_match_by_id)
+            keyDropped -> stringResource(R.string.rules_match_id_dropped)
+            else -> stringResource(R.string.rules_match_by_name, edited.label)
         }
     )
 
@@ -611,12 +668,10 @@ private fun ConversationMatchNote(edited: AppRule, stored: AppRule, onForgetKey:
     if (hasKey) {
         val withoutKey = edited.copy(conversationKey = null)
         if (withoutKey.isConversationRule && ConversationMatch.isMatchable(withoutKey)) {
-            TextButton(onClick = onForgetKey) { ButtonLabel("Re-learn this chat") }
-            Caption(
-                "Forgets the stored chat id and matches on the name instead, taking up the new id " +
-                    "the next time that chat messages — the repair for an id changed by a " +
-                    "reinstall or a restored backup."
-            )
+            TextButton(onClick = onForgetKey) {
+                ButtonLabel(stringResource(R.string.rules_relearn_chat))
+            }
+            Caption(stringResource(R.string.rules_relearn_hint))
         }
     }
 }

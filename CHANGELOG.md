@@ -4,6 +4,16 @@ All notable changes to HiLight Studio are documented here.
 
 ## [Unreleased]
 
+- Added **Japanese**. Every user-visible string moved out of the code and into resources, and the app
+  now declares its languages, so Android's own per-app language picker can show HiLight in Japanese
+  while the rest of the phone stays in English.
+- Terms are fixed by a glossary rather than translated string by string, so the same English word does
+  not become two Japanese ones. Product names (HiLight, Shizuku, ADB, LED) stay in Latin script, and
+  Android's own Japanese is followed for the system features HiLight talks about, so a button and the
+  Settings screen it opens agree with each other.
+- Two things extraction turned up that were bugs in English too: the Quick Settings tile chose its
+  accent colour by comparing a *label* to the word "Rainbow", and the catch-all rule stored its own
+  name, so a rule created in one language kept that name in the other.
 - Added **per-contact rules**: a colour for one person or one chat, so a message from a chosen contact
   lights the array differently from everything else in the same app. Works with WhatsApp, Google
   Messages, Telegram, Signal, Slack, Discord and anything else that names the sender in its

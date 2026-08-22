@@ -89,12 +89,19 @@ class ForegroundWatcher : Service() {
 
     private fun notification(): Notification {
         val nm = getSystemService(NotificationManager::class.java)
+        // A Service has no composition, so getString rather than stringResource. CHANNEL is the id
+        // the notification is registered under and is never read by a person; the name beside it is
+        // the label shown in the system notification settings, so that one is translated.
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL, "HiLight app watcher", NotificationManager.IMPORTANCE_MIN)
+            NotificationChannel(
+                CHANNEL,
+                getString(R.string.service_watcher_channel_name),
+                NotificationManager.IMPORTANCE_MIN,
+            )
         )
         return Notification.Builder(this, CHANNEL)
-            .setContentTitle("HiLight Studio")
-            .setContentText("Watching for apps with light rules")
+            .setContentTitle(getString(R.string.service_watcher_title))
+            .setContentText(getString(R.string.service_watcher_text))
             .setSmallIcon(R.drawable.hilight_logo)
             .setOngoing(true)
             .build()

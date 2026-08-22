@@ -379,7 +379,9 @@ class Store private constructor(private val app: Context) {
     }
 
     fun savePreset(name: String) {
-        val clean = name.trim().ifEmpty { "Preset ${_presets.value.size + 1}" }
+        // The caller supplies the fallback name: it is user-visible text, and only a composable can
+        // resolve it from resources. An empty name arriving here would be a bug in that caller.
+        val clean = name.trim()
         _presets.value = _presets.value.filterNot { it.name == clean } + Preset(clean, _ambient.value)
         persistPresets()
     }

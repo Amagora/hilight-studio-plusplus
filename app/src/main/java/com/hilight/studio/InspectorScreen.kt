@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.json.JSONArray
@@ -41,14 +43,10 @@ import org.json.JSONObject
  * and [peeksToJson]. This is the one screen whose whole purpose is to be pasted into a bug report,
  * which makes it the one screen where a private message would end up in a stranger's inbox. Only
  * names, ids and structural facts are surfaced; anything added here later must clear the same bar.
+ *
+ * The prose lives in `res/values/strings_inspector.xml`, where the same bar is restated, because a
+ * translation is one more place a message could be invited in.
  */
-
-/** Shown in the UI and repeated inside the export, so the guarantee travels with the data. */
-private const val PRIVACY_NOTE =
-    "Names, ids and structure only. Message text is never shown here and never exported."
-
-/** What a field the app left empty reads as. */
-private const val NONE = "none"
 
 /**
  * The recent notifications HiLight has seen, as a dialog.
@@ -61,19 +59,26 @@ fun NotificationInspectorDialog(store: Store, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val peeks by store.recentPeeks.collectAsStateWithLifecycle()
 
+    // Resolved up here because the taps below are not composable scopes, so stringResource cannot be
+    // called inside them. Only this constant prose is hoisted; the JSON still waits for the tap.
+    val privacyNote = stringResource(R.string.inspector_privacy_note)
+    val exportNote = stringResource(R.string.inspector_export_note, privacyNote)
+
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.extraLarge,
-        title = { Text("Notification inspector") },
-        confirmButton = { TextButton(onClick = onDismiss) { ButtonLabel("Close") } },
+        title = { Text(stringResource(R.string.inspector_title)) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { ButtonLabel(stringResource(R.string.common_close)) }
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 PixelCard(tone = 3) {
-                    Caption(PRIVACY_NOTE)
+                    Caption(privacyNote)
                     if (peeks.isNotEmpty()) {
                         Caption(
-                            if (peeks.size == 1) "The last notification HiLight saw."
-                            else "The last ${peeks.size} notifications HiLight saw, newest first."
+                            if (peeks.size == 1) stringResource(R.string.inspector_seen_one)
+                            else stringResource(R.string.inspector_seen_many, peeks.size)
                         )
                         Row(
                             Modifier.fillMaxWidth(),
@@ -82,28 +87,22 @@ fun NotificationInspectorDialog(store: Store, onDismiss: () -> Unit) {
                             // built on the tap rather than on every recomposition: the list changes
                             // while the dialog is open, every time a notification arrives
                             Button(
-                                onClick = { copyJson(ctx, peeksToJson(peeks)) },
+                                onClick = { copyJson(ctx, peeksToJson(peeks, exportNote)) },
                                 modifier = Modifier.weight(1f),
-                            ) { ButtonLabel("Copy as JSON") }
+                            ) { ButtonLabel(stringResource(R.string.inspector_copy_json)) }
                             TextButton(
-                                onClick = { shareJson(ctx, peeksToJson(peeks)) },
+                                onClick = { shareJson(ctx, peeksToJson(peeks, exportNote)) },
                                 modifier = Modifier.weight(1f),
-                            ) { ButtonLabel("Send") }
+                            ) { ButtonLabel(stringResource(R.string.inspector_send)) }
                         }
                     }
                 }
 
                 if (peeks.isEmpty()) {
                     PixelCard(tone = 3) {
-                        SectionTitle("Nothing seen yet")
-                        Caption(
-                            "Notifications appear here as they arrive, so leave this open — or " +
-                                "reopen it once one has landed."
-                        )
-                        Caption(
-                            "Nothing is seen at all without notification access. The list is kept " +
-                                "in memory only, so it empties whenever HiLight stops."
-                        )
+                        SectionTitle(stringResource(R.string.inspector_empty_title))
+                        Caption(stringResource(R.string.inspector_empty_body))
+                        Caption(stringResource(R.string.inspector_empty_access))
                     }
                 } else {
                     LazyColumn(Modifier.heightIn(max = 360.dp)) {
@@ -138,36 +137,53 @@ private fun PeekCard(peek: MessageInfo) {
             // "no name": the two look identical in the fields below, and the advice for each is the
             // opposite of the other's.
             when {
-                peek.readFailed -> LivePill("could not read", ok = false)
-                name != null -> LivePill("name found", ok = true)
-                else -> LivePill("no name", ok = false)
+                peek.readFailed ->
+                    LivePill(stringResource(R.string.inspector_pill_read_failed), ok = false)
+                name != null ->
+                    LivePill(stringResource(R.string.inspector_pill_name_found), ok = true)
+                else ->
+                    LivePill(stringResource(R.string.inspector_pill_no_name), ok = false)
             }
         }
         // Stated before the fields rather than after them, because it changes how every line below
         // should be read: those are missing values, not values an app chose to leave out.
         if (peek.readFailed) {
-            Caption(
-                "This notification could not be read, so the fields below are missing rather than " +
-                    "absent. That is a fault worth reporting with this output attached."
-            )
+            Caption(stringResource(R.string.inspector_read_failed_note))
         }
-        Caption("Shortcut id: ${orNone(peek.shortcutId)}")
-        Caption("Sender: ${orNone(peek.sender)}")
-        Caption("Conversation: ${orNone(peek.conversationTitle)}")
-        Caption("Title: ${orNone(peek.title)}")
-        Caption("MessagingStyle: ${if (peek.isMessagingStyle) "detected" else "not detected"}")
+        Field(R.string.inspector_field_shortcut_id, peek.shortcutId)
+        Field(R.string.inspector_field_sender, peek.sender)
+        Field(R.string.inspector_field_conversation, peek.conversationTitle)
+        Field(R.string.inspector_field_title, peek.title)
+        // The one field whose value is a state rather than something the app supplied, so both
+        // readings are whole lines and a translator can reword either without a value slot.
+        Caption(
+            stringResource(
+                if (peek.isMessagingStyle) R.string.inspector_field_messaging_style_detected
+                else R.string.inspector_field_messaging_style_not_detected
+            )
+        )
         if (peek.isGroupSummary) {
-            Caption("Group summary, which HiLight ignores so a chat cannot fire twice.")
+            Caption(stringResource(R.string.inspector_group_summary))
         }
         // Reassurance only where it is true. A failed read has no name either, and telling the user
         // their app simply names nobody would send them away satisfied from a bug.
         if (name == null && !peek.readFailed) {
-            Caption(
-                "This app gave no name to match on, so no per-chat rule can be written from it. A " +
-                    "rule for the whole app still works."
-            )
+            Caption(stringResource(R.string.inspector_no_name_note))
         }
     }
+}
+
+/**
+ * One `label: value` line, where a field the app left empty is worth stating — since its absence is
+ * usually the whole answer.
+ *
+ * [line] is the whole line rather than a label, because a Japanese label takes a particle where
+ * English takes a colon, and only the translation can decide where the value sits in it.
+ */
+@Composable
+private fun Field(@StringRes line: Int, value: String?) {
+    val shown = value?.takeIf { it.isNotBlank() } ?: stringResource(R.string.common_none)
+    Caption(stringResource(line, shown))
 }
 
 /**
@@ -177,8 +193,13 @@ private fun PeekCard(peek: MessageInfo) {
  * promise is written into the export, so whoever receives it can see what it does not contain. The
  * timestamps are here because they are what the re-post check reads, and a rule that fires once and
  * then never again is diagnosed from them.
+ *
+ * Every key here is a diagnostic name rather than something a person reads, so the keys stay
+ * literals. [note] is the exception: it is prose, so it arrives already resolved from
+ * `R.string.inspector_export_note` rather than being read from resources here, which keeps this a
+ * plain function over data that a unit test can call without a Context.
  */
-fun peeksToJson(peeks: List<MessageInfo>): String {
+fun peeksToJson(peeks: List<MessageInfo>, note: String): String {
     val array = JSONArray()
     peeks.forEach { peek ->
         array.put(
@@ -202,19 +223,18 @@ fun peeksToJson(peeks: List<MessageInfo>): String {
         )
     }
     return JSONObject().apply {
-        put("note", "HiLight notification inspector, newest first. $PRIVACY_NOTE")
+        put("note", note)
         put("count", peeks.size)
         put("peeks", array)
     }.toString(2)
 }
 
-/** A field an app left empty is worth stating, since its absence is usually the whole answer. */
-private fun orNone(value: String?): String = value?.takeIf { it.isNotBlank() } ?: NONE
-
 private fun copyJson(ctx: Context, text: String) {
+    // the clip label is an identifier the clipboard keys on rather than prose, so it is not a string
+    // resource
     ctx.getSystemService(ClipboardManager::class.java)
         ?.setPrimaryClip(ClipData.newPlainText("hilight-inspector", text))
-    Toast.makeText(ctx, "Copied as JSON", Toast.LENGTH_SHORT).show()
+    Toast.makeText(ctx, ctx.getString(R.string.inspector_copied_toast), Toast.LENGTH_SHORT).show()
 }
 
 private fun shareJson(ctx: Context, text: String) {
@@ -222,5 +242,6 @@ private fun shareJson(ctx: Context, text: String) {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, text)
     }
-    ctx.startActivity(Intent.createChooser(send, "Send inspector output"))
+    val title = ctx.getString(R.string.inspector_share_chooser_title)
+    ctx.startActivity(Intent.createChooser(send, title))
 }
