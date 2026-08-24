@@ -296,14 +296,27 @@ public final class Engine {
                     noteDark(now);
                     return;
             }
-            // The session is taken only while there is something to show, and reopened on demand: a
-            // rule firing lands here and gets it back before the first frame.
+            int[] frame = renderer.frame(cfg, t, Math.max(1, lights.ledCount()));
+            int[] output = protect(frame, now);
+
+            // A black frame is not an effect. Keeping a session open while repeatedly sending black
+            // wins over Android's lower session and intermittently hides Gemini, calls and other
+            // system effects even though HiLight looks idle. Blank once if we were previously lit,
+            // then give the hardware back immediately. Animated patterns simply reopen the session
+            // when their next visible frame arrives.
+            if (!FrameVisibility.isVisible(output)) {
+                if (lights.isSessionOpen()) lights.push(output);
+                release("dark frame — released HiLight to the system");
+                return;
+            }
+
+            // The session is taken only while there is something visible to show, and reopened on
+            // demand: a rule firing lands here and gets it back before the first lit frame.
             if (!lights.isSessionOpen() || priority != lights.sessionPriority()) {
                 if (lights.isSessionOpen()) lights.closeSession();
                 lights.openSession(priority);
             }
-            int[] frame = renderer.frame(cfg, t, Math.max(1, lights.ledCount()));
-            lights.push(protect(frame, now));
+            lights.push(output);
         }
     }
 

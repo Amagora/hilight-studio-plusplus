@@ -57,7 +57,7 @@ final class SafetyGuard {
             resting = false;
         }
 
-        if (!isLit(frame)) {
+        if (!FrameVisibility.isVisible(frame)) {
             continuousLitMs = 0;
             return frame;
         }
@@ -93,12 +93,5 @@ final class SafetyGuard {
 
     int dutyPercent() {
         return (int) (100.0 * litMsInWindow / (dutyWindowMs * maxDuty));
-    }
-
-    private static boolean isLit(int[] frame) {
-        for (int c : frame) {
-            if (((c >> 16 & 0xFF) + (c >> 8 & 0xFF) + (c & 0xFF)) > 12) return true;
-        }
-        return false;
     }
 }
