@@ -84,7 +84,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        Store.get(this).refreshStatus()
+        Store.get(this).apply {
+            syncForegroundWatcher()
+            refreshStatus()
+        }
     }
 
     /** A test the user started by hand must not outlive the screen they started it from. */

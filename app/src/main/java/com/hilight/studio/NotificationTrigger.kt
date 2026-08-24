@@ -18,6 +18,14 @@ class NotificationTrigger : NotificationListenerService() {
 
     private val store by lazy { Store.get(this) }
 
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        // Android reconnects an approved notification listener after boot. Touching Store here
+        // restores persisted While open rules without requiring the user to open HiLight Studio or
+        // wait for an unrelated notification first.
+        store.syncForegroundWatcher()
+    }
+
     /**
      * The newest message stamp already acted on, per notification key.
      *

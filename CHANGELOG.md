@@ -4,6 +4,13 @@ All notable changes to HiLight Studio are documented here.
 
 ## [Unreleased]
 
+- Released the light session whenever a rendered frame is dark, so an idle or temporarily dark
+  HiLight effect no longer masks Android's own effects such as Gemini lighting.
+- Restored saved **While open** rules when Android reconnects HiLight after a reboot or the app
+  process returns, and replaced the ten-second event snapshot with retained activity lifecycle
+  tracking. Already-open apps and temporary system overlays are now handled reliably. Usage access
+  remains required.
+
 ## [1.0.7-experimental] - 2026-08-23
 
 - Enabled reproducible, developer-signed builds for the initial F-Droid submission. This release

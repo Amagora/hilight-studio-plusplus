@@ -3,6 +3,7 @@ package com.hilight.studio
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.AppOpsManager
 import android.app.Service
 import android.app.usage.UsageStatsManager
 import android.content.Context
@@ -11,6 +12,9 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
+import android.os.Process
+import android.os.SystemClock
+import android.util.Log
 
 /**
  * Applies FOREGROUND rules: while a chosen app is on screen, HiLight holds that app's look.
@@ -25,6 +29,9 @@ class ForegroundWatcher : Service() {
     private val main = Handler(Looper.getMainLooper())
     private val store by lazy { Store.get(this) }
     private var lastPkg: String? = null
+    private val foreground = ForegroundAppTracker()
+    private var queriedThroughMs = Long.MIN_VALUE
+    @Volatile private var forceRefresh = true
 
     /**
      * Set on the main thread when the service is going away.
@@ -39,14 +46,15 @@ class ForegroundWatcher : Service() {
     private val tick = object : Runnable {
         override fun run() {
             val pkg = currentForegroundPackage()
-            if (pkg != null && pkg != lastPkg) {
+            if (forceRefresh || pkg != lastPkg) {
+                forceRefresh = false
                 lastPkg = pkg
                 // Store is a main-thread object: every other caller mutates it from there, and its
                 // override field and file writes are not synchronized.
                 main.post {
                     if (!stopped) {
-                        val rule = store.ruleFor(pkg, Trigger.FOREGROUND)
-                        store.setForegroundOverride(if (rule != null) pkg else null, rule)
+                        val rule = pkg?.let { store.ruleFor(it, Trigger.FOREGROUND) }
+                        store.setForegroundOverride(pkg?.takeIf { rule != null }, rule)
                     }
                 }
             }
@@ -72,19 +80,40 @@ class ForegroundWatcher : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) = START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // syncRunning also calls start when the service already exists. Re-evaluate the same package
+        // so enabling or editing its rule cannot be ignored just because the app did not change.
+        forceRefresh = true
+        return START_STICKY
+    }
 
     private fun currentForegroundPackage(): String? {
+        if (!hasUsageAccess(this)) {
+            foreground.clear()
+            queriedThroughMs = Long.MIN_VALUE
+            return null
+        }
         val usm = getSystemService(UsageStatsManager::class.java) ?: return null
         val now = System.currentTimeMillis()
-        val events = usm.queryEvents(now - 10_000, now)
-        var pkg: String? = null
+        val bootWallTime = now - SystemClock.elapsedRealtime()
+        val begin = if (queriedThroughMs == Long.MIN_VALUE) {
+            maxOf(bootWallTime, now - BOOTSTRAP_LOOKBACK_MS)
+        } else {
+            maxOf(bootWallTime, queriedThroughMs - QUERY_OVERLAP_MS)
+        }
+        val events = usm.queryEvents(begin, now)
         val e = android.app.usage.UsageEvents.Event()
         while (events.hasNextEvent()) {
             events.getNextEvent(e)
-            if (e.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED) pkg = e.packageName
+            val lifecycle = when (e.eventType) {
+                android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED -> ForegroundLifecycle.RESUMED
+                android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED -> ForegroundLifecycle.PAUSED
+                else -> null
+            }
+            if (lifecycle != null) foreground.accept(e.packageName, e.className, lifecycle)
         }
-        return pkg
+        queriedThroughMs = now
+        return foreground.currentPackage()
     }
 
     private fun notification(): Notification {
@@ -110,18 +139,25 @@ class ForegroundWatcher : Service() {
     companion object {
         private const val CHANNEL = "fg_watch"
         private const val POLL_MS = 1000L
+        private const val QUERY_OVERLAP_MS = 2_000L
+        private const val BOOTSTRAP_LOOKBACK_MS = 24 * 60 * 60_000L
 
         /** Starts or stops the watcher to match the current rule set. */
         fun syncRunning(ctx: Context, rules: List<AppRule>, enabled: Boolean) {
-            val needed = enabled && rules.any { it.enabled && it.trigger == Trigger.FOREGROUND }
+            val needed = ForegroundWatchPolicy.shouldRun(enabled, rules)
             val intent = Intent(ctx, ForegroundWatcher::class.java)
-            if (needed) ctx.startForegroundService(intent) else ctx.stopService(intent)
+            runCatching {
+                if (needed) ctx.startForegroundService(intent) else ctx.stopService(intent)
+            }.onFailure { Log.w("HiLightForeground", "could not update foreground watcher", it) }
         }
 
         fun hasUsageAccess(ctx: Context): Boolean {
-            val usm = ctx.getSystemService(UsageStatsManager::class.java) ?: return false
-            val now = System.currentTimeMillis()
-            return usm.queryEvents(now - 60_000, now).hasNextEvent()
+            val appOps = ctx.getSystemService(AppOpsManager::class.java) ?: return false
+            return appOps.checkOpNoThrow(
+                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                Process.myUid(),
+                ctx.packageName,
+            ) == AppOpsManager.MODE_ALLOWED
         }
     }
 }

@@ -240,6 +240,10 @@ class Store private constructor(private val app: Context) {
             }
         }
         if (_enabled.value && root.state.value == RootBackend.State.AVAILABLE) beginRootStart()
+        // Persisted while-open rules need their watcher restored whenever the app process returns.
+        // Previously this only happened while adding or deleting a rule, so a reboot or process
+        // death left valid saved rules inert until the user edited one again.
+        syncForegroundWatcher()
     }
 
     // ------------------------------------------------------------------ transport selection
@@ -271,10 +275,15 @@ class Store private constructor(private val app: Context) {
     fun setEnabled(v: Boolean) {
         _enabled.value = v
         prefs.edit().putBoolean("enabled", v).apply()
+        syncForegroundWatcher()
         if (v && root.state.value == RootBackend.State.AVAILABLE) beginRootStart()
         else pushCurrent()
         HiLightTile.refresh(app)
     }
+
+    /** Restores or stops the service to match saved rules and the master switch. */
+    fun syncForegroundWatcher() =
+        ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value)
 
     fun setDynamicColor(v: Boolean) {
         _dynamicColor.value = v
