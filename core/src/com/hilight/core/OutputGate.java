@@ -60,6 +60,17 @@ final class OutputGate {
         blanked = false;
     }
 
+    /**
+     * Records output owned outside the alert/ambient layers, currently a privacy activity rule.
+     *
+     * Privacy output may begin after this gate has already latched the array as blank. Clearing the
+     * latch makes the first inactive frame return BLANK instead of IDLE, so the external output is
+     * physically cleared and its session released when the microphone or camera stops.
+     */
+    void noteExternalOutput() {
+        blanked = false;
+    }
+
     boolean isAlertHeld() {
         return alertHeld;
     }

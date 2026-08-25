@@ -4,6 +4,8 @@ All notable changes to HiLight Studio are documented here.
 
 ## [Unreleased]
 
+## [1.0.8-experimental] - 2026-08-25
+
 - Released the light session whenever a rendered frame is dark, so an idle or temporarily dark
   HiLight effect no longer masks Android's own effects such as Gemini lighting.
 - Restored saved **While open** rules when Android reconnects HiLight after a reboot or the app
@@ -12,6 +14,8 @@ All notable changes to HiLight Studio are documented here.
   remains required.
 - Forced a second hardware-level black update before releasing an animated alert, preventing the
   Pixel 11 light driver from leaving one LED latched in the alert's last colour.
+- Cleared and released privacy-activity output as soon as microphone or camera use ends, including
+  when the array was already idle before that activity started.
 
 ## [1.0.7-experimental] - 2026-08-23
 

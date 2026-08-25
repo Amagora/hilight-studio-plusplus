@@ -232,6 +232,9 @@ public final class Engine {
             boolean privacyOwnsOutput = privacyOutputEnabled &&
                     (privacy.phase == PrivacyScheduler.Phase.LIT ||
                             privacy.phase == PrivacyScheduler.Phase.COOLDOWN);
+            if (privacyOutputEnabled && privacy.phase == PrivacyScheduler.Phase.LIT) {
+                gate.noteExternalOutput();
+            }
             if (!enabled && !privacyOwnsOutput) {
                 leavePrivacyRenderer();
                 blankAndRelease(now, "released HiLight to the system");

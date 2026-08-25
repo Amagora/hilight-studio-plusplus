@@ -98,4 +98,18 @@ public final class OutputGateTest {
         assertEquals(0, gate.alertElapsed(5_000));
         assertEquals(2_500, gate.alertElapsed(7_500));
     }
+
+    @Test
+    public void privacyOutputThatStartsWhileIdleOwesANewBlankWhenItEnds() {
+        OutputGate gate = new OutputGate();
+        gate.armAmbient(0, TIMEOUT);
+        gate.next(TIMEOUT + 1);
+        assertEquals(OutputGate.Layer.IDLE, gate.next(TIMEOUT + 100));
+
+        gate.noteExternalOutput();
+
+        assertFalse(gate.isAmbientHeld());
+        assertEquals(OutputGate.Layer.BLANK, gate.next(TIMEOUT + 200));
+        assertEquals(OutputGate.Layer.IDLE, gate.next(TIMEOUT + 233));
+    }
 }
