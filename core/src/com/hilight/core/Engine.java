@@ -103,7 +103,7 @@ public final class Engine {
         synchronized (lock) {
             running = false;
             privacyWatcher.stop();
-            lights.push(new int[]{0});
+            lights.forceBlack();
             lights.closeSession();
         }
     }
@@ -234,8 +234,7 @@ public final class Engine {
                             privacy.phase == PrivacyScheduler.Phase.COOLDOWN);
             if (!enabled && !privacyOwnsOutput) {
                 leavePrivacyRenderer();
-                release("released HiLight to the system");
-                noteDark(now);
+                blankAndRelease(now, "released HiLight to the system");
                 return;
             }
 
@@ -305,7 +304,7 @@ public final class Engine {
             // then give the hardware back immediately. Animated patterns simply reopen the session
             // when their next visible frame arrives.
             if (!FrameVisibility.isVisible(output)) {
-                if (lights.isSessionOpen()) lights.push(output);
+                lights.forceBlack();
                 release("dark frame — released HiLight to the system");
                 return;
             }
@@ -354,7 +353,7 @@ public final class Engine {
     }
 
     private void blankAndRelease(long now, String why) {
-        if (lights.isSessionOpen()) lights.push(protect(BLANK, now));
+        lights.forceBlack();
         release(why);
         noteDark(now);
     }

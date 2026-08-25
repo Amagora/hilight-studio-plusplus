@@ -27,6 +27,7 @@ public final class LightsBackend {
     private int[] ids = new int[0];
     private boolean sessionOpen;
     private int sessionPriority = Integer.MIN_VALUE;
+    private long minUpdatePeriodMs = Engine.FRAME_MS;
 
     public void connect() throws Exception {
         IBinder b = (IBinder) Class.forName("android.os.ServiceManager")
@@ -46,7 +47,11 @@ public final class LightsBackend {
         for (Light l : all) if (l.getType() == Light.LIGHT_TYPE_APPLICATION) n++;
         ids = new int[n];
         int k = 0;
-        for (Light l : all) if (l.getType() == Light.LIGHT_TYPE_APPLICATION) ids[k++] = l.getId();
+        for (Light l : all) {
+            if (l.getType() != Light.LIGHT_TYPE_APPLICATION) continue;
+            ids[k++] = l.getId();
+            minUpdatePeriodMs = Math.max(minUpdatePeriodMs, l.getMinUpdatePeriodMillis());
+        }
         describe(all);
     }
 
@@ -101,6 +106,20 @@ public final class LightsBackend {
             Log.w("closeSession failed: " + e);
         }
         sessionOpen = false;
+    }
+
+    /**
+     * Forces two real black writes through Android before a session is closed.
+     *
+     * LightsService deduplicates the complete ARGB integer, while LightState explicitly ignores its
+     * alpha channel. An alpha-only black first changes the framework state without lighting RGB,
+     * then canonical black changes it again. Waiting for the hardware's advertised update period
+     * keeps the second write from being coalesced by the Pixel light driver. This works around a
+     * Pixel 11 panel latch where one animated LED could survive an otherwise successful black write.
+     */
+    public void forceBlack() {
+        if (!sessionOpen || ids.length == 0) return;
+        ForcedBlackClear.apply(minUpdatePeriodMs, color -> push(new int[]{color}), Thread::sleep);
     }
 
     /** Pushes one frame. [colors] is indexed per LED; a shorter array is repeated. */

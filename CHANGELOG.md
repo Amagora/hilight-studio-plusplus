@@ -10,6 +10,8 @@ All notable changes to HiLight Studio are documented here.
   process returns, and replaced the ten-second event snapshot with retained activity lifecycle
   tracking. Already-open apps and temporary system overlays are now handled reliably. Usage access
   remains required.
+- Forced a second hardware-level black update before releasing an animated alert, preventing the
+  Pixel 11 light driver from leaving one LED latched in the alert's last colour.
 
 ## [1.0.7-experimental] - 2026-08-23
 
