@@ -75,4 +75,13 @@
     <!-- Title the system share sheet is given when presets are exported -->
     <string name="style_export_chooser">Export presets</string>
 
+    <!-- Signature Presets -->
+    <string name="style_signature_presets">Signature Presets</string>
+    <string name="preset_aurora">Aurora</string>
+    <string name="preset_cyberpunk">Cyberpunk</string>
+    <string name="preset_campfire">Campfire</string>
+    <string name="preset_ocean">Deep Ocean</string>
+    <string name="preset_spectrum">Spectrum</string>
+    <string name="preset_matrix">Matrix</string>
+
 </resources>

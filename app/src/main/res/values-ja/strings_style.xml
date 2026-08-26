@@ -106,4 +106,13 @@
     <!-- "Export presets" — title the system share sheet is given -->
     <string name="style_export_chooser">プリセットを書き出す</string>
 
+    <!-- Signature Presets -->
+    <string name="style_signature_presets">おすすめプリセット</string>
+    <string name="preset_aurora">オーロラ</string>
+    <string name="preset_cyberpunk">サイバーパンク</string>
+    <string name="preset_campfire">焚き火</string>
+    <string name="preset_ocean">ディープオーシャン</string>
+    <string name="preset_spectrum">スペクトラム</string>
+    <string name="preset_matrix">マトリックス</string>
+
 </resources>

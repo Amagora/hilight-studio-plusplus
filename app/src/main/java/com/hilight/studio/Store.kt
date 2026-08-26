@@ -37,6 +37,16 @@ class Store private constructor(private val app: Context) {
     )
     val transport: StateFlow<Transport> = _transport.asStateFlow()
 
+    private val _themeMode = MutableStateFlow(
+        ThemeMode.fromName(prefs.getString("themeMode", null))
+    )
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    private val _themePalette = MutableStateFlow(
+        ThemePalette.fromName(prefs.getString("themePalette", null))
+    )
+    val themePalette: StateFlow<ThemePalette> = _themePalette.asStateFlow()
+
     private val _dynamicColor = MutableStateFlow(prefs.getBoolean("dynamicColor", true))
     val dynamicColor: StateFlow<Boolean> = _dynamicColor.asStateFlow()
 
@@ -67,8 +77,16 @@ class Store private constructor(private val app: Context) {
     private val _screenOffOnly = MutableStateFlow(prefs.getBoolean("screenOffOnly", false))
     val screenOffOnly: StateFlow<Boolean> = _screenOffOnly.asStateFlow()
 
+    private val _aiDisclosureAcknowledged =
+        MutableStateFlow(prefs.getBoolean("aiDisclosureAcknowledged", false))
+    val aiDisclosureAcknowledged: StateFlow<Boolean> = _aiDisclosureAcknowledged.asStateFlow()
+
     private val _batteryGuard = MutableStateFlow(prefs.getBoolean("batteryGuard", true))
     val batteryGuard: StateFlow<Boolean> = _batteryGuard.asStateFlow()
+
+    private val _batteryIndicatorEnabled =
+        MutableStateFlow(prefs.getBoolean("batteryIndicatorEnabled", false))
+    val batteryIndicatorEnabled: StateFlow<Boolean> = _batteryIndicatorEnabled.asStateFlow()
 
     private val _batteryMinPct =
         MutableStateFlow(prefs.getInt("batteryMinPct", Limits.BATTERY_DEFAULT_PCT))
@@ -285,9 +303,32 @@ class Store private constructor(private val app: Context) {
     fun syncForegroundWatcher() =
         ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value)
 
+    fun setThemeMode(mode: ThemeMode) {
+        _themeMode.value = mode
+        prefs.edit().putString("themeMode", mode.name).apply()
+    }
+
+    fun setThemePalette(palette: ThemePalette) {
+        _themePalette.value = palette
+        prefs.edit().putString("themePalette", palette.name).apply()
+        val isDynamic = palette == ThemePalette.DYNAMIC
+        if (_dynamicColor.value != isDynamic) {
+            _dynamicColor.value = isDynamic
+            prefs.edit().putBoolean("dynamicColor", isDynamic).apply()
+        }
+    }
+
     fun setDynamicColor(v: Boolean) {
         _dynamicColor.value = v
         prefs.edit().putBoolean("dynamicColor", v).apply()
+        val targetPalette = if (v) ThemePalette.DYNAMIC else ThemePalette.INDIGO
+        _themePalette.value = targetPalette
+        prefs.edit().putString("themePalette", targetPalette.name).apply()
+    }
+
+    fun acknowledgeAiDisclosure() {
+        _aiDisclosureAcknowledged.value = true
+        prefs.edit().putBoolean("aiDisclosureAcknowledged", true).apply()
     }
 
     fun setAmbientTimeoutMs(v: Int) {
@@ -333,6 +374,46 @@ class Store private constructor(private val app: Context) {
             .apply()
         refreshSuppression()
         pushCurrent()
+    }
+
+    fun setBatteryIndicatorEnabled(v: Boolean) {
+        _batteryIndicatorEnabled.value = v
+        prefs.edit().putBoolean("batteryIndicatorEnabled", v).apply()
+    }
+
+    fun showBatteryGauge() {
+        val i = app.registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val level = i?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: 100
+        val scale = i?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: 100
+        val charging = (i?.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
+        val realPct = if (level >= 0 && scale > 0) (level * 100 / scale) else 100
+        val color = if (charging) 0xFF00E676.toInt() else when {
+            realPct > 50 -> 0xFF00E676.toInt()
+            realPct > 20 -> 0xFFFFB300.toInt()
+            else -> 0xFFFF1744.toInt()
+        }
+        val pattern = if (charging) Pattern.BREATHE else Pattern.SOLID
+        preview(pattern = pattern, color = color, speedMs = 1500, brightness = 0.85f, durationMs = 5000)
+    }
+
+    fun startFillLight(color: Int, brightness: Float = 0.85f) {
+        preview(
+            pattern = Pattern.SOLID,
+            color = color,
+            speedMs = 1000,
+            brightness = brightness,
+            durationMs = 60_000 * 30,
+        )
+    }
+
+    fun startEmergencyStrobe(isSos: Boolean = false, brightness: Float = 1.0f) {
+        preview(
+            pattern = if (isSos) Pattern.BLINK else Pattern.PULSE,
+            color = 0xFFFFFFFF.toInt(),
+            speedMs = if (isSos) 600 else 150,
+            brightness = brightness,
+            durationMs = 60_000 * 15,
+        )
     }
 
     fun setSaverGuard(v: Boolean) {

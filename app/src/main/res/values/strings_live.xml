@@ -70,6 +70,18 @@
     <string name="tile_resting">Resting</string>
     <string name="tile_timed_out">Timed out</string>
 
+    <!-- Tabletop Video Fill Light & Emergency Strobe -->
+    <string name="live_tools_title">Tabletop &amp; Lighting Tools</string>
+    <string name="live_tools_caption">Continuous soft lighting for Tabletop video calls and emergency beacon.</string>
+    <string name="live_fill_light_title">Video Fill Light</string>
+    <string name="live_fill_warm">Warm 2700K</string>
+    <string name="live_fill_soft">Soft 3800K</string>
+    <string name="live_fill_neutral">Neutral 4500K</string>
+    <string name="live_fill_cool">Cool 6500K</string>
+    <string name="live_strobe_title">Emergency Strobe</string>
+    <string name="live_strobe_sos">SOS Beacon</string>
+    <string name="live_tools_stop">Turn off light</string>
+
     <!-- The colour picker. widget_colour is the heading it falls back to when a caller does not name
          the colour it is editing; %1$d in widget_percent is a percentage of full. -->
     <string name="widget_colour">Colour</string>

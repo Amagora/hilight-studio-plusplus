@@ -184,11 +184,29 @@
     <!-- "Open usage access" -->
     <string name="setup_open_usage_access">使用状況へのアクセスを開く</string>
 
-    <!-- Appearance -->
+    <!-- Appearance & Material Theming -->
     <!-- "Appearance" -->
     <string name="setup_appearance_title">外観</string>
+    <string name="setup_theme_mode">テーマモード</string>
+    <string name="theme_mode_system">システム</string>
+    <string name="theme_mode_light">ライト</string>
+    <string name="theme_mode_dark">ダーク</string>
+    <string name="theme_mode_amoled">AMOLED</string>
+    <string name="setup_theme_palette">カラーパレット</string>
     <!-- "Wallpaper colours" -->
     <string name="setup_wallpaper_colours">壁紙の色</string>
+    <string name="palette_dynamic">ダイナミック</string>
+    <string name="palette_indigo">インディゴ</string>
+    <string name="palette_blue">オーシャンブルー</string>
+    <string name="palette_emerald">エメラルド</string>
+    <string name="palette_coral">コーラル</string>
+    <string name="palette_amber">アンバー</string>
+    <string name="palette_rose">ローズ</string>
+    <string name="palette_monochrome">モノクロ</string>
+
+    <!-- Battery Level & Charging Indicator -->
+    <string name="setup_battery_indicator_title">バッテリー残量インジケーター</string>
+    <string name="setup_battery_indicator_body">充電中に 8 つの LED でバッテリー残量を視覚的に表示します。</string>
 
     <!-- Manual GitHub update check -->
     <!-- "Updates" -->
@@ -212,7 +230,26 @@
     <!-- "No published releases were found." -->
     <string name="setup_updates_none">公開済みのリリースが見つかりません。</string>
     <!-- "Could not check for updates. Check your connection and try again." -->
-    <string name="setup_updates_failed">アップデートを確認できませんでした。接続を確認して、もう一度お試しください。</string>
+    <string name="setup_updates_failed">アップデートを確認できませんでした。接続を確認してやり直してください。</string>
+
+    <!-- About & License -->
+    <string name="setup_license_title">ライセンスと情報</string>
+    <string name="setup_license_body">HiLight Studio は MIT ライセンスに基づき公開されているオープンソースソフトウェアです。</string>
+    <string name="setup_license_button">MIT ライセンスを表示</string>
+    <string name="setup_license_dialog_title">MIT ライセンス</string>
+
+    <!-- Original Developer & Upstream Source -->
+    <string name="setup_original_developer_title">原作者および GitHub ソース</string>
+    <string name="setup_original_developer_body">HiLight Studio は元々 Dhananjay Bhosale によって考案・開発されました。GitHub で上流リポジトリとオリジナルプロジェクトをご覧いただけます。</string>
+    <string name="setup_original_developer_button_repo">GitHub リポジトリ</string>
+    <string name="setup_original_developer_button_author">Dhananjay Bhosale</string>
+
+    <!-- A.I. Disclosure -->
+    <string name="setup_ai_disclosure_title">AI に関する開示事項</string>
+    <string name="setup_ai_disclosure_body">本フォークの設計および開発における人工知能（AI）の利用に関する透明性情報。</string>
+    <string name="setup_ai_disclosure_button">開示事項を読む</string>
+    <string name="setup_ai_disclosure_dialog_title">AI に関する開示と透明性</string>
+    <string name="setup_ai_disclosure_dialog_understand">理解しました</string>
 
     <!-- The self test. The channel name is also seen in the system's notification settings. -->
     <!-- "End-to-end test" -->
