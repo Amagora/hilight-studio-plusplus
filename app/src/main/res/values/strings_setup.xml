@@ -117,9 +117,27 @@
     <string name="setup_usage_body">Only for \"while open\" rules.</string>
     <string name="setup_open_usage_access">Open usage access</string>
 
-    <!-- Appearance -->
+    <!-- Appearance & Material Theming -->
     <string name="setup_appearance_title">Appearance</string>
+    <string name="setup_theme_mode">Theme mode</string>
+    <string name="theme_mode_system">System</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="theme_mode_amoled">AMOLED</string>
+    <string name="setup_theme_palette">Color palette</string>
     <string name="setup_wallpaper_colours">Wallpaper colours</string>
+    <string name="palette_dynamic">Dynamic</string>
+    <string name="palette_indigo">Indigo</string>
+    <string name="palette_blue">Ocean Blue</string>
+    <string name="palette_emerald">Emerald</string>
+    <string name="palette_coral">Coral</string>
+    <string name="palette_amber">Amber</string>
+    <string name="palette_rose">Rose</string>
+    <string name="palette_monochrome">Monochrome</string>
+
+    <!-- Battery Level & Charging Indicator -->
+    <string name="setup_battery_indicator_title">Battery level indicator</string>
+    <string name="setup_battery_indicator_body">Shows battery level proportionally on the 8 LEDs while charging.</string>
 
     <!-- Manual GitHub update check -->
     <string name="setup_updates_title">Updates</string>
@@ -133,6 +151,25 @@
     <string name="setup_updates_current">You are up to date.</string>
     <string name="setup_updates_none">No published releases were found.</string>
     <string name="setup_updates_failed">Could not check for updates. Check your connection and try again.</string>
+
+    <!-- Original Developer & Upstream Source -->
+    <string name="setup_original_developer_title">Original Creator &amp; GitHub Source</string>
+    <string name="setup_original_developer_body">HiLight Studio was originally conceived and built by Dhananjay Bhosale. View the upstream repository and original project on GitHub.</string>
+    <string name="setup_original_developer_button_repo">GitHub Repository</string>
+    <string name="setup_original_developer_button_author">Dhananjay Bhosale</string>
+
+    <!-- About & License -->
+    <string name="setup_license_title">About &amp; License</string>
+    <string name="setup_license_body">Hi-Light Studio V2 is free and open-source software released under the MIT License.</string>
+    <string name="setup_license_button">View MIT License</string>
+    <string name="setup_license_dialog_title">MIT License</string>
+
+    <!-- A.I. Disclosure -->
+    <string name="setup_ai_disclosure_title">A.I. Disclosure</string>
+    <string name="setup_ai_disclosure_body">Information regarding the use of Artificial Intelligence in the design and development of this fork.</string>
+    <string name="setup_ai_disclosure_button">Read A.I. Disclosure</string>
+    <string name="setup_ai_disclosure_dialog_title">A.I. Disclosure &amp; Transparency</string>
+    <string name="setup_ai_disclosure_dialog_understand">I Understand</string>
 
     <!-- The self test posts a real notification from this app, so the channel name is seen in the
          system's own notification settings as well. -->
