@@ -1,6 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
-title Hi-Light Studio V2 [v a1.1.0] - Universal Pixel 11 Pro ADB Control
+title hilight-studio-plusplus [v a1.1.0] - Universal Pixel 11 Pro ADB Control
 
 :: 1. Check standard SDK locations and local folder only
 set "ADB_PATH="
@@ -20,7 +20,7 @@ if "%ADB_PATH%"=="" (
     echo   ADB (Android Debug Bridge) Configuration
     echo ======================================================================
     echo [NOTICE] ADB was not found in your standard Android SDK or PATH.
-    echo Hi-Light Studio V2 requires ADB to communicate with your Pixel 11 Pro device.
+    echo hilight-studio-plusplus requires ADB to communicate with your Pixel 11 Pro device.
     echo.
     echo Would you like to download Google's official Android platform-tools (~5 MB) directly
     echo from dl.google.com into this folder?
@@ -55,7 +55,7 @@ if "%ADB_PATH%"=="" (
 :MENU
 cls
 echo ======================================================================
-echo    Hi-Light Studio V2 [v a1.1.0] - Universal Control Manager
+echo    hilight-studio-plusplus [v a1.1.0] - Universal Control Manager
 echo    Supports: Pixel 11 Pro / Pixel 11 Pro XL / Pixel 11 Pro Fold
 echo ======================================================================
 echo.

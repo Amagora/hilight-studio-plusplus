@@ -41,7 +41,7 @@ namespace HiLightManager
 
         private void InitializeDarkUI()
         {
-            this.Text = "Hi-Light Studio V2 — [v a1.1.0]";
+            this.Text = "hilight-studio-plusplus — [v a1.1.0]";
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.ClientSize = new Size(1250, 920);
             this.MinimumSize = new Size(1100, 820);
@@ -111,7 +111,7 @@ namespace HiLightManager
 
             lblHeaderTitle = new Label
             {
-                Text = "Hi-Light Studio V2",
+                Text = "hilight-studio-plusplus",
                 Font = new Font("Segoe UI", 17f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(250, 250, 255),
                 AutoSize = true,
@@ -719,7 +719,7 @@ Current ADB Executable in Use:
                 {
                     Dock = DockStyle.Fill,
                     Text = "ADB was not found in your standard Android SDK or system PATH.\r\n\r\n" +
-                           "Hi-Light Studio V2 needs ADB to communicate with your Pixel 11 Pro series device.\r\n\r\n" +
+                           "hilight-studio-plusplus needs ADB to communicate with your Pixel 11 Pro series device.\r\n\r\n" +
                            "Would you like to download official Google platform-tools, or select an existing adb.exe?",
                     Font = new Font("Segoe UI", 10f, FontStyle.Regular),
                     ForeColor = Color.FromArgb(220, 220, 235),
@@ -1058,7 +1058,7 @@ Current ADB Executable in Use:
 
 Original Creator: Dhananjay Bhosale (https://github.com/DhananjayBhosale/hilight-studio)
 Copyright (c) 2026 HiLight Studio contributors
-Copyright (c) 2026 Hi-Light Studio V2 contributors
+Copyright (c) 2026 hilight-studio-plusplus contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the ""Software""), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -1192,7 +1192,7 @@ THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMP
 Portions of the architectural design, user interface layout, Material 3 dynamic theming, video fill light controls, fuel gauge indicators, and desktop control tooling in this fork of HiLight Studio were developed with the assistance of advanced Artificial Intelligence (AI) models, under explicit human direction, code review, and hardware testing on Google Pixel 11 Pro series devices.
 
 2. Local Execution & Complete Privacy:
-Both the Hi-Light Studio V2 Android application and this desktop management tool run 100% locally on your computer and phone.
+Both the hilight-studio-plusplus Android application and this desktop management tool run 100% locally on your computer and phone.
 • No user data, files, telemetry, or hardware information are ever uploaded or transmitted to external AI servers or cloud services.
 • No arbitrary file scanning takes place on your PC.
 • Network connections are only initiated upon your explicit request (e.g. downloading official Google platform-tools from dl.google.com).

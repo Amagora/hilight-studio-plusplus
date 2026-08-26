@@ -1,8 +1,9 @@
-# Hi-Light Studio V2 — Complete Conversation Log & Source Code Record
+# hilight-studio-plusplus — Complete Conversation Log & Source Code Record
 
 **Build Version:** `a1.1.0` (Build Code `110`)  
 **Target Hardware:** Google Pixel 11 Pro Series (Pixel 11 Pro, Pixel 11 Pro XL, Pixel 11 Pro Fold — Target Device: `66291FDDJ001HW` on Android 17 / API 37)  
 **Base Repository:** Forked from [DhananjayBhosale/hilight-studio](https://github.com/DhananjayBhosale/hilight-studio) (v1.0.8-experimental)  
+**Repository Fork:** [Amagora/hilight-studio-plusplus](https://github.com/Amagora/hilight-studio-plusplus)  
 **License:** MIT License (Full Open Source)  
 **Transparency:** AI-Assisted Pair-Programming Record & Human Verification Log  
 
@@ -21,9 +22,9 @@
 
 ## 1. Executive Overview & Purpose
 
-This document provides an unedited, exhaustive technical log of the development, user directives, AI pair-programming interactions, bug fixes, architecture decisions, and full source code changes for **Hi-Light Studio V2** (Build `a1.1.0`).
+This document provides an unedited, exhaustive technical log of the development, user directives, AI pair-programming interactions, bug fixes, architecture decisions, and full source code changes for **hilight-studio-plusplus** (Build `a1.1.0`).
 
-Hi-Light Studio V2 transforms the 8-LED rear camera ring array on Google Pixel 11 Pro series devices into a fully customizable ambient light, emergency strobe, tabletop video fill light, and battery fuel gauge, accompanied by a rootless background daemon (`AdbHelper`) and a native Windows desktop controller (`HiLight-Control.exe`).
+**hilight-studio-plusplus** transforms the 8-LED rear camera ring array on Google Pixel 11 Pro series devices into a fully customizable ambient light, emergency strobe, tabletop video fill light, and battery fuel gauge, accompanied by a rootless background daemon (`AdbHelper`) and a native Windows desktop controller (`HiLight-Control.exe`).
 
 ---
 

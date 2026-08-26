@@ -160,7 +160,7 @@
 
     <!-- About & License -->
     <string name="setup_license_title">About &amp; License</string>
-    <string name="setup_license_body">Hi-Light Studio V2 is free and open-source software released under the MIT License.</string>
+    <string name="setup_license_body">hilight-studio-plusplus is free and open-source software released under the MIT License.</string>
     <string name="setup_license_button">View MIT License</string>
     <string name="setup_license_dialog_title">MIT License</string>
 

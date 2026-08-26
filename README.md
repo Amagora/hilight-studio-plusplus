@@ -1,8 +1,8 @@
-# Hi-Light Studio V2
+# hilight-studio-plusplus
 
 **Version: `a1.1.0`** — Universal Hardware Lighting Control for Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold devices on Android 17 (API 37).
 
-[![Build Version](https://img.shields.io/badge/version-a1.1.0-blue.svg)](https://github.com/DhananjayBhosale/hilight-studio)
+[![Build Version](https://img.shields.io/badge/version-a1.1.0-blue.svg)](https://github.com/Amagora/hilight-studio-plusplus)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f81f7.svg)](LICENSE)
 [![Changelog](https://img.shields.io/badge/changelog-custom%20modifications-blue.svg)](CHANGELOG.md)
 
@@ -10,7 +10,7 @@
 > See [CHANGELOG.md](CHANGELOG.md) for the detailed log of custom additions, user requests, architectural enhancements, and privacy guarantees.
 
 > [!IMPORTANT]
-> Hi-Light Studio V2 is an open-source enhancement supporting all devices across the **Pixel 11 Pro line** (Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold) on Android 17 (API 37).
+> **hilight-studio-plusplus** is an open-source enhancement supporting all devices across the **Pixel 11 Pro line** (Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold) on Android 17 (API 37).
 
 <p align="center">
   <img src="docs/media/screen-live.png" alt="Live tab controlling the HiLight array on a Pixel 11 Pro XL" width="420">
