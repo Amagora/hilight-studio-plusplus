@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -178,21 +179,27 @@ fun AmbientScreen(store: Store) {
 
                 Pattern.GRADIENT -> PixelCard {
                     SectionTitle(stringResource(R.string.pattern_gradient))
-                    ColorPicker(
-                        ambient.color,
-                        { store.setAmbient(ambient.copy(color = it)) },
-                        stringResource(R.string.style_gradient_start),
-                    )
-                    ColorPicker(
-                        ambient.secondColor,
-                        { store.setAmbient(ambient.copy(secondColor = it)) },
-                        stringResource(R.string.style_gradient_middle),
-                    )
-                    ColorPicker(
-                        ambient.thirdColor,
-                        { store.setAmbient(ambient.copy(thirdColor = it)) },
-                        stringResource(R.string.style_gradient_end),
-                    )
+                    key("ambient_start") {
+                        ColorPicker(
+                            ambient.color,
+                            { store.setAmbient(ambient.copy(color = it)) },
+                            stringResource(R.string.style_gradient_start),
+                        )
+                    }
+                    key("ambient_middle") {
+                        ColorPicker(
+                            ambient.secondColor,
+                            { store.setAmbient(ambient.copy(secondColor = it)) },
+                            stringResource(R.string.style_gradient_middle),
+                        )
+                    }
+                    key("ambient_end") {
+                        ColorPicker(
+                            ambient.thirdColor,
+                            { store.setAmbient(ambient.copy(thirdColor = it)) },
+                            stringResource(R.string.style_gradient_end),
+                        )
+                    }
                 }
 
                 Pattern.OFF -> PixelCard {

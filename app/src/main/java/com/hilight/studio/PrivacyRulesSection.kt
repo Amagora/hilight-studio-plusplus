@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -219,23 +220,31 @@ fun PrivacyRuleEditorDialog(
                     onSelect = { edited = edited.copy(pattern = it) },
                 )
                 if (edited.pattern == Pattern.GRADIENT) {
-                    ColorPicker(
-                        edited.color,
-                        { edited = edited.copy(color = it) },
-                        stringResource(R.string.style_gradient_start),
-                    )
-                    ColorPicker(
-                        edited.secondColor,
-                        { edited = edited.copy(secondColor = it) },
-                        stringResource(R.string.style_gradient_middle),
-                    )
-                    ColorPicker(
-                        edited.thirdColor,
-                        { edited = edited.copy(thirdColor = it) },
-                        stringResource(R.string.style_gradient_end),
-                    )
+                    key("privacy_start") {
+                        ColorPicker(
+                            edited.color,
+                            { edited = edited.copy(color = it) },
+                            stringResource(R.string.style_gradient_start),
+                        )
+                    }
+                    key("privacy_middle") {
+                        ColorPicker(
+                            edited.secondColor,
+                            { edited = edited.copy(secondColor = it) },
+                            stringResource(R.string.style_gradient_middle),
+                        )
+                    }
+                    key("privacy_end") {
+                        ColorPicker(
+                            edited.thirdColor,
+                            { edited = edited.copy(thirdColor = it) },
+                            stringResource(R.string.style_gradient_end),
+                        )
+                    }
                 } else {
-                    ColorPicker(edited.color, { edited = edited.copy(color = it) })
+                    key("privacy_single") {
+                        ColorPicker(edited.color, { edited = edited.copy(color = it) })
+                    }
                 }
 
                 GatedDurationSlider(

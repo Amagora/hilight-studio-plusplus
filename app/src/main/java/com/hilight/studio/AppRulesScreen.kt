@@ -150,7 +150,7 @@ fun AppRulesScreen(store: Store) {
         },
         onToggle = { store.upsertPrivacyRule(it.copy(enabled = !it.enabled), replacing = it) },
         onEdit = { editingPrivacy = it },
-        onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.lightMs) },
+        onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.lightMs, it.secondColor, it.thirdColor) },
         onDelete = store::removePrivacyRule,
     )
 
@@ -221,7 +221,12 @@ fun AppRulesScreen(store: Store) {
                 store.upsertRule(it, replacing = rule)
                 editing = null
             },
-            onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.durationMs) },
+            onTest = {
+                store.preview(
+                    it.pattern, it.color, it.speedMs, it.brightness, it.durationMs,
+                    it.secondColor, it.thirdColor,
+                )
+            },
             onAddPrivacy = if (rule.isConversationRule || rule.isCatchAll) null else ({
                 editing = null
                 privacyPrefilledApp = InstalledApp(rule.pkg, rule.label, null)
@@ -642,23 +647,31 @@ private fun RuleEditorDialog(
                 ) { r = r.copy(randomColor = it) }
                 if (!r.randomColor) {
                     if (r.pattern == Pattern.GRADIENT) {
-                        ColorPicker(
-                            r.color,
-                            { r = r.copy(color = it) },
-                            stringResource(R.string.style_gradient_start),
-                        )
-                        ColorPicker(
-                            r.secondColor,
-                            { r = r.copy(secondColor = it) },
-                            stringResource(R.string.style_gradient_middle),
-                        )
-                        ColorPicker(
-                            r.thirdColor,
-                            { r = r.copy(thirdColor = it) },
-                            stringResource(R.string.style_gradient_end),
-                        )
+                        key("rule_color_start") {
+                            ColorPicker(
+                                r.color,
+                                { r = r.copy(color = it) },
+                                stringResource(R.string.style_gradient_start),
+                            )
+                        }
+                        key("rule_color_middle") {
+                            ColorPicker(
+                                r.secondColor,
+                                { r = r.copy(secondColor = it) },
+                                stringResource(R.string.style_gradient_middle),
+                            )
+                        }
+                        key("rule_color_end") {
+                            ColorPicker(
+                                r.thirdColor,
+                                { r = r.copy(thirdColor = it) },
+                                stringResource(R.string.style_gradient_end),
+                            )
+                        }
                     } else {
-                        ColorPicker(r.color, { r = r.copy(color = it) })
+                        key("rule_color_single") {
+                            ColorPicker(r.color, { r = r.copy(color = it) })
+                        }
                     }
                 }
 
