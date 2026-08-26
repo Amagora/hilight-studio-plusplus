@@ -1,7 +1,7 @@
 # hilight-studio-plusplus — Complete Conversation Log & Source Code Record
 
 **Build Version:** `a1.1.0` (Build Code `110`)  
-**Target Hardware:** Google Pixel 11 Pro Series (Pixel 11 Pro, Pixel 11 Pro XL, Pixel 11 Pro Fold — Target Device: `66291FDDJ001HW` on Android 17 / API 37)  
+**Target Hardware:** Google Pixel 11 Pro Series (Pixel 11 Pro, Pixel 11 Pro XL, Pixel 11 Pro Fold on Android 17 / API 37)  
 **Base Repository:** Forked from [DhananjayBhosale/hilight-studio](https://github.com/DhananjayBhosale/hilight-studio) (v1.0.8-experimental)  
 **Repository Fork:** [Amagora/hilight-studio-plusplus](https://github.com/Amagora/hilight-studio-plusplus)  
 **License:** MIT License (Full Open Source)  
@@ -45,7 +45,7 @@ Below is the complete chronological record of all user prompts, directives, issu
      ```bash
      nohup app_process -Djava.class.path=/data/app/.../base.apk /system/bin com.hilight.core.AdbHelper > /dev/null 2>&1 &
      ```
-  3. Tested and confirmed on device `66291FDDJ001HW` (Pixel 11 Pro Fold, Android 17 / API 37).
+  3. Tested and confirmed on connected Pixel 11 Pro Fold (Android 17 / API 37).
 
 ---
 
@@ -227,35 +227,33 @@ Below is the complete chronological record of all user prompts, directives, issu
 ### 📱 Android Application (`app/`)
 | File Path | Description of Enhancements |
 |---|---|
-| [`app/build.gradle.kts`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/app/build.gradle.kts) | Versioning `a1.1.0` (code `110`), Jetpack Compose, Material 3, Android 17 / API 37 compatibility. |
-| [`app/src/main/AndroidManifest.xml`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/app/src/main/AndroidManifest.xml) | App name `Hi-Light Studio V2`, battery broadcast receiver permissions, orientation configurations. |
-| [`app/src/main/java/com/hilight/studio/MainActivity.kt`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/app/src/main/java/com/hilight/studio/MainActivity.kt) | Adaptive Dual-Pane layout for foldables, dynamic status bar insets controller (`isAppearanceLightStatusBars`), first-launch AI disclosure dialog. |
-| [`app/src/main/java/com/hilight/studio/ui/theme/Theme.kt`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/app/src/main/java/com/hilight/studio/ui/theme/Theme.kt) | Material 3 Theming engine with AMOLED pitch black option (`#000000` surface). |
-| [`app/src/main/java/com/hilight/studio/ui/theme/Color.kt`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/app/src/main/java/com/hilight/studio/ui/theme/Color.kt) | Curated color palettes, neon accents, and CCT temperature color constants. |
-| [`app/src/main/java/com/hilight/studio/ui/screens/SetupScreen.kt`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/app/src/main/java/com/hilight/studio/ui/screens/SetupScreen.kt) | A.I. Disclosure Card, Original Creator & GitHub Source Card, MIT License modal viewer, battery fuel gauge toggle. |
-| [`app/src/main/java/com/hilight/studio/ui/screens/LiveToolsScreen.kt`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/app/src/main/java/com/hilight/studio/ui/screens/LiveToolsScreen.kt) | Tabletop video fill light launcher, strobe & SOS triggers, real-time 8-LED hero visualizer. |
-| [`app/src/main/java/com/hilight/studio/ui/screens/TabletopFillLightScreen.kt`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/app/src/main/java/com/hilight/studio/ui/screens/TabletopFillLightScreen.kt) | Color temperature sliders (2700K–6500K), brightness control, continuous light driver. |
-| [`app/src/main/java/com/hilight/studio/receiver/BatteryReceiver.kt`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/app/src/main/java/com/hilight/studio/receiver/BatteryReceiver.kt) | Broadcast receiver for battery percentage and AC/USB charging state animations. |
-| [`app/src/main/java/com/hilight/studio/presets/Presets.kt`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/app/src/main/java/com/hilight/studio/presets/Presets.kt) | 6 curated signature presets (Aurora, Cyberpunk, Ember, Ocean, Spectrum, Matrix). |
+| [`app/build.gradle.kts`](app/build.gradle.kts) | Versioning `a1.1.0` (code `110`), Jetpack Compose, Material 3, Android 17 / API 37 compatibility. |
+| [`app/src/main/AndroidManifest.xml`](app/src/main/AndroidManifest.xml) | App name `hilight-studio-plusplus`, battery broadcast receiver permissions, orientation configurations. |
+| [`app/src/main/java/com/hilight/studio/MainActivity.kt`](app/src/main/java/com/hilight/studio/MainActivity.kt) | Adaptive Dual-Pane layout for foldables, dynamic status bar insets controller (`isAppearanceLightStatusBars`), first-launch AI disclosure dialog. |
+| [`app/src/main/java/com/hilight/studio/Theme.kt`](app/src/main/java/com/hilight/studio/Theme.kt) | Material 3 Theming engine with AMOLED pitch black option (`#000000` surface). |
+| [`app/src/main/java/com/hilight/studio/SetupScreen.kt`](app/src/main/java/com/hilight/studio/SetupScreen.kt) | A.I. Disclosure Card, Original Creator & GitHub Source Card, MIT License modal viewer, battery fuel gauge toggle. |
+| [`app/src/main/java/com/hilight/studio/LiveScreen.kt`](app/src/main/java/com/hilight/studio/LiveScreen.kt) | Tabletop video fill light launcher, strobe & SOS triggers, real-time 8-LED hero visualizer. |
+| [`app/src/main/java/com/hilight/studio/AmbientScreen.kt`](app/src/main/java/com/hilight/studio/AmbientScreen.kt) | Color temperature tuning, brightness control, continuous light driver. |
+| [`app/src/main/java/com/hilight/studio/Store.kt`](app/src/main/java/com/hilight/studio/Store.kt) | Data persistence for presets, AI disclosure consent, theme selection, and quiet hours. |
 
 ---
 
 ### 🖥️ Windows Desktop Controller (`tools/HiLightManager/`)
 | File Path | Description of Enhancements |
 |---|---|
-| [`tools/HiLightManager/MainForm.cs`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/tools/HiLightManager/MainForm.cs) | Complete High-DPI `SizeType.AutoSize` architecture, 2-column TableLayoutPanels, custom interactive action cards, resizable sub-menus, text editor and Notepad integration, privacy opt-in ADB downloader. |
-| [`tools/HiLightManager/Program.cs`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/tools/HiLightManager/Program.cs) | High-DPI application configuration, STA thread entry point, unhandled exception guards. |
-| [`tools/HiLightManager/HiLightManager.csproj`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/tools/HiLightManager/HiLightManager.csproj) | .NET 9 WinForms project file targeting `win-x64` with output binary `HiLight-Control.exe`. |
+| [`tools/HiLightManager/MainForm.cs`](tools/HiLightManager/MainForm.cs) | Complete High-DPI `SizeType.AutoSize` architecture, 2-column TableLayoutPanels, custom interactive action cards, resizable sub-menus, text editor and Notepad integration, privacy opt-in ADB downloader. |
+| [`tools/HiLightManager/Program.cs`](tools/HiLightManager/Program.cs) | High-DPI application configuration, STA thread entry point, unhandled exception guards. |
+| [`tools/HiLightManager/HiLightManager.csproj`](tools/HiLightManager/HiLightManager.csproj) | .NET 9 WinForms project file targeting `win-x64` with output binary `HiLight-Control.exe`. |
 
 ---
 
 ### ⚡ 1-Click Launchers & Scripts
 | File Path | Description of Enhancements |
 |---|---|
-| [`Install-And-Start.bat`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/Install-And-Start.bat) | Interactive persistent menu for full Gradle assemble, APK install, and daemon launch. |
-| [`Start-HiLight.bat`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/Start-HiLight.bat) | 1-click fast startup script restarting the background renderer without reinstalling. |
-| [`Install-And-Start.ps1`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/Install-And-Start.ps1) | PowerShell implementation of the complete build, install, and starter pipeline. |
-| [`Start-HiLight.ps1`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/Start-HiLight.ps1) | PowerShell launcher for quick daemon restart. |
+| [`Install-And-Start.bat`](Install-And-Start.bat) | Interactive persistent menu for full Gradle assemble, APK install, and daemon launch. |
+| [`Start-HiLight.bat`](Start-HiLight.bat) | 1-click fast startup script restarting the background renderer without reinstalling. |
+| [`Install-And-Start.ps1`](Install-And-Start.ps1) | PowerShell implementation of the complete build, install, and starter pipeline. |
+| [`Start-HiLight.ps1`](Start-HiLight.ps1) | PowerShell launcher for quick daemon restart. |
 
 ---
 
@@ -277,15 +275,15 @@ dotnet publish tools/HiLightManager/HiLightManager.csproj -c Release -r win-x64 
 
 ### Generating Release ZIP Archives
 ```powershell
-Compress-Archive -Path "HiLight-Control.exe", "Install-And-Start.bat", "Start-HiLight.bat", "Install-And-Start.ps1", "LICENSE", "README.md", "CHANGELOG.md", "CONVERSATION_LOG_AND_SOURCE_RECORD.md", "app\build\outputs\apk\debug\app-debug.apk" -DestinationPath "Hi-Light-Studio-V2-Release.zip" -Force
+Compress-Archive -Path "HiLight-Control.exe", "Install-And-Start.bat", "Start-HiLight.bat", "Install-And-Start.ps1", "LICENSE", "README.md", "CHANGELOG.md", "CONVERSATION_LOG_AND_SOURCE_RECORD.md", "app\build\outputs\apk\debug\app-debug.apk" -DestinationPath "hilight-studio-plusplus-Release.zip" -Force
 ```
 
 ---
 
 ## 5. Open Source Licensing & Upstream Attribution
 
-Hi-Light Studio V2 is distributed under the terms of the **MIT License**.
+**hilight-studio-plusplus** is distributed under the terms of the **MIT License**.
 
 - **Original Creator & Foundation:** Dhananjay Bhosale ([GitHub Profile](https://github.com/DhananjayBhosale) / [Repository](https://github.com/DhananjayBhosale/hilight-studio))
-- **V2 Fork & Enhancements:** Hi-Light Studio V2 Contributors (2026)
-- **Full License Text:** See [`LICENSE`](file:///c:/Users/Amagora/Downloads/HiLight%20Studio%20Fork/LICENSE)
+- **hilight-studio-plusplus Fork & Enhancements:** Contributors (2026)
+- **Full License Text:** See [`LICENSE`](LICENSE)

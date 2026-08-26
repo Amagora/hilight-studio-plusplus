@@ -81,7 +81,7 @@
 **`HiLight-Control.exe`** is a native Windows GUI controller designed to give users complete 1-click management of their Google Pixel 11 Pro series hardware lights without touching the command line:
 
 - **🟢 Real-Time Hardware Detection**:
-  - Live status badge displaying device connectivity, Pixel model name (Pixel 11 Pro, 11 Pro XL, or 11 Pro Fold), and USB/Wi-Fi hardware serial number (`66291FDDJ001HW`).
+  - Live status badge displaying device connectivity, Pixel model name (Pixel 11 Pro, 11 Pro XL, or 11 Pro Fold), and USB/Wi-Fi hardware connection state.
 - **⚡ 3 One-Click Action Cards**:
   1. **`🚀 1. Full Easy Install & Start`**: Instantly locates or compiles the latest APK, flashes/updates it on your connected Pixel, launches the app, and starts the rootless 8-LED renderer.
   2. **`⚡ 2. Start Hi-Light (After Phone Reboot)`**: Re-initializes the background ADB helper daemon in seconds after restarting your phone without needing to reinstall the APK.
