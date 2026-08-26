@@ -76,6 +76,27 @@
   <img src="docs/media/screen-desktop-manager.png" alt="hilight-studio-plusplus Windows Desktop Control Manager" width="850">
 </p>
 
+## 🖥️ Desktop Companion Suite (`HiLight-Control.exe`)
+
+**`HiLight-Control.exe`** is a native Windows GUI controller designed to give users complete 1-click management of their Google Pixel 11 Pro series hardware lights without touching the command line:
+
+- **🟢 Real-Time Hardware Detection**:
+  - Live status badge displaying device connectivity, Pixel model name (Pixel 11 Pro, 11 Pro XL, or 11 Pro Fold), and USB/Wi-Fi hardware serial number (`66291FDDJ001HW`).
+- **⚡ 3 One-Click Action Cards**:
+  1. **`🚀 1. Full Easy Install & Start`**: Instantly locates or compiles the latest APK, flashes/updates it on your connected Pixel, launches the app, and starts the rootless 8-LED renderer.
+  2. **`⚡ 2. Start Hi-Light (After Phone Reboot)`**: Re-initializes the background ADB helper daemon in seconds after restarting your phone without needing to reinstall the APK.
+  3. **`🛑 3. Stop / Kill ADB Session`**: Cleanly terminates the background process and turns off / releases hardware lights control.
+- **🔒 Privacy-First ADB Detection**:
+  - **Zero invasive directory scanning**: Automatically searches only standard developer environment variables (`ANDROID_HOME`, `ANDROID_SDK_ROOT`, standard SDK path, or local folder).
+  - **Explicit User Consent**: If ADB is not found, provides an interactive opt-in dialog to download official Google platform-tools directly from `dl.google.com`, or select an existing `adb.exe` manually.
+- **📐 High-DPI Adaptive Geometry & Resizable Windows**:
+  - Built with dynamic `SizeType.AutoSize` architecture that looks crisp and legible on all monitor scaling factors (100%, 125%, 150%, 175%, 4K).
+  - All sub-menus (ADB Setup, MIT License, A.I. Disclosure, Request Log) are fully resizable and maximizable.
+- **📝 Text Editor & Notepad Integration**:
+  - Every informational dialog features **`📝 Open in Text Editor`** (opens in your default system editor) and **`📄 Open in Notepad`** buttons for instant viewing and editing.
+- **📜 Live Output Console**:
+  - Real-time scrolling terminal output stream with timestamped execution feedback and a 1-click **`🗑️ Clear Console`** action.
+
 
 ## Build & Install on Pixel 11 Pro Fold
 
