@@ -55,7 +55,7 @@
 
 ## Screenshots
 
-### 📱 Android Application (Pixel 11 Pro Fold)
+### 📱 Android Application (Pixel 11 Pro Series / Fold)
 
 <table>
 <tr>
@@ -98,7 +98,7 @@
   - Real-time scrolling terminal output stream with timestamped execution feedback and a 1-click **`🗑️ Clear Console`** action.
 
 
-## Build & Install on Pixel 11 Pro Fold
+## Build & Install on Google Pixel 11 Pro Series
 
 ### 1. Build Your Private APK
 
@@ -114,9 +114,9 @@ To compile your own private build:
 
 The APK will be generated at: `app/build/outputs/apk/debug/app-debug.apk`.
 
-### 2. Install / Flash to Pixel 11 Pro Fold
+### 2. Install / Flash to Pixel 11 Pro, Pixel 11 Pro XL, or Pixel 11 Pro Fold
 
-Connect your **Pixel 11 Pro Fold** via USB with **USB debugging** enabled in Developer Options:
+Connect your **Pixel 11 Pro, Pixel 11 Pro XL, or Pixel 11 Pro Fold** via USB with **USB debugging** enabled in Developer Options:
 
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
@@ -128,7 +128,7 @@ adb uninstall com.hilight.studio
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-HiLight Studio needs privileged access to the Android lights service. Choose one of the privilege methods below:
+hilight-studio-plusplus needs privileged access to the Android lights service. Choose one of the privilege methods below:
 
 ### Root
 
