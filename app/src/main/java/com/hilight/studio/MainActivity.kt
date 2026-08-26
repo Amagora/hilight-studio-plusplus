@@ -13,11 +13,15 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,7 +37,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -43,6 +50,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -67,9 +75,15 @@ class MainActivity : ComponentActivity() {
         requestNotificationPermissionIfNeeded()
         val store = Store.get(this)
         setContent {
-            val dynamic by store.dynamicColor.collectAsStateWithLifecycle()
-            HiLightTheme(dynamicColor = dynamic) {
-                App(store)
+            val themeMode by store.themeMode.collectAsStateWithLifecycle()
+            val themePalette by store.themePalette.collectAsStateWithLifecycle()
+            HiLightTheme(themeMode = themeMode, themePalette = themePalette) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background,
+                ) {
+                    App(store)
+                }
             }
         }
     }
@@ -107,7 +121,6 @@ private enum class Tab(@StringRes val labelRes: Int, val icon: ImageVector) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun App(store: Store) {
-    // saved, so a rotation or a recreated activity does not drop the user back on Live
     var tabIndex by rememberSaveable { mutableIntStateOf(0) }
     val tab = Tab.entries[tabIndex.coerceIn(0, Tab.entries.lastIndex)]
     val status by store.status.collectAsStateWithLifecycle()
@@ -115,9 +128,6 @@ private fun App(store: Store) {
     val haptics = LocalHapticFeedback.current
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
-    // Tied to the lifecycle, not just the composition: a plain LaunchedEffect keeps its coroutine
-    // running once the activity stops, so this polled the helper over binder and file I/O every 1.5s
-    // in the background, for a screen nobody was looking at.
     val owner = LocalLifecycleOwner.current
     LaunchedEffect(owner) {
         owner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -128,10 +138,20 @@ private fun App(store: Store) {
         }
     }
 
+    val aiDisclosureAcknowledged by store.aiDisclosureAcknowledged.collectAsStateWithLifecycle()
+    if (!aiDisclosureAcknowledged) {
+        AiDisclosureDialog(
+            onDismiss = { store.acknowledgeAiDisclosure() },
+            confirmButtonText = stringResource(R.string.setup_ai_disclosure_dialog_understand),
+        )
+    }
+
+    val config = LocalConfiguration.current
+    val isWide = config.screenWidthDp >= 600
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            // single-line bar: the hero already carries the visual weight
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -163,48 +183,82 @@ private fun App(store: Store) {
             )
         },
         bottomBar = {
-            NavigationBar {
-                Tab.entries.forEach { t ->
-                    NavigationBarItem(
-                        selected = tab == t,
-                        onClick = {
-                            if (tab != t) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            tabIndex = t.ordinal
-                        },
-                        icon = { Icon(t.icon, contentDescription = stringResource(t.labelRes)) },
-                        label = { Text(stringResource(t.labelRes)) },
-                        alwaysShowLabel = true,
-                    )
+            if (!isWide) {
+                NavigationBar {
+                    Tab.entries.forEach { t ->
+                        NavigationBarItem(
+                            selected = tab == t,
+                            onClick = {
+                                if (tab != t) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                tabIndex = t.ordinal
+                            },
+                            icon = { Icon(t.icon, contentDescription = stringResource(t.labelRes)) },
+                            label = { Text(stringResource(t.labelRes)) },
+                            alwaysShowLabel = true,
+                        )
+                    }
                 }
             }
         },
     ) { pad ->
-        // tabs slide in the direction of travel, like the system's pagers
-        AnimatedContent(
-            targetState = tab,
-            transitionSpec = {
-                val forward = targetState.ordinal > initialState.ordinal
-                val dir = if (forward) 1 else -1
-                (slideInHorizontally(tween(320)) { w -> dir * w / 8 } + fadeIn(tween(220)))
-                    .togetherWith(
-                        slideOutHorizontally(tween(320)) { w -> -dir * w / 8 } + fadeOut(tween(160))
-                    )
-            },
-            label = "tab",
-            modifier = Modifier.padding(pad),
-        ) { current ->
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                when (current) {
-                    Tab.LIVE -> LiveScreen(store)
-                    Tab.AMBIENT -> AmbientScreen(store)
-                    Tab.APPS -> AppRulesScreen(store)
-                    Tab.SETUP -> SetupScreen(store)
+        Row(
+            Modifier
+                .fillMaxSize()
+                .padding(pad),
+        ) {
+            if (isWide) {
+                NavigationRail(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxHeight(),
+                ) {
+                    Spacer(Modifier.height(8.dp))
+                    Tab.entries.forEach { t ->
+                        NavigationRailItem(
+                            selected = tab == t,
+                            onClick = {
+                                if (tab != t) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                tabIndex = t.ordinal
+                            },
+                            icon = { Icon(t.icon, contentDescription = stringResource(t.labelRes)) },
+                            label = { Text(stringResource(t.labelRes)) },
+                            alwaysShowLabel = true,
+                        )
+                    }
                 }
-                Spacer(Modifier.height(28.dp))
+            }
+
+            AnimatedContent(
+                targetState = tab,
+                transitionSpec = {
+                    val forward = targetState.ordinal > initialState.ordinal
+                    val dir = if (forward) 1 else -1
+                    (slideInHorizontally(tween(320)) { w -> dir * w / 8 } + fadeIn(tween(220)))
+                        .togetherWith(
+                            slideOutHorizontally(tween(320)) { w -> -dir * w / 8 } + fadeOut(tween(160))
+                        )
+                },
+                label = "tab",
+                modifier = Modifier.weight(1f),
+            ) { current ->
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    Column(
+                        Modifier
+                            .widthIn(max = if (isWide) 720.dp else 500.dp)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        when (current) {
+                            Tab.LIVE -> LiveScreen(store)
+                            Tab.AMBIENT -> AmbientScreen(store)
+                            Tab.APPS -> AppRulesScreen(store)
+                            Tab.SETUP -> SetupScreen(store)
+                        }
+                        Spacer(Modifier.height(28.dp))
+                    }
+                }
             }
         }
     }

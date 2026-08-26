@@ -119,6 +119,18 @@
     <!-- "Timed out" — what ran out is the auto-off timer, so the subtitle names it -->
     <string name="tile_timed_out">自動オフ</string>
 
+    <!-- Tabletop Video Fill Light & Emergency Strobe -->
+    <string name="live_tools_title">卓上＆照明ツール</string>
+    <string name="live_tools_caption">ビデオ通話や非常用ライトとして常時点灯します。</string>
+    <string name="live_fill_light_title">ビデオ用フィルライト</string>
+    <string name="live_fill_warm">電球色 2700K</string>
+    <string name="live_fill_soft">温白色 3800K</string>
+    <string name="live_fill_neutral">昼白色 4500K</string>
+    <string name="live_fill_cool">昼光色 6500K</string>
+    <string name="live_strobe_title">非常用ストロボ</string>
+    <string name="live_strobe_sos">SOS ビーコン</string>
+    <string name="live_tools_stop">消灯する</string>
+
     <!-- The colour picker. widget_colour is the heading it falls back to when a caller does not name
          the colour it is editing; %1$d in widget_percent is a percentage of full. Intensity is the
          HSV value channel, so 明度, which leaves 明るさ free for style_brightness on the same screen. -->

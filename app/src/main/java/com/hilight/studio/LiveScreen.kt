@@ -15,17 +15,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.Flare
+import androidx.compose.material.icons.rounded.FlashlightOn
 import androidx.compose.material.icons.rounded.Nightlight
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Waves
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -214,6 +221,84 @@ fun LiveScreen(store: Store) {
                     }
                 }
             }
+        }
+    }
+
+    // Tabletop Video Fill Light & Emergency Strobe tools
+    var fillBrightness by remember { mutableFloatStateOf(0.85f) }
+    val fillTemps = listOf(
+        Triple(R.string.live_fill_warm, 0xFFFFB366.toInt(), Color(0xFFFFB366)),
+        Triple(R.string.live_fill_soft, 0xFFFFE0B2.toInt(), Color(0xFFFFE0B2)),
+        Triple(R.string.live_fill_neutral, 0xFFFFF0E0.toInt(), Color(0xFFFFF0E0)),
+        Triple(R.string.live_fill_cool, 0xFFE0F0FF.toInt(), Color(0xFFE0F0FF)),
+    )
+
+    PixelCard(tone = 2) {
+        SectionTitle(stringResource(R.string.live_tools_title))
+        Caption(stringResource(R.string.live_tools_caption))
+
+        Text(
+            stringResource(R.string.live_fill_light_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            fillTemps.forEach { (labelRes, colorInt, accentColor) ->
+                PixelTile(
+                    label = stringResource(labelRes),
+                    icon = Icons.Rounded.Videocam,
+                    accent = accentColor,
+                    enabled = enabled && status.alive,
+                    modifier = Modifier.weight(1f),
+                ) { store.startFillLight(colorInt, fillBrightness) }
+            }
+        }
+
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            PixelTile(
+                label = stringResource(R.string.live_strobe_title),
+                icon = Icons.Rounded.FlashlightOn,
+                accent = Color(0xFFFF5252),
+                enabled = enabled && status.alive,
+                modifier = Modifier.weight(1f),
+            ) { store.startEmergencyStrobe(isSos = false, brightness = 1f) }
+
+            PixelTile(
+                label = stringResource(R.string.live_strobe_sos),
+                icon = Icons.Rounded.Warning,
+                accent = Color(0xFFFFAB00),
+                enabled = enabled && status.alive,
+                modifier = Modifier.weight(1f),
+            ) { store.startEmergencyStrobe(isSos = true, brightness = 1f) }
+
+            PixelTile(
+                label = stringResource(R.string.setup_battery_indicator_title),
+                icon = Icons.Rounded.BatteryChargingFull,
+                accent = Color(0xFF00E676),
+                enabled = enabled && status.alive,
+                modifier = Modifier.weight(1f),
+            ) { store.showBatteryGauge() }
+        }
+
+        PixelSlider(
+            label = stringResource(R.string.style_brightness),
+            value = fillBrightness * 100f,
+            range = 10f..100f,
+            onChange = { fillBrightness = it / 100f },
+        ) { "%.0f%%".format(it) }
+
+        FilledTonalButton(
+            onClick = { store.stopPreview() },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            ButtonLabel(stringResource(R.string.live_tools_stop))
         }
     }
 

@@ -237,11 +237,50 @@ private fun PresetsCard(store: Store) {
     var name by remember { mutableStateOf("") }
     var importText by remember { mutableStateOf("") }
 
+    val signaturePresets = listOf(
+        Pair(R.string.preset_aurora, Ambient(pattern = Pattern.WAVE, color = 0xFF00E5FF.toInt(), secondColor = 0xFF00E676.toInt(), speedMs = 2200, brightness = 0.8f)),
+        Pair(R.string.preset_cyberpunk, Ambient(pattern = Pattern.CHASE, color = 0xFFFF007F.toInt(), secondColor = 0xFF00F0FF.toInt(), speedMs = 1400, brightness = 0.9f)),
+        Pair(R.string.preset_campfire, Ambient(pattern = Pattern.PULSE, color = 0xFFFF6D00.toInt(), secondColor = 0xFFD50000.toInt(), speedMs = 1600, brightness = 0.85f)),
+        Pair(R.string.preset_ocean, Ambient(pattern = Pattern.BREATHE, color = 0xFF304FFE.toInt(), secondColor = 0xFF00B0FF.toInt(), speedMs = 2800, brightness = 0.75f)),
+        Pair(R.string.preset_spectrum, Ambient(pattern = Pattern.RAINBOW, color = 0xFFFFFFFF.toInt(), rainbowSpread = true, speedMs = 2000, brightness = 0.85f)),
+        Pair(R.string.preset_matrix, Ambient(pattern = Pattern.COMET, color = 0xFF00FF66.toInt(), speedMs = 1200, brightness = 0.85f)),
+    )
+
     PixelCard {
         SectionTitle(
             stringResource(R.string.style_presets),
             trailing = { Caption(stringResource(R.string.style_presets_saved, presets.size)) },
         )
+
+        Text(
+            stringResource(R.string.style_signature_presets),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            signaturePresets.forEach { (titleRes, presetAmbient) ->
+                Box(
+                    Modifier
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                            CircleShape,
+                        )
+                        .clickable { store.setAmbient(presetAmbient) }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                ) {
+                    Text(
+                        stringResource(titleRes),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
+        }
+
         if (presets.isEmpty()) {
             Caption(stringResource(R.string.style_presets_empty))
         } else {

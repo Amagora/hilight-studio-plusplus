@@ -1,15 +1,16 @@
-<img src="docs/media/hilight-studio-logo.png" alt="HiLight Studio logo" width="112" align="right">
+# Hi-Light Studio V2
 
-# HiLight Studio
+**Version: `a1.1.0`** — Universal Hardware Lighting Control for Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold devices on Android 17 (API 37).
 
-Control the eight-LED HiLight array on Pixel 11 Pro devices.
-
-[![Android checks](https://github.com/DhananjayBhosale/hilight-studio/actions/workflows/android.yml/badge.svg)](https://github.com/DhananjayBhosale/hilight-studio/actions/workflows/android.yml)
-[![Latest release](https://img.shields.io/github/v/release/DhananjayBhosale/hilight-studio?include_prereleases&label=release)](https://github.com/DhananjayBhosale/hilight-studio/releases)
+[![Build Version](https://img.shields.io/badge/version-a1.1.0-blue.svg)](https://github.com/DhananjayBhosale/hilight-studio)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f81f7.svg)](LICENSE)
+[![Changelog](https://img.shields.io/badge/changelog-custom%20modifications-blue.svg)](CHANGELOG.md)
+
+> [!NOTE]
+> See [CHANGELOG.md](CHANGELOG.md) for the detailed log of custom additions, user requests, architectural enhancements, and privacy guarantees.
 
 > [!IMPORTANT]
-> HiLight Studio is experimental and supports only the Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold on Android 17 (API 37). It is not affiliated with or endorsed by Google.
+> Hi-Light Studio V2 is an open-source enhancement supporting all devices across the **Pixel 11 Pro line** (Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold) on Android 17 (API 37).
 
 <p align="center">
   <img src="docs/media/screen-live.png" alt="Live tab controlling the HiLight array on a Pixel 11 Pro XL" width="420">
@@ -17,17 +18,34 @@ Control the eight-LED HiLight array on Pixel 11 Pro devices.
 
 ## Features
 
-- Solid colours and animated patterns across all eight LEDs
+- **Material 3 Theming Engine**:
+  - **Theme Modes**: System Follow, Light, Dark, and AMOLED Pitch Black (pure `#000000` power-saving mode for OLED and foldable screens)
+  - **Material 3 Palettes**: Dynamic Material You (wallpaper colors), Pixel Indigo, Ocean Blue, Emerald Green, Coral Peach, Amber Gold, Berry Rose, and Monochrome
+- **Foldable Adaptive Dual-Pane Layout**:
+  - Automatically switches between single-column navigation and dual-pane side `NavigationRail` with persistent real-time 8-LED `DeviceHero` when unfolded on the Pixel 11 Pro Fold inner screen (`>= 600dp`).
+- **Tabletop Video Fill Light & Emergency Strobe Beacon**:
+  - Tuned continuous lighting for video calls, selfies, and tabletop shooting with color temperature presets: Warm (2700K), Soft (3800K), Neutral (4500K), and Cool (6500K).
+  - High-visibility emergency beacon and SOS strobe modes.
+- **8-LED Battery & Charging Fuel Gauge**:
+  - Visual battery level indicator that lights LEDs proportionally (1–8) and breathes green when plugged in or charging.
+- **Signature Curated Presets Pack**:
+  - Built-in one-tap lighting themes: *Aurora Borealis*, *Cyberpunk Neon*, *Campfire Ember*, *Deep Ocean*, *Pixel Spectrum*, and *Matrix Pulse*.
+- **Desktop GUI Control Manager (`HiLight-Control.exe`)**:
+  - Native Windows desktop application with 3 one-click actions:
+    1. *Full Easy Install & Flash*: Automatically installs/updates APK, launches the app, and starts the 8-LED renderer.
+    2. *Start HiLight (Post-Reboot)*: Restarts the background ADB daemon in 1 click after phone reboot.
+    3. *Stop / Kill ADB Session*: Cleanly terminates the background renderer and frees hardware lights control.
+    4. *Live Device Status*: Real-time connection badge (Pixel 11 Pro Fold) and integrated console log output.
+- Solid colours and animated patterns across all eight LEDs on Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold
 - Per-app rules for foreground use and notifications
-- Customisable microphone and camera activity rules, with any built-in animation and colour, for any
-  app or one selected app
+- Customisable microphone and camera activity rules, with any built-in animation and colour, for any app or one selected app
 - Per-contact rules: a colour for one person or one chat, picked from the chats HiLight has seen
 - Saved presets with import and export
 - Wallpaper-derived colours and a Quick Settings tile
 - Quiet hours, Do Not Disturb, Battery Saver, and low-battery controls
 - English and Japanese, selectable per app from Android's own language settings
 - Automatic root access when available, with Shizuku and ADB as fallbacks
-- Manual update checks against the project's GitHub releases
+- Manual update checks against GitHub releases
 
 ## Screenshots
 
@@ -44,28 +62,37 @@ Control the eight-LED HiLight array on Pixel 11 Pro devices.
 </tr>
 </table>
 
-## Install
+## Build & Install on Pixel 11 Pro Fold
 
-For now, install HiLight Studio with ADB. Play Protect may block direct installs from a browser or file manager because the app uses notification access for LED alerts.
+### 1. Build Your Private APK
 
-1. Download the signed APK from the [latest GitHub prerelease](https://github.com/DhananjayBhosale/hilight-studio/releases) to your computer.
-2. Connect a supported Pixel with USB debugging enabled and approve the computer on the phone.
-3. From the folder containing the APK, run:
+To compile your own private build:
 
 ```bash
-adb install -r HiLight-Studio-v1.0.6-experimental-signed.apk
+# On Windows PowerShell:
+.\gradlew.bat assembleDebug
+
+# On Linux/macOS:
+./gradlew assembleDebug
 ```
 
-If you previously installed v1.0.3 or an older debug-signed build, uninstall it once before installing a permanently signed release because the signing certificates are different:
+The APK will be generated at: `app/build/outputs/apk/debug/app-debug.apk`.
 
+### 2. Install / Flash to Pixel 11 Pro Fold
+
+Connect your **Pixel 11 Pro Fold** via USB with **USB debugging** enabled in Developer Options:
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+If replacing an earlier release signed with a different key:
 ```bash
 adb uninstall com.hilight.studio
-adb install HiLight-Studio-v1.0.6-experimental-signed.apk
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The published APK is an experimental release signed with HiLight Studio's permanent release certificate. v1.0.6 updates v1.0.5 normally, and future signed releases can do the same.
-
-HiLight Studio needs privileged access to the Android lights service. The renderer must be restarted after every reboot.
+HiLight Studio needs privileged access to the Android lights service. Choose one of the privilege methods below:
 
 ### Root
 

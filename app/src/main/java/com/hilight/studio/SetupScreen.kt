@@ -14,11 +14,21 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
@@ -32,10 +42,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
@@ -91,12 +107,15 @@ fun SetupScreen(store: Store) {
     val shizukuState by store.shizuku.state.collectAsStateWithLifecycle()
     val rootState by store.root.state.collectAsStateWithLifecycle()
     val priority by store.priority.collectAsStateWithLifecycle()
+    val themeMode by store.themeMode.collectAsStateWithLifecycle()
+    val themePalette by store.themePalette.collectAsStateWithLifecycle()
     val dynamicColor by store.dynamicColor.collectAsStateWithLifecycle()
     val timeoutMs by store.ambientTimeoutMs.collectAsStateWithLifecycle()
     val quietEnabled by store.quietEnabled.collectAsStateWithLifecycle()
     val quietStart by store.quietStart.collectAsStateWithLifecycle()
     val quietEnd by store.quietEnd.collectAsStateWithLifecycle()
     val batteryGuard by store.batteryGuard.collectAsStateWithLifecycle()
+    val batteryIndicatorEnabled by store.batteryIndicatorEnabled.collectAsStateWithLifecycle()
     val batteryMinPct by store.batteryMinPct.collectAsStateWithLifecycle()
     val saverGuard by store.saverGuard.collectAsStateWithLifecycle()
     val suppression by store.suppression.collectAsStateWithLifecycle()
@@ -109,6 +128,8 @@ fun SetupScreen(store: Store) {
     var usageAccess by remember { mutableStateOf(ForegroundWatcher.hasUsageAccess(ctx)) }
     var inspecting by remember { mutableStateOf(false) }
     var forgetting by remember { mutableStateOf(false) }
+    var showingLicense by remember { mutableStateOf(false) }
+    var showingAiDisclosure by remember { mutableStateOf(false) }
     var checkingForUpdates by remember { mutableStateOf(false) }
     var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
     val updateScope = rememberCoroutineScope()
@@ -193,6 +214,9 @@ fun SetupScreen(store: Store) {
         ToggleRow(stringResource(R.string.setup_pause_saver), saverGuard) { store.setSaverGuard(it) }
         ToggleRow(stringResource(R.string.setup_pause_low_battery), batteryGuard) {
             store.setBatteryGuard(it)
+        }
+        ToggleRow(stringResource(R.string.setup_battery_indicator_title), batteryIndicatorEnabled) {
+            store.setBatteryIndicatorEnabled(it)
         }
         if (batteryGuard) {
             PixelSlider(
@@ -329,8 +353,50 @@ fun SetupScreen(store: Store) {
 
     PixelCard {
         SectionTitle(stringResource(R.string.setup_appearance_title))
-        ToggleRow(stringResource(R.string.setup_wallpaper_colours), dynamicColor) {
-            store.setDynamicColor(it)
+
+        Text(
+            stringResource(R.string.setup_theme_mode),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SegmentedSelector(
+            options = ThemeMode.entries,
+            selected = themeMode,
+            label = { stringResource(it.labelRes) },
+            onSelect = { store.setThemeMode(it) },
+        )
+
+        Spacer(Modifier.height(4.dp))
+        Text(
+            stringResource(R.string.setup_theme_palette),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        val row1 = listOf(ThemePalette.DYNAMIC, ThemePalette.INDIGO, ThemePalette.BLUE, ThemePalette.EMERALD)
+        val row2 = listOf(ThemePalette.CORAL, ThemePalette.AMBER, ThemePalette.ROSE, ThemePalette.MONOCHROME)
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row1.forEach { p ->
+                    ThemePaletteItem(
+                        palette = p,
+                        selected = themePalette == p,
+                        modifier = Modifier.weight(1f),
+                        onClick = { store.setThemePalette(p) },
+                    )
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row2.forEach { p ->
+                    ThemePaletteItem(
+                        palette = p,
+                        selected = themePalette == p,
+                        modifier = Modifier.weight(1f),
+                        onClick = { store.setThemePalette(p) },
+                    )
+                }
+            }
         }
     }
 
@@ -388,6 +454,48 @@ fun SetupScreen(store: Store) {
     }
 
     PixelCard {
+        SectionTitle(stringResource(R.string.setup_original_developer_title))
+        Caption(stringResource(R.string.setup_original_developer_body))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilledTonalButton(
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/DhananjayBhosale/hilight-studio"))
+                    ctx.startActivity(intent)
+                }
+            ) {
+                ButtonLabel(stringResource(R.string.setup_original_developer_button_repo))
+            }
+            FilledTonalButton(
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/DhananjayBhosale"))
+                    ctx.startActivity(intent)
+                }
+            ) {
+                ButtonLabel(stringResource(R.string.setup_original_developer_button_author))
+            }
+        }
+    }
+
+    PixelCard {
+        SectionTitle(stringResource(R.string.setup_license_title))
+        Caption(stringResource(R.string.setup_license_body))
+        FilledTonalButton(onClick = { showingLicense = true }) {
+            ButtonLabel(stringResource(R.string.setup_license_button))
+        }
+    }
+
+    PixelCard {
+        SectionTitle(stringResource(R.string.setup_ai_disclosure_title))
+        Caption(stringResource(R.string.setup_ai_disclosure_body))
+        FilledTonalButton(onClick = { showingAiDisclosure = true }) {
+            ButtonLabel(stringResource(R.string.setup_ai_disclosure_button))
+        }
+    }
+
+    PixelCard {
         SectionTitle(stringResource(R.string.setup_test_title))
         Caption(stringResource(R.string.setup_test_body))
         FilledTonalButton(onClick = { postSelfTestNotification(ctx) }) {
@@ -436,7 +544,95 @@ fun SetupScreen(store: Store) {
             },
         )
     }
+
+    if (showingLicense) {
+        AlertDialog(
+            onDismissRequest = { showingLicense = false },
+            shape = MaterialTheme.shapes.extraLarge,
+            title = { Text(stringResource(R.string.setup_license_dialog_title)) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 360.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Text(
+                        text = MIT_LICENSE_TEXT,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showingLicense = false }) {
+                    ButtonLabel(stringResource(R.string.common_close))
+                }
+            },
+        )
+    }
+
+    if (showingAiDisclosure) {
+        AiDisclosureDialog(
+            onDismiss = { showingAiDisclosure = false },
+            confirmButtonText = stringResource(R.string.common_close),
+        )
+    }
 }
+
+@Composable
+fun AiDisclosureDialog(
+    onDismiss: () -> Unit,
+    confirmButtonText: String = stringResource(R.string.setup_ai_disclosure_dialog_understand),
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
+        title = { Text(stringResource(R.string.setup_ai_disclosure_dialog_title)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 380.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                Text(
+                    text = AI_DISCLOSURE_TEXT,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                ButtonLabel(confirmButtonText)
+            }
+        },
+    )
+}
+
+const val AI_DISCLOSURE_TEXT = """Artificial Intelligence (A.I.) Disclosure & Transparency Notice
+
+1. Use of Artificial Intelligence:
+Portions of the architectural design, user interface layout, Material 3 dynamic theming, and code enhancements in this fork of HiLight Studio were developed with the assistance of advanced Artificial Intelligence (AI) models, under explicit human direction, code review, and hardware testing on the Google Pixel 11 Pro Fold.
+
+2. Local Execution & Complete Privacy:
+The HiLight Studio application runs 100% locally on your device. It does not send your data, telemetry, hardware state, or personal information to any external AI servers, cloud providers, or third-party networks during runtime.
+
+3. Open Source & Hardware Safety:
+All modifications are fully open-source under the MIT License and designed to interact safely with the Google Pixel lights HAL (Hardware Abstraction Layer).
+
+4. Original Attribution:
+Original HiLight Studio architecture and concepts created by Dhananjay Bhosale and open-source contributors."""
+
+private const val MIT_LICENSE_TEXT = """MIT License
+
+Copyright (c) 2026 HiLight Studio contributors
+Copyright (c) 2026 HiLight Studio Fork contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
 
 @Composable
 private fun ShizukuCard(store: Store, state: ShizukuBackend.State) {
@@ -630,4 +826,60 @@ private fun hasNotificationAccess(ctx: Context): Boolean {
     val flat = Settings.Secure.getString(ctx.contentResolver, "enabled_notification_listeners")
         ?: return false
     return flat.contains(ctx.packageName)
+}
+
+@Composable
+private fun ThemePaletteItem(
+    palette: ThemePalette,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val haptics = LocalHapticFeedback.current
+    val strokeColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
+    val containerColor = if (selected) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+
+    Column(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.small)
+            .background(containerColor)
+            .then(
+                if (selected) Modifier.border(2.dp, strokeColor, MaterialTheme.shapes.small)
+                else Modifier
+            )
+            .clickable {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick()
+            }
+            .padding(vertical = 10.dp, horizontal = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .background(
+                    if (palette == ThemePalette.DYNAMIC) MaterialTheme.colorScheme.primary else palette.primaryAccent,
+                    CircleShape
+                )
+                .then(
+                    if (palette == ThemePalette.DYNAMIC) {
+                        Modifier.border(1.5.dp, Color.White.copy(alpha = 0.6f), CircleShape)
+                    } else Modifier
+                )
+        )
+        Text(
+            text = stringResource(palette.labelRes),
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            softWrap = false,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        )
+    }
 }
