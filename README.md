@@ -6,6 +6,12 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f81f7.svg)](LICENSE)
 [![Changelog](https://img.shields.io/badge/changelog-custom%20modifications-blue.svg)](CHANGELOG.md)
 
+> [!WARNING]
+> ### ⚖️ Non-Liability & Experimental A.I. Code Disclaimer
+> This software contains experimental hardware lighting modifications and AI-assisted code for Google Pixel 11 Pro series devices. It is provided **"AS-IS"** under the MIT License without warranty of any kind, express or implied.
+> - **Use at Your Own Discretion & Risk**: The developers, fork authors, contributors, and upstream creators assume **zero liability or responsibility** for any hardware damage (including LED burnout, thermal stress, or battery wear), data loss, software errors, security risks, or system instability resulting from the use of this application, ADB daemon scripts, or desktop utilities.
+> - **User Acceptance**: By downloading, compiling, installing, or executing any part of this project, you acknowledge and agree that you assume all risks associated with its operation.
+
 > [!NOTE]
 > See [CHANGELOG.md](CHANGELOG.md) for the detailed log of custom additions, user requests, architectural enhancements, and privacy guarantees.
 
@@ -13,7 +19,7 @@
 > **hilight-studio-plusplus** is an open-source enhancement supporting all devices across the **Pixel 11 Pro line** (Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold) on Android 17 (API 37).
 
 <p align="center">
-  <img src="docs/media/screen-live.png" alt="Live tab controlling the HiLight array on a Pixel 11 Pro XL" width="420">
+  <img src="docs/media/screen-live.png" alt="Live tab controlling the HiLight array on a Pixel 11 Pro Fold" width="380">
 </p>
 
 ## Features
@@ -49,6 +55,8 @@
 
 ## Screenshots
 
+### 📱 Android Application (Pixel 11 Pro Fold)
+
 <table>
 <tr>
 <td width="33%"><img src="docs/media/screen-style.png" alt="Style tab with presets, patterns, and colour controls"></td>
@@ -56,11 +64,18 @@
 <td width="33%"><img src="docs/media/screen-setup.png" alt="Setup tab with access and safety controls"></td>
 </tr>
 <tr>
-<td align="center"><sub><b>Style</b></sub></td>
-<td align="center"><sub><b>Apps</b></sub></td>
-<td align="center"><sub><b>Setup</b></sub></td>
+<td align="center"><sub><b>Style &amp; Signature Presets</b></sub></td>
+<td align="center"><sub><b>Apps &amp; Notification Rules</b></sub></td>
+<td align="center"><sub><b>Setup &amp; Safety Controls</b></sub></td>
 </tr>
 </table>
+
+### 🖥️ Windows Desktop Control Manager (`HiLight-Control.exe`)
+
+<p align="center">
+  <img src="docs/media/screen-desktop-manager.png" alt="hilight-studio-plusplus Windows Desktop Control Manager" width="850">
+</p>
+
 
 ## Build & Install on Pixel 11 Pro Fold
 

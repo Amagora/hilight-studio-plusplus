@@ -32,11 +32,35 @@ namespace HiLightManager
         private string adbPath = "";
         private string workspaceRoot = "";
 
-        public MainForm()
+        public MainForm(bool captureScreenshot = false)
         {
             InitializeDarkUI();
             FindPaths();
             _ = RefreshDeviceStatusAsync();
+
+            if (captureScreenshot)
+            {
+                this.Shown += async (s, e) =>
+                {
+                    await Task.Delay(1500);
+                    try
+                    {
+                        using (Bitmap bmp = new Bitmap(this.Width, this.Height))
+                        {
+                            this.DrawToBitmap(bmp, new Rectangle(0, 0, this.Width, this.Height));
+                            string outDir = Path.Combine(workspaceRoot, "docs", "media");
+                            Directory.CreateDirectory(outDir);
+                            string outPath = Path.Combine(outDir, "screen-desktop-manager.png");
+                            bmp.Save(outPath, System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        File.WriteAllText(Path.Combine(workspaceRoot, "screenshot-error.txt"), ex.ToString());
+                    }
+                    Application.Exit();
+                };
+            }
         }
 
         private void InitializeDarkUI()
@@ -82,7 +106,7 @@ namespace HiLightManager
                 Padding = new Padding(22, 18, 22, 18),
                 Margin = new Padding(0, 0, 0, 14)
             };
-            pnlHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            pnlHeader.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             pnlHeader.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             pnlHeader.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
