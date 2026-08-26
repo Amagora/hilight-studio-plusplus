@@ -25,5 +25,6 @@ docs/media/hilight-studio-logo-v*.png
 *.exe
 *.pdb
 *.user
+builds/
 tools/HiLightManager/bin/
 tools/HiLightManager/obj/
