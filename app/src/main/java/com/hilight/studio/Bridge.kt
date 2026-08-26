@@ -141,10 +141,14 @@ object Bridge {
         secondColor: Int = 0xFF00E5FF.toInt(),
         thirdColor: Int = 0xFFFF4081.toInt(),
         advancedColors: Boolean = false,
+        usePerLed: Boolean = false,
+        perLed: List<Int> = emptyList(),
     ): JSONObject = JSONObject().apply {
         put("id", id)
         put("pattern", pattern.key)
-        if (pattern == Pattern.GRADIENT || advancedColors) {
+        if (usePerLed && perLed.isNotEmpty()) {
+            put("colors", org.json.JSONArray().also { a -> perLed.forEach { a.put(it.toUInt().toLong()) } })
+        } else if (pattern == Pattern.GRADIENT || advancedColors) {
             put(
                 "colors",
                 org.json.JSONArray()

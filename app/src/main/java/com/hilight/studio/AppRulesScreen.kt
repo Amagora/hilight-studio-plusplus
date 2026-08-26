@@ -133,7 +133,7 @@ fun AppRulesScreen(store: Store) {
                         // test what the rule will actually do, including how long it stays lit
                         store.preview(
                             rule.pattern, rule.color, rule.speedMs, rule.brightness, rule.durationMs,
-                            rule.secondColor, rule.thirdColor,
+                            rule.secondColor, rule.thirdColor, rule.advancedColors, rule.usePerLed, rule.perLed,
                         )
                     },
                     onDelete = { store.removeRule(rule) },
@@ -419,6 +419,11 @@ private fun RuleCard(
             Ambient(
                 pattern = rule.pattern,
                 color = rule.color,
+                secondColor = rule.secondColor,
+                thirdColor = rule.thirdColor,
+                advancedColors = rule.advancedColors,
+                usePerLed = rule.usePerLed,
+                perLed = rule.perLed,
                 speedMs = rule.speedMs,
                 brightness = rule.brightness,
             ),
@@ -607,6 +612,9 @@ private fun RuleEditorDialog(
                         color = r.color,
                         secondColor = r.secondColor,
                         thirdColor = r.thirdColor,
+                        advancedColors = r.advancedColors,
+                        usePerLed = r.usePerLed,
+                        perLed = r.perLed,
                         speedMs = r.speedMs,
                         brightness = r.brightness,
                     ),
@@ -646,25 +654,54 @@ private fun RuleEditorDialog(
                     stringResource(R.string.rules_random_colour_each_time), r.randomColor,
                 ) { r = r.copy(randomColor = it) }
                 if (!r.randomColor) {
-                    if (r.pattern == Pattern.GRADIENT) {
+                    ToggleRow(
+                        stringResource(R.string.style_customize_per_led), r.usePerLed,
+                    ) { r = r.copy(usePerLed = it) }
+                    if (r.usePerLed) {
+                        PerLedEditor(
+                            perLed = r.perLed,
+                            onChange = { r = r.copy(perLed = it) },
+                            primaryColor = r.color,
+                            secondColor = r.secondColor,
+                            thirdColor = r.thirdColor,
+                        )
+                    } else if (r.pattern == Pattern.GRADIENT) {
                         key("rule_color_start") {
                             ColorPicker(
                                 r.color,
-                                { r = r.copy(color = it) },
+                                {
+                                    val newCol = it
+                                    r = r.copy(
+                                        color = newCol,
+                                        perLed = generateGradient8(newCol, r.secondColor, r.thirdColor),
+                                    )
+                                },
                                 stringResource(R.string.style_gradient_start),
                             )
                         }
                         key("rule_color_middle") {
                             ColorPicker(
                                 r.secondColor,
-                                { r = r.copy(secondColor = it) },
+                                {
+                                    val newCol = it
+                                    r = r.copy(
+                                        secondColor = newCol,
+                                        perLed = generateGradient8(r.color, newCol, r.thirdColor),
+                                    )
+                                },
                                 stringResource(R.string.style_gradient_middle),
                             )
                         }
                         key("rule_color_end") {
                             ColorPicker(
                                 r.thirdColor,
-                                { r = r.copy(thirdColor = it) },
+                                {
+                                    val newCol = it
+                                    r = r.copy(
+                                        thirdColor = newCol,
+                                        perLed = generateGradient8(r.color, r.secondColor, newCol),
+                                    )
+                                },
                                 stringResource(R.string.style_gradient_end),
                             )
                         }
@@ -699,7 +736,7 @@ private fun RuleEditorDialog(
                                 ColorPicker(r.color, { r = r.copy(color = it) })
                             }
                         }
-                    } else if (r.pattern == Pattern.SOLID) {
+                    } else {
                         key("rule_color_single") {
                             ColorPicker(r.color, { r = r.copy(color = it) })
                         }

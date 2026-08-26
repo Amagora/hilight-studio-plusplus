@@ -47,7 +47,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.runtime.key
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -460,4 +466,106 @@ fun formatDuration(ms: Int): String = when {
     // where that is what a reader expects.
     ms >= 1_000 -> stringResource(R.string.duration_seconds_fraction, "%.1f".format(ms / 1000f))
     else -> stringResource(R.string.duration_ms, ms)
+}
+
+@Composable
+fun LedSwatch(
+    color: Int,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val haptics = LocalHapticFeedback.current
+    val scale by animateFloatAsState(
+        if (selected) 1.1f else 1f,
+        spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMedium),
+        label = "ledSwatch",
+    )
+    Box(
+        modifier
+            .scale(scale)
+            .aspectRatio(1f)
+            .background(Color(color), CircleShape)
+            .border(
+                if (selected) 3.dp else 1.dp,
+                if (selected) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                CircleShape,
+            )
+            .clickable {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick()
+            },
+        contentAlignment = Alignment.Center,
+    ) {}
+}
+
+fun generateGradient8(c1: Int, c2: Int, c3: Int): List<Int> = List(LED_COUNT) { i ->
+    val frac = i.toDouble() / (LED_COUNT - 1)
+    if (frac <= 0.5) {
+        Renderer.mix(c1, c2, frac * 2.0)
+    } else {
+        Renderer.mix(c2, c3, (frac - 0.5) * 2.0)
+    }
+}
+
+@Composable
+fun PerLedEditor(
+    perLed: List<Int>,
+    onChange: (List<Int>) -> Unit,
+    primaryColor: Int = 0xFF7C4DFF.toInt(),
+    secondColor: Int = 0xFF00E5FF.toInt(),
+    thirdColor: Int = 0xFFFF4081.toInt(),
+    modifier: Modifier = Modifier,
+) {
+    var editingLed by rememberSaveable { mutableIntStateOf(0) }
+    val safeEditingLed = editingLed.coerceIn(0, (perLed.size - 1).coerceAtLeast(0))
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Caption(stringResource(R.string.style_per_led_hint))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            perLed.forEachIndexed { i, c ->
+                LedSwatch(
+                    color = c,
+                    selected = i == safeEditingLed,
+                    modifier = Modifier.weight(1f),
+                ) { editingLed = i }
+            }
+        }
+        if (perLed.isNotEmpty()) {
+            key("per_led_picker_$safeEditingLed") {
+                ColorPicker(
+                    color = perLed[safeEditingLed],
+                    onColor = { c ->
+                        onChange(perLed.toMutableList().also { it[safeEditingLed] = c })
+                    },
+                    label = stringResource(R.string.style_led_number, safeEditingLed + 1),
+                )
+            }
+        }
+        val wallpaper = wallpaperLedColours()
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilledTonalButton(
+                onClick = { onChange(generateGradient8(primaryColor, secondColor, thirdColor)) },
+                modifier = Modifier.weight(1f),
+            ) { ButtonLabel(stringResource(R.string.style_fill_gradient_3)) }
+            FilledTonalButton(
+                onClick = {
+                    onChange(List(LED_COUNT) { i -> Renderer.hsv(i * 360f / LED_COUNT) })
+                },
+                modifier = Modifier.weight(1f),
+            ) { ButtonLabel(stringResource(Pattern.RAINBOW.shortLabelRes)) }
+            FilledTonalButton(
+                onClick = { onChange(wallpaper) },
+                modifier = Modifier.weight(1f),
+            ) { ButtonLabel(stringResource(R.string.style_wallpaper)) }
+            FilledTonalButton(
+                onClick = {
+                    val fillCol = if (perLed.isNotEmpty()) perLed[safeEditingLed] else primaryColor
+                    onChange(List(LED_COUNT) { fillCol })
+                },
+                modifier = Modifier.weight(1f),
+            ) { ButtonLabel(stringResource(R.string.style_fill_all)) }
+        }
+    }
 }

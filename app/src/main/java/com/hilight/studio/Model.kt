@@ -87,6 +87,7 @@ data class Ambient(
     val secondColor: Int = 0xFF00E5FF.toInt(),
     val thirdColor: Int = 0xFFFF4081.toInt(),
     val advancedColors: Boolean = false,
+    val usePerLed: Boolean = false,
     val perLed: List<Int> = List(LED_COUNT) { 0xFF7C4DFF.toInt() },
     val brightness: Float = 0.7f,
     val speedMs: Int = 2500,
@@ -108,7 +109,7 @@ data class Ambient(
         put("randomSaturation", randomSaturation.toDouble())
         put("rotateMs", rotateMs)
         when {
-            pattern == Pattern.CUSTOM -> put("colors", JSONArray().also { a -> perLed.forEach { a.put(it.toUInt().toLong()) } })
+            pattern == Pattern.CUSTOM || usePerLed -> put("colors", JSONArray().also { a -> perLed.forEach { a.put(it.toUInt().toLong()) } })
             pattern == Pattern.GRADIENT || advancedColors -> put(
                 "colors",
                 JSONArray()
@@ -127,6 +128,7 @@ data class Ambient(
             secondColor = o.optLong("secondColor", 0xFF00E5FFL).toInt(),
             thirdColor = o.optLong("thirdColor", 0xFFFF4081L).toInt(),
             advancedColors = o.optBoolean("advancedColors", false),
+            usePerLed = o.optBoolean("usePerLed", false),
             perLed = o.optJSONArray("perLed")?.let { a ->
                 (0 until a.length()).map { a.optLong(it).toInt() }
             }?.takeIf { it.size == LED_COUNT } ?: List(LED_COUNT) { 0xFF7C4DFF.toInt() },
@@ -148,6 +150,7 @@ data class Ambient(
         put("secondColor", secondColor.toUInt().toLong())
         put("thirdColor", thirdColor.toUInt().toLong())
         put("advancedColors", advancedColors)
+        put("usePerLed", usePerLed)
         put("perLed", JSONArray().also { a -> perLed.forEach { a.put(it.toUInt().toLong()) } })
         put("brightness", brightness.toDouble())
         put("speedMs", speedMs)
@@ -172,6 +175,8 @@ data class AppRule(
     val secondColor: Int = 0xFF00E5FF.toInt(),
     val thirdColor: Int = 0xFFFF4081.toInt(),
     val advancedColors: Boolean = false,
+    val usePerLed: Boolean = false,
+    val perLed: List<Int> = List(LED_COUNT) { 0xFF00E676.toInt() },
     val durationMs: Int = 10_000,
     val speedMs: Int = 800,
     val brightness: Float = 1f,
@@ -226,6 +231,8 @@ data class AppRule(
         put("secondColor", secondColor.toUInt().toLong())
         put("thirdColor", thirdColor.toUInt().toLong())
         put("advancedColors", advancedColors)
+        put("usePerLed", usePerLed)
+        put("perLed", JSONArray().also { a -> perLed.forEach { a.put(it.toUInt().toLong()) } })
         put("durationMs", durationMs)
         put("speedMs", speedMs)
         put("brightness", brightness.toDouble())
@@ -241,28 +248,35 @@ data class AppRule(
         /** Package sentinel for the catch-all rule. */
         const val ANY_APP = "*"
 
-        fun fromJson(o: JSONObject) = AppRule(
-            pkg = o.getString("pkg"),
-            label = o.optString("label", o.getString("pkg")),
-            enabled = o.optBoolean("enabled", true),
-            trigger = runCatching { Trigger.valueOf(o.optString("trigger", "NOTIFICATION")) }
-                .getOrDefault(Trigger.NOTIFICATION),
-            pattern = Pattern.of(o.optString("pattern", "pulse")),
-            randomColor = o.optBoolean("randomColor", false),
-            color = o.optLong("color", 0xFF00E676L).toInt(),
-            secondColor = o.optLong("secondColor", 0xFF00E5FFL).toInt(),
-            thirdColor = o.optLong("thirdColor", 0xFFFF4081L).toInt(),
-            advancedColors = o.optBoolean("advancedColors", false),
-            durationMs = o.optInt("durationMs", 10_000),
-            speedMs = o.optInt("speedMs", 800),
-            brightness = o.optDouble("brightness", 1.0).toFloat(),
-            onlyWhenScreenOff = o.optBoolean("onlyWhenScreenOff", false),
-            keyword = o.optString("keyword", ""),
-            conversationKey = o.optString("conversationKey", "").takeIf { it.isNotEmpty() },
-            conversationName = o.optString("conversationName", "").takeIf { it.isNotEmpty() },
-            includeGroups = o.optBoolean("includeGroups", false),
-            conversationIsGroup = o.optBoolean("conversationIsGroup", false),
-        )
+        fun fromJson(o: JSONObject): AppRule {
+            val fallbackColor = o.optLong("color", 0xFF00E676L).toInt()
+            return AppRule(
+                pkg = o.getString("pkg"),
+                label = o.optString("label", o.getString("pkg")),
+                enabled = o.optBoolean("enabled", true),
+                trigger = runCatching { Trigger.valueOf(o.optString("trigger", "NOTIFICATION")) }
+                    .getOrDefault(Trigger.NOTIFICATION),
+                pattern = Pattern.of(o.optString("pattern", "pulse")),
+                randomColor = o.optBoolean("randomColor", false),
+                color = fallbackColor,
+                secondColor = o.optLong("secondColor", 0xFF00E5FFL).toInt(),
+                thirdColor = o.optLong("thirdColor", 0xFFFF4081L).toInt(),
+                advancedColors = o.optBoolean("advancedColors", false),
+                usePerLed = o.optBoolean("usePerLed", false),
+                perLed = o.optJSONArray("perLed")?.let { a ->
+                    (0 until a.length()).map { a.optLong(it).toInt() }
+                }?.takeIf { it.size == LED_COUNT } ?: List(LED_COUNT) { fallbackColor },
+                durationMs = o.optInt("durationMs", 10_000),
+                speedMs = o.optInt("speedMs", 800),
+                brightness = o.optDouble("brightness", 1.0).toFloat(),
+                onlyWhenScreenOff = o.optBoolean("onlyWhenScreenOff", false),
+                keyword = o.optString("keyword", ""),
+                conversationKey = o.optString("conversationKey", "").takeIf { it.isNotEmpty() },
+                conversationName = o.optString("conversationName", "").takeIf { it.isNotEmpty() },
+                includeGroups = o.optBoolean("includeGroups", false),
+                conversationIsGroup = o.optBoolean("conversationIsGroup", false),
+            )
+        }
     }
 }
 
@@ -277,6 +291,8 @@ data class PrivacyRule(
     val secondColor: Int = 0xFF00E5FF.toInt(),
     val thirdColor: Int = 0xFFFF4081.toInt(),
     val advancedColors: Boolean = false,
+    val usePerLed: Boolean = false,
+    val perLed: List<Int> = List(LED_COUNT) { color },
     val lightMs: Int = DEFAULT_LIGHT_MS,
     val cooldownMs: Int = DEFAULT_COOLDOWN_MS,
     val speedMs: Int = 800,
@@ -295,6 +311,8 @@ data class PrivacyRule(
         put("secondColor", secondColor.toUInt().toLong())
         put("thirdColor", thirdColor.toUInt().toLong())
         put("advancedColors", advancedColors)
+        put("usePerLed", usePerLed)
+        put("perLed", JSONArray().also { a -> perLed.forEach { a.put(it.toUInt().toLong()) } })
         put("lightMs", lightMs)
         put("cooldownMs", cooldownMs)
         put("speedMs", speedMs)
@@ -307,7 +325,9 @@ data class PrivacyRule(
         put("activity", activity.key)
         put("pkg", pkg)
         put("pattern", pattern.key)
-        if (pattern == Pattern.GRADIENT || advancedColors) {
+        if (usePerLed) {
+            put("colors", JSONArray().also { a -> perLed.forEach { a.put(it.toUInt().toLong()) } })
+        } else if (pattern == Pattern.GRADIENT || advancedColors) {
             put(
                 "colors",
                 JSONArray()
@@ -352,13 +372,14 @@ data class PrivacyRule(
         fun fromJson(o: JSONObject): PrivacyRule? {
             val activity = PrivacyActivity.of(o.optString("activity")) ?: return null
             val defaults = default(activity)
+            val parsedColor = o.optLong("color", defaults.color.toUInt().toLong()).toInt()
             return PrivacyRule(
                 activity = activity,
                 pkg = o.optString("pkg", AppRule.ANY_APP),
                 appLabel = o.optString("appLabel", ""),
                 enabled = o.optBoolean("enabled", true),
                 pattern = Pattern.of(o.optString("pattern", defaults.pattern.key)),
-                color = o.optLong("color", defaults.color.toUInt().toLong()).toInt(),
+                color = parsedColor,
                 secondColor = o.optLong(
                     "secondColor",
                     defaults.secondColor.toUInt().toLong(),
@@ -368,6 +389,10 @@ data class PrivacyRule(
                     defaults.thirdColor.toUInt().toLong(),
                 ).toInt(),
                 advancedColors = o.optBoolean("advancedColors", false),
+                usePerLed = o.optBoolean("usePerLed", false),
+                perLed = o.optJSONArray("perLed")?.let { a ->
+                    (0 until a.length()).map { a.optLong(it).toInt() }
+                }?.takeIf { it.size == LED_COUNT } ?: List(LED_COUNT) { parsedColor },
                 lightMs = o.optInt("lightMs", DEFAULT_LIGHT_MS)
                     .coerceIn(MIN_PHASE_MS, MAX_PHASE_MS),
                 cooldownMs = o.optInt("cooldownMs", DEFAULT_COOLDOWN_MS)

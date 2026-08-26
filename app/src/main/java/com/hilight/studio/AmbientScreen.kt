@@ -124,25 +124,12 @@ fun AmbientScreen(store: Store) {
 
                 Pattern.CUSTOM -> PixelCard {
                     SectionTitle(stringResource(R.string.style_per_led_colours))
-                    Caption(stringResource(R.string.style_per_led_hint))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        ambient.perLed.forEachIndexed { i, c ->
-                            LedSwatch(
-                                color = c,
-                                selected = i == editingLed,
-                                modifier = Modifier.weight(1f),
-                            ) { editingLed = i }
-                        }
-                    }
-                    ColorPicker(
-                        color = ambient.perLed[editingLed],
-                        onColor = { c ->
-                            store.setAmbient(
-                                ambient.copy(
-                                    perLed = ambient.perLed.toMutableList().also { it[editingLed] = c })
-                            )
-                        },
-                        label = stringResource(R.string.style_led_number, editingLed + 1),
+                    PerLedEditor(
+                        perLed = ambient.perLed,
+                        onChange = { store.setAmbient(ambient.copy(perLed = it)) },
+                        primaryColor = ambient.color,
+                        secondColor = ambient.secondColor,
+                        thirdColor = ambient.thirdColor,
                     )
                     PixelSlider(
                         stringResource(R.string.style_rotate_around_array),
@@ -153,52 +140,68 @@ fun AmbientScreen(store: Store) {
                         if (it < 50) stringResource(R.string.style_rotate_off)
                         else stringResource(R.string.duration_ms, it.toInt())
                     }
-                    val wallpaper = wallpaperLedColours()
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        FilledTonalButton(
-                            onClick = {
-                                store.setAmbient(
-                                    ambient.copy(
-                                        perLed = List(LED_COUNT) { i -> Renderer.hsv(i * 360f / LED_COUNT) })
-                                )
-                            },
-                            modifier = Modifier.weight(1f),
-                        ) { ButtonLabel(stringResource(Pattern.RAINBOW.shortLabelRes)) }
-                        FilledTonalButton(
-                            onClick = { store.setAmbient(ambient.copy(perLed = wallpaper)) },
-                            modifier = Modifier.weight(1f),
-                        ) { ButtonLabel(stringResource(R.string.style_wallpaper)) }
-                        FilledTonalButton(
-                            onClick = {
-                                store.setAmbient(ambient.copy(perLed = List(LED_COUNT) { ambient.color }))
-                            },
-                            modifier = Modifier.weight(1f),
-                        ) { ButtonLabel(stringResource(R.string.pattern_solid)) }
-                    }
                 }
 
                 Pattern.GRADIENT -> PixelCard {
                     SectionTitle(stringResource(R.string.pattern_gradient))
-                    key("ambient_start") {
-                        ColorPicker(
-                            ambient.color,
-                            { store.setAmbient(ambient.copy(color = it)) },
-                            stringResource(R.string.style_gradient_start),
+                    ToggleRow(
+                        stringResource(R.string.style_customize_per_led),
+                        ambient.usePerLed,
+                    ) { store.setAmbient(ambient.copy(usePerLed = it)) }
+                    if (ambient.usePerLed) {
+                        PerLedEditor(
+                            perLed = ambient.perLed,
+                            onChange = { store.setAmbient(ambient.copy(perLed = it)) },
+                            primaryColor = ambient.color,
+                            secondColor = ambient.secondColor,
+                            thirdColor = ambient.thirdColor,
                         )
-                    }
-                    key("ambient_middle") {
-                        ColorPicker(
-                            ambient.secondColor,
-                            { store.setAmbient(ambient.copy(secondColor = it)) },
-                            stringResource(R.string.style_gradient_middle),
-                        )
-                    }
-                    key("ambient_end") {
-                        ColorPicker(
-                            ambient.thirdColor,
-                            { store.setAmbient(ambient.copy(thirdColor = it)) },
-                            stringResource(R.string.style_gradient_end),
-                        )
+                    } else {
+                        key("ambient_start") {
+                            ColorPicker(
+                                ambient.color,
+                                {
+                                    val newCol = it
+                                    store.setAmbient(
+                                        ambient.copy(
+                                            color = newCol,
+                                            perLed = generateGradient8(newCol, ambient.secondColor, ambient.thirdColor)
+                                        )
+                                    )
+                                },
+                                stringResource(R.string.style_gradient_start),
+                            )
+                        }
+                        key("ambient_middle") {
+                            ColorPicker(
+                                ambient.secondColor,
+                                {
+                                    val newCol = it
+                                    store.setAmbient(
+                                        ambient.copy(
+                                            secondColor = newCol,
+                                            perLed = generateGradient8(ambient.color, newCol, ambient.thirdColor)
+                                        )
+                                    )
+                                },
+                                stringResource(R.string.style_gradient_middle),
+                            )
+                        }
+                        key("ambient_end") {
+                            ColorPicker(
+                                ambient.thirdColor,
+                                {
+                                    val newCol = it
+                                    store.setAmbient(
+                                        ambient.copy(
+                                            thirdColor = newCol,
+                                            perLed = generateGradient8(ambient.color, ambient.secondColor, newCol)
+                                        )
+                                    )
+                                },
+                                stringResource(R.string.style_gradient_end),
+                            )
+                        }
                     }
                 }
 
@@ -209,8 +212,22 @@ fun AmbientScreen(store: Store) {
 
                 Pattern.SOLID -> PixelCard {
                     SectionTitle(stringResource(R.string.style_colour))
-                    key("ambient_solid") {
-                        ColorPicker(ambient.color, { store.setAmbient(ambient.copy(color = it)) })
+                    ToggleRow(
+                        stringResource(R.string.style_customize_per_led),
+                        ambient.usePerLed,
+                    ) { store.setAmbient(ambient.copy(usePerLed = it)) }
+                    if (ambient.usePerLed) {
+                        PerLedEditor(
+                            perLed = ambient.perLed,
+                            onChange = { store.setAmbient(ambient.copy(perLed = it)) },
+                            primaryColor = ambient.color,
+                            secondColor = ambient.secondColor,
+                            thirdColor = ambient.thirdColor,
+                        )
+                    } else {
+                        key("ambient_solid") {
+                            ColorPicker(ambient.color, { store.setAmbient(ambient.copy(color = it)) })
+                        }
                     }
                 }
 
@@ -218,38 +235,52 @@ fun AmbientScreen(store: Store) {
                     PixelCard {
                         SectionTitle(stringResource(pattern.labelRes))
                         ToggleRow(
-                            stringResource(R.string.style_advanced_colors),
-                            ambient.advancedColors,
-                        ) { store.setAmbient(ambient.copy(advancedColors = it)) }
-                        if (ambient.advancedColors) {
-                            key("ambient_multi_1") {
-                                ColorPicker(
-                                    ambient.color,
-                                    { store.setAmbient(ambient.copy(color = it)) },
-                                    stringResource(R.string.style_color_primary),
-                                )
-                            }
-                            key("ambient_multi_2") {
-                                ColorPicker(
-                                    ambient.secondColor,
-                                    { store.setAmbient(ambient.copy(secondColor = it)) },
-                                    stringResource(R.string.style_color_secondary),
-                                )
-                            }
-                            key("ambient_multi_3") {
-                                ColorPicker(
-                                    ambient.thirdColor,
-                                    { store.setAmbient(ambient.copy(thirdColor = it)) },
-                                    stringResource(R.string.style_color_accent),
-                                )
-                            }
+                            stringResource(R.string.style_customize_per_led),
+                            ambient.usePerLed,
+                        ) { store.setAmbient(ambient.copy(usePerLed = it)) }
+                        if (ambient.usePerLed) {
+                            PerLedEditor(
+                                perLed = ambient.perLed,
+                                onChange = { store.setAmbient(ambient.copy(perLed = it)) },
+                                primaryColor = ambient.color,
+                                secondColor = ambient.secondColor,
+                                thirdColor = ambient.thirdColor,
+                            )
                         } else {
-                            key("ambient_single") {
-                                ColorPicker(
-                                    ambient.color,
-                                    { store.setAmbient(ambient.copy(color = it)) },
-                                    stringResource(R.string.style_colour),
-                                )
+                            ToggleRow(
+                                stringResource(R.string.style_advanced_colors),
+                                ambient.advancedColors,
+                            ) { store.setAmbient(ambient.copy(advancedColors = it)) }
+                            if (ambient.advancedColors) {
+                                key("ambient_multi_1") {
+                                    ColorPicker(
+                                        ambient.color,
+                                        { store.setAmbient(ambient.copy(color = it)) },
+                                        stringResource(R.string.style_color_primary),
+                                    )
+                                }
+                                key("ambient_multi_2") {
+                                    ColorPicker(
+                                        ambient.secondColor,
+                                        { store.setAmbient(ambient.copy(secondColor = it)) },
+                                        stringResource(R.string.style_color_secondary),
+                                    )
+                                }
+                                key("ambient_multi_3") {
+                                    ColorPicker(
+                                        ambient.thirdColor,
+                                        { store.setAmbient(ambient.copy(thirdColor = it)) },
+                                        stringResource(R.string.style_color_accent),
+                                    )
+                                }
+                            } else {
+                                key("ambient_single") {
+                                    ColorPicker(
+                                        ambient.color,
+                                        { store.setAmbient(ambient.copy(color = it)) },
+                                        stringResource(R.string.style_colour),
+                                    )
+                                }
                             }
                         }
                     }
@@ -523,36 +554,4 @@ fun PatternCarousel(
             }
         }
     }
-}
-
-@Composable
-private fun LedSwatch(
-    color: Int,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    val haptics = LocalHapticFeedback.current
-    val scale by animateFloatAsState(
-        if (selected) 1.1f else 1f,
-        spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMedium),
-        label = "ledSwatch",
-    )
-    Box(
-        modifier
-            .scale(scale)
-            .aspectRatio(1f)
-            .background(Color(color), CircleShape)
-            .border(
-                if (selected) 3.dp else 1.dp,
-                if (selected) MaterialTheme.colorScheme.onSurface
-                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                CircleShape,
-            )
-            .clickable {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                onClick()
-            },
-        contentAlignment = Alignment.Center,
-    ) {}
 }

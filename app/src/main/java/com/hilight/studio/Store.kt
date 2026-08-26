@@ -910,6 +910,8 @@ class Store private constructor(private val app: Context) {
                 secondColor = rule.secondColor,
                 thirdColor = rule.thirdColor,
                 advancedColors = rule.advancedColors,
+                usePerLed = rule.usePerLed,
+                perLed = rule.perLed,
             ),
             durationMs = rule.durationMs,
             arm = false,               // a notification must not extend the ambient window
@@ -984,6 +986,8 @@ class Store private constructor(private val app: Context) {
             secondColor = rule.secondColor,
             thirdColor = rule.thirdColor,
             advancedColors = rule.advancedColors,
+            usePerLed = rule.usePerLed,
+            perLed = rule.perLed,
         )
         pushCurrent(arm = false)       // opening an app must not extend the ambient window either
     }
@@ -1005,11 +1009,13 @@ class Store private constructor(private val app: Context) {
         secondColor: Int = 0xFF00E5FF.toInt(),
         thirdColor: Int = 0xFFFF4081.toInt(),
         advancedColors: Boolean = false,
+        usePerLed: Boolean = false,
+        perLed: List<Int> = emptyList(),
     ) {
         holdAlert(
             alert = Bridge.alertJson(
                 Bridge.nextAlertId(), pattern, color, durationMs, speedMs, brightness,
-                AlertSource.PREVIEW, secondColor, thirdColor, advancedColors,
+                AlertSource.PREVIEW, secondColor, thirdColor, advancedColors, usePerLed, perLed,
             ),
             durationMs = durationMs,
             arm = true,                // the user asked for this one, so it may open a window
@@ -1019,6 +1025,8 @@ class Store private constructor(private val app: Context) {
                 secondColor = secondColor,
                 thirdColor = thirdColor,
                 advancedColors = advancedColors,
+                usePerLed = usePerLed,
+                perLed = if (perLed.size == LED_COUNT) perLed else List(LED_COUNT) { color },
                 speedMs = speedMs,
                 brightness = brightness,
             ),

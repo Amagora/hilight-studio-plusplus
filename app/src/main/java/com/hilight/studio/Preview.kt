@@ -23,18 +23,22 @@ object Renderer {
 
         when (pattern) {
             Pattern.OFF -> Unit
-            Pattern.SOLID -> for (i in 0 until n) out[i] = base
+            Pattern.SOLID -> for (i in 0 until n) out[i] = if (cfg.usePerLed) cfg.perLed[i] else base
             Pattern.CUSTOM -> for (i in 0 until n) out[i] = cfg.perLed[i % cfg.perLed.size]
             Pattern.GRADIENT -> {
-                val a = base
-                val b = cfg.secondColor
-                val c = cfg.thirdColor
-                for (i in 0 until n) {
-                    val frac = i.toDouble() / (n - 1)
-                    out[i] = if (frac <= 0.5) {
-                        mix(a, b, frac * 2.0)
-                    } else {
-                        mix(b, c, (frac - 0.5) * 2.0)
+                if (cfg.usePerLed) {
+                    for (i in 0 until n) out[i] = cfg.perLed[i]
+                } else {
+                    val a = base
+                    val b = cfg.secondColor
+                    val c = cfg.thirdColor
+                    for (i in 0 until n) {
+                        val frac = i.toDouble() / (n - 1)
+                        out[i] = if (frac <= 0.5) {
+                            mix(a, b, frac * 2.0)
+                        } else {
+                            mix(b, c, (frac - 0.5) * 2.0)
+                        }
                     }
                 }
             }
@@ -42,7 +46,9 @@ object Renderer {
             Pattern.BREATHE -> {
                 val phase = (t % speed) / speed.toDouble()
                 val k = (1 - cos(phase * 2 * PI)) / 2
-                if (cfg.advancedColors) {
+                if (cfg.usePerLed) {
+                    for (i in 0 until n) out[i] = scale(cfg.perLed[i], 0.05 + 0.95 * k)
+                } else if (cfg.advancedColors) {
                     val currentCol = when {
                         phase < 1.0 / 3.0 -> mix(cfg.color, cfg.secondColor, phase * 3.0)
                         phase < 2.0 / 3.0 -> mix(cfg.secondColor, cfg.thirdColor, (phase - 1.0 / 3.0) * 3.0)
@@ -56,7 +62,9 @@ object Renderer {
 
             Pattern.BLINK -> {
                 if ((t % speed) < speed / 2) {
-                    if (cfg.advancedColors) {
+                    if (cfg.usePerLed) {
+                        for (i in 0 until n) out[i] = cfg.perLed[i]
+                    } else if (cfg.advancedColors) {
                         val blinkIdx = ((t / speed) % 3).toInt()
                         val blinkCol = when (blinkIdx) {
                             0 -> cfg.color
@@ -73,7 +81,9 @@ object Renderer {
             Pattern.PULSE -> {
                 val phase = (t % speed) / speed.toDouble()
                 val k = if (phase < 0.12) phase / 0.12 else exp(-(phase - 0.12) * 5)
-                if (cfg.advancedColors) {
+                if (cfg.usePerLed) {
+                    for (i in 0 until n) out[i] = scale(cfg.perLed[i], k)
+                } else if (cfg.advancedColors) {
                     val pulseIdx = ((t / speed) % 3).toInt()
                     val pulseCol = when (pulseIdx) {
                         0 -> cfg.color
@@ -88,7 +98,9 @@ object Renderer {
 
             Pattern.CHASE -> {
                 val head = ((t / max(1, speed / n)) % n).toInt()
-                if (cfg.advancedColors) {
+                if (cfg.usePerLed) {
+                    for (i in 0 until n) out[i] = if (i == head) cfg.perLed[i] else 0xFF000000.toInt()
+                } else if (cfg.advancedColors) {
                     val frac = head.toDouble() / n
                     val headCol = when {
                         frac < 1.0 / 3.0 -> mix(cfg.color, cfg.secondColor, frac * 3.0)
@@ -108,7 +120,9 @@ object Renderer {
                     if (d < 0) d += n
                     if (d <= 3.0) {
                         val tailFrac = d / 3.0
-                        val cometCol = if (cfg.advancedColors) {
+                        val cometCol = if (cfg.usePerLed) {
+                            cfg.perLed[i]
+                        } else if (cfg.advancedColors) {
                             if (tailFrac <= 0.5) {
                                 mix(cfg.color, cfg.secondColor, tailFrac * 2.0)
                             } else {
@@ -128,7 +142,9 @@ object Renderer {
                 val phase = (t % speed) / speed.toDouble()
                 for (i in 0 until n) {
                     val ledFrac = i.toDouble() / (n - 1)
-                    val waveCol = if (cfg.advancedColors) {
+                    val waveCol = if (cfg.usePerLed) {
+                        cfg.perLed[i]
+                    } else if (cfg.advancedColors) {
                         if (ledFrac <= 0.5) {
                             mix(cfg.color, cfg.secondColor, ledFrac * 2.0)
                         } else {
@@ -173,7 +189,7 @@ object Renderer {
         return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
     }
 
-    private fun mix(a: Int, b: Int, k: Double): Int {
+    fun mix(a: Int, b: Int, k: Double): Int {
         val kk = k.coerceIn(0.0, 1.0)
         val r = (((a shr 16) and 0xFF) * (1 - kk) + ((b shr 16) and 0xFF) * kk).toInt()
         val g = (((a shr 8) and 0xFF) * (1 - kk) + ((b shr 8) and 0xFF) * kk).toInt()

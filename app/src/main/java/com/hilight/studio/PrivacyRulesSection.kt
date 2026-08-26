@@ -114,6 +114,8 @@ fun PrivacyRulesSection(
                     secondColor = rule.secondColor,
                     thirdColor = rule.thirdColor,
                     advancedColors = rule.advancedColors,
+                    usePerLed = rule.usePerLed,
+                    perLed = rule.perLed,
                     speedMs = rule.speedMs,
                     brightness = rule.brightness,
                 ),
@@ -216,6 +218,22 @@ fun PrivacyRuleEditorDialog(
                 Modifier.heightIn(max = 540.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
+                LedStrip(
+                    edited.pattern,
+                    Ambient(
+                        pattern = edited.pattern,
+                        color = edited.color,
+                        secondColor = edited.secondColor,
+                        thirdColor = edited.thirdColor,
+                        advancedColors = edited.advancedColors,
+                        usePerLed = edited.usePerLed,
+                        perLed = edited.perLed,
+                        speedMs = edited.speedMs,
+                        brightness = edited.brightness,
+                    ),
+                    heightDp = 38,
+                )
+
                 val microphone = stringResource(R.string.privacy_microphone)
                 val camera = stringResource(R.string.privacy_camera)
                 SegmentedSelector(
@@ -234,25 +252,55 @@ fun PrivacyRuleEditorDialog(
                     options = PrivacyRule.selectablePatterns,
                     onSelect = { edited = edited.copy(pattern = it) },
                 )
-                if (edited.pattern == Pattern.GRADIENT) {
+
+                ToggleRow(
+                    stringResource(R.string.style_customize_per_led), edited.usePerLed,
+                ) { edited = edited.copy(usePerLed = it) }
+                if (edited.usePerLed) {
+                    PerLedEditor(
+                        perLed = edited.perLed,
+                        onChange = { edited = edited.copy(perLed = it) },
+                        primaryColor = edited.color,
+                        secondColor = edited.secondColor,
+                        thirdColor = edited.thirdColor,
+                    )
+                } else if (edited.pattern == Pattern.GRADIENT) {
                     key("privacy_start") {
                         ColorPicker(
                             edited.color,
-                            { edited = edited.copy(color = it) },
+                            {
+                                val newCol = it
+                                edited = edited.copy(
+                                    color = newCol,
+                                    perLed = generateGradient8(newCol, edited.secondColor, edited.thirdColor),
+                                )
+                            },
                             stringResource(R.string.style_gradient_start),
                         )
                     }
                     key("privacy_middle") {
                         ColorPicker(
                             edited.secondColor,
-                            { edited = edited.copy(secondColor = it) },
+                            {
+                                val newCol = it
+                                edited = edited.copy(
+                                    secondColor = newCol,
+                                    perLed = generateGradient8(edited.color, newCol, edited.thirdColor),
+                                )
+                            },
                             stringResource(R.string.style_gradient_middle),
                         )
                     }
                     key("privacy_end") {
                         ColorPicker(
                             edited.thirdColor,
-                            { edited = edited.copy(thirdColor = it) },
+                            {
+                                val newCol = it
+                                edited = edited.copy(
+                                    thirdColor = newCol,
+                                    perLed = generateGradient8(edited.color, edited.secondColor, newCol),
+                                )
+                            },
                             stringResource(R.string.style_gradient_end),
                         )
                     }
@@ -287,7 +335,7 @@ fun PrivacyRuleEditorDialog(
                             ColorPicker(edited.color, { edited = edited.copy(color = it) })
                         }
                     }
-                } else if (edited.pattern == Pattern.SOLID) {
+                } else {
                     key("privacy_single") {
                         ColorPicker(edited.color, { edited = edited.copy(color = it) })
                     }

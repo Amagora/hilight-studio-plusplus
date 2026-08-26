@@ -63,6 +63,10 @@
     <string name="style_color_primary">メインカラー</string>
     <string name="style_color_secondary">セカンダリカラー</string>
     <string name="style_color_accent">アクセントカラー</string>
+    <string name="style_customize_per_led">各LEDを個別にカスタマイズ (8灯)</string>
+    <string name="style_customize_per_led_hint">このエフェクトの各LED (全8灯) に個別の色を割り当てます。</string>
+    <string name="style_fill_gradient_3">3色グラデーション適用</string>
+    <string name="style_fill_all">すべて塗りつぶす</string>
 
     <!-- "The array stays dark until an app rule fires." -->
     <string name="style_off_body">アプリ別ルールが発動するまで、LED アレイは消灯したままです。</string>

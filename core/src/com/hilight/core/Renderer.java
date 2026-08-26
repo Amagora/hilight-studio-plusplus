@@ -47,7 +47,9 @@ public final class Renderer {
                 break;
 
             case "gradient": {
-                if (palette.length >= 3) {
+                if (palette.length >= n) {
+                    for (int i = 0; i < n; i++) out[i] = palette[i];
+                } else if (palette.length >= 3) {
                     int a = palette[0];
                     int b = palette[1];
                     int c = palette[2];
@@ -70,7 +72,9 @@ public final class Renderer {
             case "breathe": {
                 double phase = (t % speed) / (double) speed;
                 double k = (1 - Math.cos(phase * 2 * Math.PI)) / 2;
-                if (palette.length >= 3) {
+                if (palette.length >= n) {
+                    for (int i = 0; i < n; i++) out[i] = scale(palette[i], 0.05 + 0.95 * k);
+                } else if (palette.length >= 3) {
                     int currentCol;
                     if (phase < 1.0 / 3.0) {
                         currentCol = mix(palette[0], palette[1], phase * 3.0);
@@ -88,7 +92,9 @@ public final class Renderer {
 
             case "blink": {
                 if ((t % speed) < speed / 2) {
-                    if (palette.length >= 3) {
+                    if (palette.length >= n) {
+                        for (int i = 0; i < n; i++) out[i] = palette[i];
+                    } else if (palette.length >= 3) {
                         int blinkIdx = (int) ((t / speed) % 3);
                         int blinkCol = palette[blinkIdx % palette.length];
                         for (int i = 0; i < n; i++) out[i] = blinkCol;
@@ -103,7 +109,9 @@ public final class Renderer {
                 // sharp attack, exponential decay — reads well as a notification
                 double phase = (t % speed) / (double) speed;
                 double k = phase < 0.12 ? phase / 0.12 : Math.exp(-(phase - 0.12) * 5);
-                if (palette.length >= 3) {
+                if (palette.length >= n) {
+                    for (int i = 0; i < n; i++) out[i] = scale(palette[i], k);
+                } else if (palette.length >= 3) {
                     int pulseIdx = (int) ((t / speed) % 3);
                     int pulseCol = palette[pulseIdx % palette.length];
                     for (int i = 0; i < n; i++) out[i] = scale(pulseCol, k);
@@ -115,7 +123,9 @@ public final class Renderer {
 
             case "chase": {
                 int head = (int) ((t / Math.max(1, speed / n)) % n);
-                if (palette.length >= 3) {
+                if (palette.length >= n) {
+                    for (int i = 0; i < n; i++) out[i] = (i == head) ? palette[i] : 0xFF000000;
+                } else if (palette.length >= 3) {
                     double frac = (double) head / n;
                     int headCol;
                     if (frac < 1.0 / 3.0) {
@@ -125,9 +135,9 @@ public final class Renderer {
                     } else {
                         headCol = mix(palette[2], palette[0], (frac - 2.0 / 3.0) * 3.0);
                     }
-                    for (int i = 0; i < n; i++) out[i] = i == head ? headCol : 0xFF000000;
+                    for (int i = 0; i < n; i++) out[i] = (i == head) ? headCol : 0xFF000000;
                 } else {
-                    for (int i = 0; i < n; i++) out[i] = i == head ? palette[0] : 0xFF000000;
+                    for (int i = 0; i < n; i++) out[i] = (i == head) ? palette[0] : 0xFF000000;
                 }
                 break;
             }
@@ -140,7 +150,9 @@ public final class Renderer {
                     if (d <= 3.0) {
                         double tailFrac = d / 3.0;
                         int cometCol;
-                        if (palette.length >= 3) {
+                        if (palette.length >= n) {
+                            cometCol = palette[i];
+                        } else if (palette.length >= 3) {
                             if (tailFrac <= 0.5) {
                                 cometCol = mix(palette[0], palette[1], tailFrac * 2.0);
                             } else {
@@ -162,7 +174,9 @@ public final class Renderer {
                 for (int i = 0; i < n; i++) {
                     double ledFrac = (double) i / (n - 1);
                     int waveCol;
-                    if (palette.length >= 3) {
+                    if (palette.length >= n) {
+                        waveCol = palette[i];
+                    } else if (palette.length >= 3) {
                         if (ledFrac <= 0.5) {
                             waveCol = mix(palette[0], palette[1], ledFrac * 2.0);
                         } else {
