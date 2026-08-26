@@ -40,7 +40,7 @@ namespace HiLightManager
 
             if (captureScreenshot)
             {
-                this.ClientSize = new Size(1180, 860);
+                this.ClientSize = new Size(1240, 860);
                 this.Shown += async (s, e) =>
                 {
                     await Task.Delay(1500);
@@ -68,8 +68,8 @@ namespace HiLightManager
         {
             this.Text = "Hilight-Studio-PlusPlusV3 — [v a1.2.0]";
             this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.ClientSize = new Size(1180, 860);
-            this.MinimumSize = new Size(1000, 750);
+            this.ClientSize = new Size(1240, 860);
+            this.MinimumSize = new Size(1050, 750);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(15, 15, 20); // Material 3 Surface Dark
             this.ForeColor = Color.FromArgb(241, 245, 249);
@@ -104,7 +104,7 @@ namespace HiLightManager
                 ColumnCount = 2,
                 RowCount = 1,
                 BackColor = Color.FromArgb(23, 24, 33),
-                Padding = new Padding(22, 14, 22, 14),
+                Padding = new Padding(16, 12, 16, 12),
                 Margin = new Padding(0, 0, 0, 12)
             };
             pnlHeader.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -176,7 +176,7 @@ namespace HiLightManager
 
             lblHeaderSubtitle = new Label
             {
-                Text = "Universal Pixel 11 Pro Series 8-LED Hardware Control & ADB Manager",
+                Text = "Universal Pixel 11 Pro Series 8-LED Hardware Control",
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(148, 163, 184),
                 AutoSize = true,
@@ -199,7 +199,17 @@ namespace HiLightManager
                 BackColor = Color.Transparent
             };
 
-            Button btnUpstream = CreateStyledButton("⭐ GitHub", Color.FromArgb(20, 38, 54), Color.FromArgb(112, 210, 255));
+            Button btnFork = CreateStyledButton("🍴 My Fork", Color.FromArgb(32, 28, 48), Color.FromArgb(208, 188, 255));
+            btnFork.Click += (s, e) =>
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "https://github.com/Amagora/hilight-studio-plusplus",
+                    UseShellExecute = true
+                });
+            };
+
+            Button btnUpstream = CreateStyledButton("⭐ Dhananjay's Repo", Color.FromArgb(20, 38, 54), Color.FromArgb(112, 210, 255));
             btnUpstream.Click += (s, e) =>
             {
                 Process.Start(new ProcessStartInfo
@@ -209,15 +219,16 @@ namespace HiLightManager
                 });
             };
 
-            Button btnAiDisclosure = CreateStyledButton("🤖 AI Disclosure", Color.FromArgb(32, 34, 46), Color.FromArgb(226, 232, 240));
+            Button btnAiDisclosure = CreateStyledButton("🤖 AI Info", Color.FromArgb(32, 34, 46), Color.FromArgb(226, 232, 240));
             btnAiDisclosure.Click += (s, e) => ShowAiDisclosureDialog();
 
             Button btnChangeLog = CreateStyledButton("📋 Request Log", Color.FromArgb(32, 34, 46), Color.FromArgb(226, 232, 240));
             btnChangeLog.Click += (s, e) => ShowUserRequestLogDialog();
 
-            Button btnLicense = CreateStyledButton("📜 MIT License", Color.FromArgb(32, 34, 46), Color.FromArgb(226, 232, 240));
+            Button btnLicense = CreateStyledButton("📜 License", Color.FromArgb(32, 34, 46), Color.FromArgb(226, 232, 240));
             btnLicense.Click += (s, e) => ShowLicenseDialog();
 
+            pnlHeaderButtons.Controls.Add(btnFork);
             pnlHeaderButtons.Controls.Add(btnUpstream);
             pnlHeaderButtons.Controls.Add(btnAiDisclosure);
             pnlHeaderButtons.Controls.Add(btnChangeLog);
@@ -594,12 +605,12 @@ namespace HiLightManager
                 BackColor = bg,
                 ForeColor = fg,
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleCenter,
                 UseMnemonic = false,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Padding = new Padding(12, 6, 12, 6),
+                Padding = new Padding(8, 4, 8, 4),
                 Margin = new Padding(2, 2, 2, 2)
             };
             b.FlatAppearance.BorderSize = 1;
