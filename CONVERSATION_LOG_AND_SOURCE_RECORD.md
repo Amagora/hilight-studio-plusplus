@@ -3,7 +3,7 @@
 **Build Version:** `a1.1.0` (Build Code `110`)  
 **Target Hardware:** Google Pixel 11 Pro Series (Pixel 11 Pro, Pixel 11 Pro XL, Pixel 11 Pro Fold on Android 17 / API 37)  
 **Base Repository:** Forked from [DhananjayBhosale/hilight-studio](https://github.com/DhananjayBhosale/hilight-studio) (v1.0.8-experimental)  
-**Repository Fork:** [Amagora/hilight-studio-plusplus](https://github.com/Amagora/hilight-studio-plusplus)  
+**Project Name:** `hilight-studio-plusplus`  
 **License:** MIT License (Full Open Source)  
 **Transparency:** AI-Assisted Pair-Programming Record & Human Verification Log  
 

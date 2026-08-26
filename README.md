@@ -2,7 +2,7 @@
 
 **Version: `a1.1.0`** — Universal Hardware Lighting Control for Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold devices on Android 17 (API 37).
 
-[![Build Version](https://img.shields.io/badge/version-a1.1.0-blue.svg)](https://github.com/Amagora/hilight-studio-plusplus)
+[![Build Version](https://img.shields.io/badge/version-a1.1.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f81f7.svg)](LICENSE)
 [![Changelog](https://img.shields.io/badge/changelog-custom%20modifications-blue.svg)](CHANGELOG.md)
 
