@@ -87,32 +87,49 @@ class ForegroundWatcher : Service() {
         return START_STICKY
     }
 
+    private var lastEventTimeMs = Long.MIN_VALUE
+
     private fun currentForegroundPackage(): String? {
+        val pm = getSystemService(android.os.PowerManager::class.java)
+        val km = getSystemService(android.app.KeyguardManager::class.java)
+        val isInteractive = pm?.isInteractive ?: true
+        val isLocked = km?.isKeyguardLocked ?: false
+        if (!isInteractive || isLocked) {
+            return null
+        }
+
         if (!hasUsageAccess(this)) {
             foreground.clear()
-            queriedThroughMs = Long.MIN_VALUE
+            lastEventTimeMs = Long.MIN_VALUE
             return null
         }
         val usm = getSystemService(UsageStatsManager::class.java) ?: return null
         val now = System.currentTimeMillis()
         val bootWallTime = now - SystemClock.elapsedRealtime()
-        val begin = if (queriedThroughMs == Long.MIN_VALUE) {
+        val begin = if (lastEventTimeMs == Long.MIN_VALUE) {
             maxOf(bootWallTime, now - BOOTSTRAP_LOOKBACK_MS)
         } else {
-            maxOf(bootWallTime, queriedThroughMs - QUERY_OVERLAP_MS)
+            maxOf(bootWallTime, minOf(now, lastEventTimeMs + 1))
         }
         val events = usm.queryEvents(begin, now)
         val e = android.app.usage.UsageEvents.Event()
         while (events.hasNextEvent()) {
             events.getNextEvent(e)
-            val lifecycle = when (e.eventType) {
-                android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED -> ForegroundLifecycle.RESUMED
-                android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED -> ForegroundLifecycle.PAUSED
-                else -> null
+            if (e.timeStamp > lastEventTimeMs) {
+                lastEventTimeMs = e.timeStamp
             }
-            if (lifecycle != null) foreground.accept(e.packageName, e.className, lifecycle)
+            when (e.eventType) {
+                android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED ->
+                    foreground.accept(e.packageName, e.className, ForegroundLifecycle.RESUMED)
+                android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED ->
+                    foreground.accept(e.packageName, e.className, ForegroundLifecycle.PAUSED)
+                android.app.usage.UsageEvents.Event.ACTIVITY_STOPPED ->
+                    foreground.accept(e.packageName, e.className, ForegroundLifecycle.STOPPED)
+                android.app.usage.UsageEvents.Event.KEYGUARD_SHOWN,
+                android.app.usage.UsageEvents.Event.SCREEN_NON_INTERACTIVE ->
+                    foreground.clear()
+            }
         }
-        queriedThroughMs = now
         return foreground.currentPackage()
     }
 
@@ -139,8 +156,8 @@ class ForegroundWatcher : Service() {
     companion object {
         private const val CHANNEL = "fg_watch"
         private const val POLL_MS = 1000L
-        private const val QUERY_OVERLAP_MS = 2_000L
         private const val BOOTSTRAP_LOOKBACK_MS = 24 * 60 * 60_000L
+
 
         /** Starts or stops the watcher to match the current rule set. */
         fun syncRunning(ctx: Context, rules: List<AppRule>, enabled: Boolean) {

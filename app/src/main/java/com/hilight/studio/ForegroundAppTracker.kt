@@ -1,7 +1,7 @@
 package com.hilight.studio
 
 /** Activity lifecycle signals retained from Android's usage-event history. */
-internal enum class ForegroundLifecycle { RESUMED, PAUSED }
+internal enum class ForegroundLifecycle { RESUMED, PAUSED, STOPPED }
 
 /**
  * Reduces activity lifecycle events to the app currently in front.
@@ -21,8 +21,20 @@ internal class ForegroundAppTracker {
                 resumed.remove(key)
                 resumed[key] = pkg
             }
-            ForegroundLifecycle.PAUSED -> resumed.remove(key)
+            ForegroundLifecycle.PAUSED,
+            ForegroundLifecycle.STOPPED -> {
+                if (className.isNullOrBlank() || !resumed.containsKey(key)) {
+                    resumed.entries.removeIf { it.value == pkg }
+                } else {
+                    resumed.remove(key)
+                }
+            }
         }
+    }
+
+    fun removePackage(packageName: String?) {
+        val pkg = packageName?.takeIf { it.isNotBlank() } ?: return
+        resumed.entries.removeIf { it.value == pkg }
     }
 
     fun currentPackage(): String? = resumed.values.lastOrNull()
@@ -35,3 +47,4 @@ internal object ForegroundWatchPolicy {
     fun shouldRun(enabled: Boolean, rules: List<AppRule>): Boolean =
         enabled && rules.any { it.enabled && it.trigger == Trigger.FOREGROUND }
 }
+

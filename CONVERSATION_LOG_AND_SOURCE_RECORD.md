@@ -222,6 +222,23 @@ Below is the complete chronological record of all user prompts, directives, issu
 
 ---
 
+### [Directive 16] Foreground App Lifecycle, Ghost Triggers & Screen Lock / AOD Bug Fix
+- **User Prompt / Directive:**  
+  *"When an app is opened the notification LED starts like intended but it doesn't necessarily stop either. It triggers randomly or it triggers when the screen is either logged or goes to AOD mode. Not sure what causes this bug but I have been able to replicate it. If I open the camera app in the app with a configuration of lights set then close the camera app the notification light will start and stop as intended but if I lock my phone screen it starts it again for a short duration of time despite the camera app not being open or in use."*
+- **Problem & Context:**  
+  1. `ForegroundWatcher` polled `UsageStatsManager` with a 2-second lookback overlap into the past, re-processing old `ACTIVITY_RESUMED` events whose corresponding `PAUSED` events were outside the window, resurrecting closed apps into the foreground map.
+  2. In `ForegroundAppTracker`, pause events with null/empty `className` failed exact key matching and never removed the app.
+  3. `ForegroundWatcher` lacked interactivity and keyguard lock checks (`PowerManager.isInteractive`, `KeyguardManager.isKeyguardLocked`).
+  4. `Store.kt` called `refreshSuppression(armOnRelease = true)` on `ACTION_SCREEN_OFF`, which armed a 30s LED lighting timer and pushed any lingering foreground override to the renderer upon locking the screen.
+- **Technical Solution:**  
+  1. Implemented monotonic event timestamp tracking (`lastEventTimeMs`) in `ForegroundWatcher` to eliminate duplicate event processing and ghost triggers.
+  2. Added `PowerManager.isInteractive` and `KeyguardManager.isKeyguardLocked` guards to instantly clear foreground overrides when the screen turns off or locks.
+  3. Enhanced `ForegroundAppTracker` to clear all package entries on pause/stop with null/blank class names and added support for `ACTIVITY_STOPPED`.
+  4. Updated `ACTION_SCREEN_OFF` in `Store.kt` to drop foreground overrides, cancel active alerts, and set `armOnRelease = false` to prevent LED auto-arming on lock.
+
+---
+
+
 ## 3. Full Source Code Inventory & Modification Map
 
 ### 📱 Android Application (`app/`)

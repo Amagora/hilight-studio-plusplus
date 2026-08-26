@@ -211,7 +211,12 @@ class Store private constructor(private val app: Context) {
             object : android.content.BroadcastReceiver() {
                 override fun onReceive(c: Context?, i: Intent?) {
                     when (i?.action) {
-                        Intent.ACTION_SCREEN_OFF -> refreshSuppression(armOnRelease = true)
+                        Intent.ACTION_SCREEN_OFF -> {
+                            // Screen turned off: clear foreground overrides and cancel alerts without auto-arming
+                            setForegroundOverride(null, null)
+                            cancelAlert()
+                            refreshSuppression(armOnRelease = false)
+                        }
                         Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> {
                             // The screen coming on, or the phone being unlocked, means the
                             // notification has been seen — a rule's colour has no one left to tell,
@@ -876,8 +881,10 @@ class Store private constructor(private val app: Context) {
     // ------------------------------------------------------------------ light output
 
     /** The highest layer that should currently be showing: alert, else override, else ambient. */
-    fun pushCurrent(arm: Boolean = true) =
-        send(_enabled.value, activeAlert ?: foregroundOverride?.second, arm)
+    fun pushCurrent(arm: Boolean = true) {
+        val activeForeground = if (screenOn()) foregroundOverride?.second else null
+        send(_enabled.value, activeAlert ?: activeForeground, arm)
+    }
 
     /** Fires a one-shot alert, then falls back to the override/ambient layer. */
     fun fireAlert(rule: AppRule) {
@@ -962,7 +969,7 @@ class Store private constructor(private val app: Context) {
 
     /** Holds a look for as long as [pkg] is in the foreground. */
     fun setForegroundOverride(pkg: String?, rule: AppRule?) {
-        if (pkg == null || rule == null) {
+        if (pkg == null || rule == null || !screenOn()) {
             if (foregroundOverride == null) return
             foregroundOverride = null
             pushCurrent(arm = false)
@@ -1101,12 +1108,9 @@ class Store private constructor(private val app: Context) {
         // the system rather than merely blanking it, so the system's own alerts still work
         val guards = guardState()
         val suppressed = guards.suppression()
-        _suppression.value = suppressed          // the UI still explains the always-on look
-        // A transient top layer — a notification flash or a Test preview — lights through the global
-        // "only while the screen is off" switch, because that switch is about the always-on look.
-        // Every other reason to stay dark still applies to it. A foreground "while this app is open"
-        // override is not transient and gets no such exemption.
-        val blocked = if (activeAlert != null) guards.alertSuppression() else suppressed
+        // Notification alerts, previews, and foreground app looks while screen is on are governed
+        // by quiet hours and battery guards (alertSuppression), rather than the ambient screen-off-only switch.
+        val blocked = if (alert != null) guards.alertSuppression() else suppressed
         val privacyAllowed = enabled && guards.alertSuppression() == null &&
             _privacyRules.value.any { it.enabled }
         val active = backend()
