@@ -909,6 +909,7 @@ class Store private constructor(private val app: Context) {
                 source = AlertSource.NOTIFICATION,
                 secondColor = rule.secondColor,
                 thirdColor = rule.thirdColor,
+                advancedColors = rule.advancedColors,
             ),
             durationMs = rule.durationMs,
             arm = false,               // a notification must not extend the ambient window
@@ -982,6 +983,7 @@ class Store private constructor(private val app: Context) {
             source = AlertSource.FOREGROUND,
             secondColor = rule.secondColor,
             thirdColor = rule.thirdColor,
+            advancedColors = rule.advancedColors,
         )
         pushCurrent(arm = false)       // opening an app must not extend the ambient window either
     }
@@ -1002,11 +1004,12 @@ class Store private constructor(private val app: Context) {
         durationMs: Int = 4000,
         secondColor: Int = 0xFF00E5FF.toInt(),
         thirdColor: Int = 0xFFFF4081.toInt(),
+        advancedColors: Boolean = false,
     ) {
         holdAlert(
             alert = Bridge.alertJson(
                 Bridge.nextAlertId(), pattern, color, durationMs, speedMs, brightness,
-                AlertSource.PREVIEW, secondColor, thirdColor,
+                AlertSource.PREVIEW, secondColor, thirdColor, advancedColors,
             ),
             durationMs = durationMs,
             arm = true,                // the user asked for this one, so it may open a window
@@ -1015,6 +1018,7 @@ class Store private constructor(private val app: Context) {
                 color = color,
                 secondColor = secondColor,
                 thirdColor = thirdColor,
+                advancedColors = advancedColors,
                 speedMs = speedMs,
                 brightness = brightness,
             ),

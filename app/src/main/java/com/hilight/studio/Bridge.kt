@@ -140,10 +140,11 @@ object Bridge {
         source: AlertSource,
         secondColor: Int = 0xFF00E5FF.toInt(),
         thirdColor: Int = 0xFFFF4081.toInt(),
+        advancedColors: Boolean = false,
     ): JSONObject = JSONObject().apply {
         put("id", id)
         put("pattern", pattern.key)
-        if (pattern == Pattern.GRADIENT) {
+        if (pattern == Pattern.GRADIENT || advancedColors) {
             put(
                 "colors",
                 org.json.JSONArray()

@@ -150,7 +150,7 @@ fun AppRulesScreen(store: Store) {
         },
         onToggle = { store.upsertPrivacyRule(it.copy(enabled = !it.enabled), replacing = it) },
         onEdit = { editingPrivacy = it },
-        onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.lightMs, it.secondColor, it.thirdColor) },
+        onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.lightMs, it.secondColor, it.thirdColor, it.advancedColors) },
         onDelete = store::removePrivacyRule,
     )
 
@@ -224,7 +224,7 @@ fun AppRulesScreen(store: Store) {
             onTest = {
                 store.preview(
                     it.pattern, it.color, it.speedMs, it.brightness, it.durationMs,
-                    it.secondColor, it.thirdColor,
+                    it.secondColor, it.thirdColor, it.advancedColors,
                 )
             },
             onAddPrivacy = if (rule.isConversationRule || rule.isCatchAll) null else ({
@@ -327,7 +327,7 @@ private fun RuleCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (!rule.randomColor) {
-                    if (rule.pattern == Pattern.GRADIENT) {
+                    if (rule.pattern == Pattern.GRADIENT || (rule.pattern.supportsMultiColor && rule.advancedColors)) {
                         Box(
                             Modifier
                                 .size(20.dp, 14.dp)
@@ -668,7 +668,38 @@ private fun RuleEditorDialog(
                                 stringResource(R.string.style_gradient_end),
                             )
                         }
-                    } else {
+                    } else if (r.pattern.supportsMultiColor) {
+                        ToggleRow(
+                            stringResource(R.string.style_advanced_colors), r.advancedColors,
+                        ) { r = r.copy(advancedColors = it) }
+                        if (r.advancedColors) {
+                            key("rule_color_multi_1") {
+                                ColorPicker(
+                                    r.color,
+                                    { r = r.copy(color = it) },
+                                    stringResource(R.string.style_color_primary),
+                                )
+                            }
+                            key("rule_color_multi_2") {
+                                ColorPicker(
+                                    r.secondColor,
+                                    { r = r.copy(secondColor = it) },
+                                    stringResource(R.string.style_color_secondary),
+                                )
+                            }
+                            key("rule_color_multi_3") {
+                                ColorPicker(
+                                    r.thirdColor,
+                                    { r = r.copy(thirdColor = it) },
+                                    stringResource(R.string.style_color_accent),
+                                )
+                            }
+                        } else {
+                            key("rule_color_single") {
+                                ColorPicker(r.color, { r = r.copy(color = it) })
+                            }
+                        }
+                    } else if (r.pattern == Pattern.SOLID) {
                         key("rule_color_single") {
                             ColorPicker(r.color, { r = r.copy(color = it) })
                         }

@@ -70,7 +70,20 @@ fun PrivacyRulesSection(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Box(Modifier.size(14.dp).background(Color(rule.color), CircleShape))
+                    if (rule.pattern == Pattern.GRADIENT || (rule.pattern.supportsMultiColor && rule.advancedColors)) {
+                        Box(
+                            Modifier
+                                .size(20.dp, 14.dp)
+                                .background(
+                                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                        listOf(Color(rule.color), Color(rule.secondColor), Color(rule.thirdColor))
+                                    ),
+                                    androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
+                                )
+                        )
+                    } else {
+                        Box(Modifier.size(14.dp).background(Color(rule.color), CircleShape))
+                    }
                     Column {
                         Text(
                             if (rule.activity == PrivacyActivity.MICROPHONE)
@@ -99,6 +112,8 @@ fun PrivacyRulesSection(
                     pattern = rule.pattern,
                     color = rule.color,
                     secondColor = rule.secondColor,
+                    thirdColor = rule.thirdColor,
+                    advancedColors = rule.advancedColors,
                     speedMs = rule.speedMs,
                     brightness = rule.brightness,
                 ),
@@ -241,7 +256,38 @@ fun PrivacyRuleEditorDialog(
                             stringResource(R.string.style_gradient_end),
                         )
                     }
-                } else {
+                } else if (edited.pattern.supportsMultiColor) {
+                    ToggleRow(
+                        stringResource(R.string.style_advanced_colors), edited.advancedColors,
+                    ) { edited = edited.copy(advancedColors = it) }
+                    if (edited.advancedColors) {
+                        key("privacy_multi_1") {
+                            ColorPicker(
+                                edited.color,
+                                { edited = edited.copy(color = it) },
+                                stringResource(R.string.style_color_primary),
+                            )
+                        }
+                        key("privacy_multi_2") {
+                            ColorPicker(
+                                edited.secondColor,
+                                { edited = edited.copy(secondColor = it) },
+                                stringResource(R.string.style_color_secondary),
+                            )
+                        }
+                        key("privacy_multi_3") {
+                            ColorPicker(
+                                edited.thirdColor,
+                                { edited = edited.copy(thirdColor = it) },
+                                stringResource(R.string.style_color_accent),
+                            )
+                        }
+                    } else {
+                        key("privacy_single") {
+                            ColorPicker(edited.color, { edited = edited.copy(color = it) })
+                        }
+                    }
+                } else if (edited.pattern == Pattern.SOLID) {
                     key("privacy_single") {
                         ColorPicker(edited.color, { edited = edited.copy(color = it) })
                     }

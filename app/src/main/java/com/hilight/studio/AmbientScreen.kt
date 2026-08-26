@@ -207,9 +207,59 @@ fun AmbientScreen(store: Store) {
                     Caption(stringResource(R.string.style_off_body))
                 }
 
-                else -> PixelCard {
+                Pattern.SOLID -> PixelCard {
                     SectionTitle(stringResource(R.string.style_colour))
-                    ColorPicker(ambient.color, { store.setAmbient(ambient.copy(color = it)) })
+                    key("ambient_solid") {
+                        ColorPicker(ambient.color, { store.setAmbient(ambient.copy(color = it)) })
+                    }
+                }
+
+                else -> if (pattern.supportsMultiColor) {
+                    PixelCard {
+                        SectionTitle(stringResource(pattern.labelRes))
+                        ToggleRow(
+                            stringResource(R.string.style_advanced_colors),
+                            ambient.advancedColors,
+                        ) { store.setAmbient(ambient.copy(advancedColors = it)) }
+                        if (ambient.advancedColors) {
+                            key("ambient_multi_1") {
+                                ColorPicker(
+                                    ambient.color,
+                                    { store.setAmbient(ambient.copy(color = it)) },
+                                    stringResource(R.string.style_color_primary),
+                                )
+                            }
+                            key("ambient_multi_2") {
+                                ColorPicker(
+                                    ambient.secondColor,
+                                    { store.setAmbient(ambient.copy(secondColor = it)) },
+                                    stringResource(R.string.style_color_secondary),
+                                )
+                            }
+                            key("ambient_multi_3") {
+                                ColorPicker(
+                                    ambient.thirdColor,
+                                    { store.setAmbient(ambient.copy(thirdColor = it)) },
+                                    stringResource(R.string.style_color_accent),
+                                )
+                            }
+                        } else {
+                            key("ambient_single") {
+                                ColorPicker(
+                                    ambient.color,
+                                    { store.setAmbient(ambient.copy(color = it)) },
+                                    stringResource(R.string.style_colour),
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    PixelCard {
+                        SectionTitle(stringResource(R.string.style_colour))
+                        key("ambient_fallback") {
+                            ColorPicker(ambient.color, { store.setAmbient(ambient.copy(color = it)) })
+                        }
+                    }
                 }
             }
 

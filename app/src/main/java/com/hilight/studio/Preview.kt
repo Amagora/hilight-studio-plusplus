@@ -42,22 +42,63 @@ object Renderer {
             Pattern.BREATHE -> {
                 val phase = (t % speed) / speed.toDouble()
                 val k = (1 - cos(phase * 2 * PI)) / 2
-                for (i in 0 until n) out[i] = scale(base, 0.05 + 0.95 * k)
+                if (cfg.advancedColors) {
+                    val currentCol = when {
+                        phase < 1.0 / 3.0 -> mix(cfg.color, cfg.secondColor, phase * 3.0)
+                        phase < 2.0 / 3.0 -> mix(cfg.secondColor, cfg.thirdColor, (phase - 1.0 / 3.0) * 3.0)
+                        else -> mix(cfg.thirdColor, cfg.color, (phase - 2.0 / 3.0) * 3.0)
+                    }
+                    for (i in 0 until n) out[i] = scale(currentCol, 0.05 + 0.95 * k)
+                } else {
+                    for (i in 0 until n) out[i] = scale(base, 0.05 + 0.95 * k)
+                }
             }
 
             Pattern.BLINK -> {
-                if ((t % speed) < speed / 2) for (i in 0 until n) out[i] = base
+                if ((t % speed) < speed / 2) {
+                    if (cfg.advancedColors) {
+                        val blinkIdx = ((t / speed) % 3).toInt()
+                        val blinkCol = when (blinkIdx) {
+                            0 -> cfg.color
+                            1 -> cfg.secondColor
+                            else -> cfg.thirdColor
+                        }
+                        for (i in 0 until n) out[i] = blinkCol
+                    } else {
+                        for (i in 0 until n) out[i] = base
+                    }
+                }
             }
 
             Pattern.PULSE -> {
                 val phase = (t % speed) / speed.toDouble()
                 val k = if (phase < 0.12) phase / 0.12 else exp(-(phase - 0.12) * 5)
-                for (i in 0 until n) out[i] = scale(base, k)
+                if (cfg.advancedColors) {
+                    val pulseIdx = ((t / speed) % 3).toInt()
+                    val pulseCol = when (pulseIdx) {
+                        0 -> cfg.color
+                        1 -> cfg.secondColor
+                        else -> cfg.thirdColor
+                    }
+                    for (i in 0 until n) out[i] = scale(pulseCol, k)
+                } else {
+                    for (i in 0 until n) out[i] = scale(base, k)
+                }
             }
 
             Pattern.CHASE -> {
                 val head = ((t / max(1, speed / n)) % n).toInt()
-                for (i in 0 until n) out[i] = if (i == head) base else 0xFF000000.toInt()
+                if (cfg.advancedColors) {
+                    val frac = head.toDouble() / n
+                    val headCol = when {
+                        frac < 1.0 / 3.0 -> mix(cfg.color, cfg.secondColor, frac * 3.0)
+                        frac < 2.0 / 3.0 -> mix(cfg.secondColor, cfg.thirdColor, (frac - 1.0 / 3.0) * 3.0)
+                        else -> mix(cfg.thirdColor, cfg.color, (frac - 2.0 / 3.0) * 3.0)
+                    }
+                    for (i in 0 until n) out[i] = if (i == head) headCol else 0xFF000000.toInt()
+                } else {
+                    for (i in 0 until n) out[i] = if (i == head) base else 0xFF000000.toInt()
+                }
             }
 
             Pattern.COMET -> {
@@ -65,15 +106,39 @@ object Renderer {
                 for (i in 0 until n) {
                     var d = pos - i
                     if (d < 0) d += n
-                    out[i] = scale(base, max(0.0, 1 - d / 3.0))
+                    if (d <= 3.0) {
+                        val tailFrac = d / 3.0
+                        val cometCol = if (cfg.advancedColors) {
+                            if (tailFrac <= 0.5) {
+                                mix(cfg.color, cfg.secondColor, tailFrac * 2.0)
+                            } else {
+                                mix(cfg.secondColor, cfg.thirdColor, (tailFrac - 0.5) * 2.0)
+                            }
+                        } else {
+                            base
+                        }
+                        out[i] = scale(cometCol, max(0.0, 1 - tailFrac))
+                    } else {
+                        out[i] = 0xFF000000.toInt()
+                    }
                 }
             }
 
             Pattern.WAVE -> {
                 val phase = (t % speed) / speed.toDouble()
                 for (i in 0 until n) {
+                    val ledFrac = i.toDouble() / (n - 1)
+                    val waveCol = if (cfg.advancedColors) {
+                        if (ledFrac <= 0.5) {
+                            mix(cfg.color, cfg.secondColor, ledFrac * 2.0)
+                        } else {
+                            mix(cfg.secondColor, cfg.thirdColor, (ledFrac - 0.5) * 2.0)
+                        }
+                    } else {
+                        base
+                    }
                     val k = (1 + sin(2 * PI * (phase + i.toDouble() / n))) / 2
-                    out[i] = scale(base, 0.08 + 0.92 * k)
+                    out[i] = scale(waveCol, 0.08 + 0.92 * k)
                 }
             }
 

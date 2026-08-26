@@ -57,6 +57,13 @@
     <!-- "End" -->
     <string name="style_gradient_end">終了色</string>
 
+    <!-- Advanced Multi-Color Mode -->
+    <string name="style_advanced_colors">マルチカラーモード</string>
+    <string name="style_advanced_colors_hint">2色を追加してグラデーション変化やカラーモーフィングを有効にします。</string>
+    <string name="style_color_primary">メインカラー</string>
+    <string name="style_color_secondary">セカンダリカラー</string>
+    <string name="style_color_accent">アクセントカラー</string>
+
     <!-- "The array stays dark until an app rule fires." -->
     <string name="style_off_body">アプリ別ルールが発動するまで、LED アレイは消灯したままです。</string>
 

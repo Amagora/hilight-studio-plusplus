@@ -42,6 +42,13 @@
     <string name="style_gradient_middle">Middle</string>
     <string name="style_gradient_end">End</string>
 
+    <!-- Advanced Multi-Color Mode -->
+    <string name="style_advanced_colors">Multi-Color Mode</string>
+    <string name="style_advanced_colors_hint">Add 2 additional colors for multi-color transitions.</string>
+    <string name="style_color_primary">Primary Color</string>
+    <string name="style_color_secondary">Secondary Color</string>
+    <string name="style_color_accent">Accent Color</string>
+
     <string name="style_off_body">The array stays dark until an app rule fires.</string>
 
     <!-- Heading of the colour picker for the patterns that take a single colour -->
