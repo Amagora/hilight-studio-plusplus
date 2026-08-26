@@ -51,6 +51,37 @@ class ForegroundAppTrackerTest {
     }
 
     @Test
+    fun `pausing with null or blank class name clears the foreground package`() {
+        val tracker = ForegroundAppTracker()
+        tracker.accept("com.google.android.GoogleCamera", "CameraActivity", ForegroundLifecycle.RESUMED)
+        assertEquals("com.google.android.GoogleCamera", tracker.currentPackage())
+
+        tracker.accept("com.google.android.GoogleCamera", null, ForegroundLifecycle.PAUSED)
+        assertNull(tracker.currentPackage())
+    }
+
+    @Test
+    fun `stopping the activity clears the foreground package`() {
+        val tracker = ForegroundAppTracker()
+        tracker.accept("com.google.android.GoogleCamera", "CameraActivity", ForegroundLifecycle.RESUMED)
+        assertEquals("com.google.android.GoogleCamera", tracker.currentPackage())
+
+        tracker.accept("com.google.android.GoogleCamera", "CameraActivity", ForegroundLifecycle.STOPPED)
+        assertNull(tracker.currentPackage())
+    }
+
+    @Test
+    fun `removePackage explicitly removes all activities for an app`() {
+        val tracker = ForegroundAppTracker()
+        tracker.accept("com.discord", "ChatActivity", ForegroundLifecycle.RESUMED)
+        tracker.accept("com.discord", "SettingsActivity", ForegroundLifecycle.RESUMED)
+        assertEquals("com.discord", tracker.currentPackage())
+
+        tracker.removePackage("com.discord")
+        assertNull(tracker.currentPackage())
+    }
+
+    @Test
     fun `watcher runs only for enabled while-open rules`() {
         val foreground = AppRule(
             pkg = "com.discord",
@@ -65,3 +96,4 @@ class ForegroundAppTrackerTest {
         assertFalse(ForegroundWatchPolicy.shouldRun(true, listOf(notification)))
     }
 }
+

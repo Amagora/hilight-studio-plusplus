@@ -30,7 +30,6 @@ class ForegroundWatcher : Service() {
     private val store by lazy { Store.get(this) }
     private var lastPkg: String? = null
     private val foreground = ForegroundAppTracker()
-    private var queriedThroughMs = Long.MIN_VALUE
     @Volatile private var forceRefresh = true
 
     /**
@@ -87,34 +86,53 @@ class ForegroundWatcher : Service() {
         return START_STICKY
     }
 
+    private var lastEventTimeMs = Long.MIN_VALUE
+
     private fun currentForegroundPackage(): String? {
+        val pm = getSystemService(android.os.PowerManager::class.java)
+        val km = getSystemService(android.app.KeyguardManager::class.java)
+        val isInteractive = pm?.isInteractive ?: true
+        val isLocked = km?.isKeyguardLocked ?: false
+        if (!isInteractive || isLocked) {
+            return null
+        }
+
         if (!hasUsageAccess(this)) {
             foreground.clear()
-            queriedThroughMs = Long.MIN_VALUE
+            lastEventTimeMs = Long.MIN_VALUE
             return null
         }
         val usm = getSystemService(UsageStatsManager::class.java) ?: return null
         val now = System.currentTimeMillis()
         val bootWallTime = now - SystemClock.elapsedRealtime()
-        val begin = if (queriedThroughMs == Long.MIN_VALUE) {
+        val begin = if (lastEventTimeMs == Long.MIN_VALUE) {
             maxOf(bootWallTime, now - BOOTSTRAP_LOOKBACK_MS)
         } else {
-            maxOf(bootWallTime, queriedThroughMs - QUERY_OVERLAP_MS)
+            maxOf(bootWallTime, minOf(now, lastEventTimeMs + 1))
         }
         val events = usm.queryEvents(begin, now)
         val e = android.app.usage.UsageEvents.Event()
         while (events.hasNextEvent()) {
             events.getNextEvent(e)
-            val lifecycle = when (e.eventType) {
-                android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED -> ForegroundLifecycle.RESUMED
-                android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED -> ForegroundLifecycle.PAUSED
-                else -> null
+            if (e.timeStamp > lastEventTimeMs) {
+                lastEventTimeMs = e.timeStamp
             }
-            if (lifecycle != null) foreground.accept(e.packageName, e.className, lifecycle)
+            when (e.eventType) {
+                android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED ->
+                    foreground.accept(e.packageName, e.className, ForegroundLifecycle.RESUMED)
+                android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED ->
+                    foreground.accept(e.packageName, e.className, ForegroundLifecycle.PAUSED)
+                android.app.usage.UsageEvents.Event.ACTIVITY_STOPPED ->
+                    foreground.accept(e.packageName, e.className, ForegroundLifecycle.STOPPED)
+                android.app.usage.UsageEvents.Event.KEYGUARD_SHOWN,
+                android.app.usage.UsageEvents.Event.SCREEN_NON_INTERACTIVE ->
+                    foreground.clear()
+            }
         }
-        queriedThroughMs = now
         return foreground.currentPackage()
     }
+
+
 
     private fun notification(): Notification {
         val nm = getSystemService(NotificationManager::class.java)
