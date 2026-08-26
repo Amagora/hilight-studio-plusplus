@@ -40,6 +40,7 @@ namespace HiLightManager
 
             if (captureScreenshot)
             {
+                this.ClientSize = new Size(1180, 860);
                 this.Shown += async (s, e) =>
                 {
                     await Task.Delay(1500);
@@ -67,11 +68,11 @@ namespace HiLightManager
         {
             this.Text = "Hilight-Studio-PlusPlusV3 — [v a1.2.0]";
             this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.ClientSize = new Size(1250, 920);
-            this.MinimumSize = new Size(1100, 820);
+            this.ClientSize = new Size(1180, 860);
+            this.MinimumSize = new Size(1000, 750);
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(18, 18, 22);
-            this.ForeColor = Color.FromArgb(230, 230, 235);
+            this.BackColor = Color.FromArgb(15, 15, 20); // Material 3 Surface Dark
+            this.ForeColor = Color.FromArgb(241, 245, 249);
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             this.DoubleBuffered = true;
 
@@ -81,19 +82,19 @@ namespace HiLightManager
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
                 RowCount = 5,
-                BackColor = Color.FromArgb(18, 18, 22),
+                BackColor = Color.FromArgb(15, 15, 20),
                 Padding = new Padding(24, 18, 24, 18)
             };
             mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // 0: Header (Fully Dynamic)
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // 1: Device Status Bar (Fully Dynamic)
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // 2: 3 Action Cards (Fully Dynamic)
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // 3: Progress Bar (Fully Dynamic)
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f)); // 4: Console Output (Takes remaining space)
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // 0: Header (Material Surface Container High)
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // 1: Device Status Bar (Material Surface Container)
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // 2: 3 Action Cards (Material Tonal Elevation)
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // 3: Progress Bar
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f)); // 4: Console Output
             this.Controls.Add(mainLayout);
 
             // ==========================================
-            // ROW 0: HEADER PANEL (2-Column TableLayout)
+            // ROW 0: HEADER PANEL (Material 3 Elevated Container)
             // ==========================================
             TableLayoutPanel pnlHeader = new TableLayoutPanel
             {
@@ -102,13 +103,21 @@ namespace HiLightManager
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 ColumnCount = 2,
                 RowCount = 1,
-                BackColor = Color.FromArgb(24, 24, 30),
-                Padding = new Padding(22, 18, 22, 18),
-                Margin = new Padding(0, 0, 0, 14)
+                BackColor = Color.FromArgb(23, 24, 33),
+                Padding = new Padding(22, 14, 22, 14),
+                Margin = new Padding(0, 0, 0, 12)
             };
             pnlHeader.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            pnlHeader.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            pnlHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             pnlHeader.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            pnlHeader.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using var pen = new Pen(Color.FromArgb(45, 47, 65), 1);
+                using var path = CreateRoundedRectangle(new Rectangle(0, 0, pnlHeader.Width - 1, pnlHeader.Height - 1), 10);
+                e.Graphics.DrawPath(pen, path);
+            };
 
             // Left Title & Subtitle Area
             FlowLayoutPanel pnlTitleArea = new FlowLayoutPanel
@@ -130,29 +139,36 @@ namespace HiLightManager
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
                 BackColor = Color.Transparent,
-                Margin = new Padding(0, 0, 0, 8)
+                Margin = new Padding(0, 0, 0, 6)
             };
 
             lblHeaderTitle = new Label
             {
                 Text = "Hilight-Studio-PlusPlusV3",
-                Font = new Font("Segoe UI", 17f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(250, 250, 255),
+                Font = new Font("Segoe UI", 16f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(248, 250, 252),
                 AutoSize = true,
                 UseMnemonic = false,
-                Margin = new Padding(0, 0, 12, 0)
+                Margin = new Padding(0, 0, 10, 0)
             };
 
             Label lblVersion = new Label
             {
                 Text = "a1.2.0",
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(56, 189, 248), // Cyan
-                BackColor = Color.FromArgb(30, 41, 59),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(208, 188, 255), // Material 3 Primary Container Text
+                BackColor = Color.FromArgb(56, 30, 114),  // Material 3 Primary Container
                 Padding = new Padding(8, 3, 8, 3),
                 AutoSize = true,
                 UseMnemonic = false,
-                Margin = new Padding(0, 6, 0, 0)
+                Margin = new Padding(0, 4, 0, 0)
+            };
+            lblVersion.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using var pen = new Pen(Color.FromArgb(103, 80, 164), 1);
+                using var path = CreateRoundedRectangle(new Rectangle(0, 0, lblVersion.Width - 1, lblVersion.Height - 1), 6);
+                e.Graphics.DrawPath(pen, path);
             };
 
             pnlTitleRow.Controls.Add(lblHeaderTitle);
@@ -161,8 +177,8 @@ namespace HiLightManager
             lblHeaderSubtitle = new Label
             {
                 Text = "Universal Pixel 11 Pro Series 8-LED Hardware Control & ADB Manager",
-                Font = new Font("Segoe UI", 10f, FontStyle.Regular),
-                ForeColor = Color.FromArgb(156, 163, 175),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(148, 163, 184),
                 AutoSize = true,
                 UseMnemonic = false,
                 Margin = new Padding(1, 0, 0, 0)
@@ -170,21 +186,20 @@ namespace HiLightManager
 
             pnlTitleArea.Controls.Add(pnlTitleRow);
             pnlTitleArea.Controls.Add(lblHeaderSubtitle);
-            pnlHeader.Controls.Add(pnlTitleArea, 0, 0);
 
-            // Right Header Action Buttons (Fully Auto-Sized with generous padding so text never clips)
+            // Right Header Action Buttons
             FlowLayoutPanel pnlHeaderButtons = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Right,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                Padding = new Padding(0, 8, 0, 0),
+                Padding = new Padding(0, 2, 0, 0),
                 BackColor = Color.Transparent
             };
 
-            Button btnUpstream = CreateStyledButton("⭐ Dhananjay's GitHub", Color.FromArgb(30, 41, 59), Color.FromArgb(56, 189, 248));
+            Button btnUpstream = CreateStyledButton("⭐ GitHub", Color.FromArgb(20, 38, 54), Color.FromArgb(112, 210, 255));
             btnUpstream.Click += (s, e) =>
             {
                 Process.Start(new ProcessStartInfo
@@ -194,25 +209,26 @@ namespace HiLightManager
                 });
             };
 
-            Button btnAiDisclosure = CreateStyledButton("🤖 A.I. Disclosure", Color.FromArgb(38, 38, 48), Color.FromArgb(220, 220, 240));
+            Button btnAiDisclosure = CreateStyledButton("🤖 AI Disclosure", Color.FromArgb(32, 34, 46), Color.FromArgb(226, 232, 240));
             btnAiDisclosure.Click += (s, e) => ShowAiDisclosureDialog();
 
-            Button btnChangeLog = CreateStyledButton("📋 Request Log", Color.FromArgb(38, 38, 48), Color.FromArgb(220, 220, 240));
+            Button btnChangeLog = CreateStyledButton("📋 Request Log", Color.FromArgb(32, 34, 46), Color.FromArgb(226, 232, 240));
             btnChangeLog.Click += (s, e) => ShowUserRequestLogDialog();
 
-            Button btnLicense = CreateStyledButton("📜 MIT License", Color.FromArgb(38, 38, 48), Color.FromArgb(220, 220, 240));
+            Button btnLicense = CreateStyledButton("📜 MIT License", Color.FromArgb(32, 34, 46), Color.FromArgb(226, 232, 240));
             btnLicense.Click += (s, e) => ShowLicenseDialog();
 
             pnlHeaderButtons.Controls.Add(btnUpstream);
             pnlHeaderButtons.Controls.Add(btnAiDisclosure);
             pnlHeaderButtons.Controls.Add(btnChangeLog);
             pnlHeaderButtons.Controls.Add(btnLicense);
-            pnlHeader.Controls.Add(pnlHeaderButtons, 1, 0);
 
+            pnlHeader.Controls.Add(pnlTitleArea, 0, 0);
+            pnlHeader.Controls.Add(pnlHeaderButtons, 1, 0);
             mainLayout.Controls.Add(pnlHeader, 0, 0);
 
             // ==========================================
-            // ROW 1: DEVICE CONNECTION STATUS CARD (2-Column TableLayout)
+            // ROW 1: DEVICE CONNECTION STATUS CARD (Material 3 Container)
             // ==========================================
             TableLayoutPanel pnlDeviceStatus = new TableLayoutPanel
             {
@@ -221,18 +237,26 @@ namespace HiLightManager
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 ColumnCount = 2,
                 RowCount = 1,
-                BackColor = Color.FromArgb(28, 28, 36),
-                Padding = new Padding(22, 14, 22, 14),
-                Margin = new Padding(0, 0, 0, 14)
+                BackColor = Color.FromArgb(20, 22, 30),
+                Padding = new Padding(22, 12, 22, 12),
+                Margin = new Padding(0, 0, 0, 12)
             };
             pnlDeviceStatus.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             pnlDeviceStatus.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             pnlDeviceStatus.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
+            pnlDeviceStatus.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using var pen = new Pen(Color.FromArgb(40, 42, 58), 1);
+                using var path = CreateRoundedRectangle(new Rectangle(0, 0, pnlDeviceStatus.Width - 1, pnlDeviceStatus.Height - 1), 10);
+                e.Graphics.DrawPath(pen, path);
+            };
+
             lblDeviceStatus = new Label
             {
                 Text = "● Checking Device Connection...",
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(250, 204, 21),
                 Dock = DockStyle.Fill,
                 AutoSize = true,
@@ -250,13 +274,13 @@ namespace HiLightManager
                 Padding = new Padding(0)
             };
 
-            btnBrowseAdb = CreateStyledButton("📁 Change ADB Location...", Color.FromArgb(45, 45, 58), Color.FromArgb(220, 220, 235));
+            btnBrowseAdb = CreateStyledButton("📁 Change ADB Location...", Color.FromArgb(32, 34, 46), Color.FromArgb(226, 232, 240));
             btnBrowseAdb.Click += (s, e) => BrowseForAdb();
 
-            btnAdbInfo = CreateStyledButton("ℹ️ What's this?", Color.FromArgb(35, 42, 56), Color.FromArgb(56, 189, 248));
+            btnAdbInfo = CreateStyledButton("ℹ️ What's this?", Color.FromArgb(20, 38, 54), Color.FromArgb(112, 210, 255));
             btnAdbInfo.Click += (s, e) => ShowAdbInfoDialog();
 
-            btnRefreshDevice = CreateStyledButton("⟳ Refresh Connection", Color.FromArgb(55, 55, 72), Color.White);
+            btnRefreshDevice = CreateStyledButton("⟳ Refresh Connection", Color.FromArgb(45, 48, 66), Color.White);
             btnRefreshDevice.Click += async (s, e) => await RefreshDeviceStatusAsync();
 
             pnlDevButtons.Controls.Add(btnBrowseAdb);
@@ -268,7 +292,7 @@ namespace HiLightManager
             mainLayout.Controls.Add(pnlDeviceStatus, 0, 1);
 
             // ==========================================
-            // ROW 2: THREE PROMINENT ACTION CARDS (Custom Interactive Panels)
+            // ROW 2: THREE PROMINENT MATERIAL 3 ACTION CARDS
             // ==========================================
             pnlActions = new TableLayoutPanel
             {
@@ -277,7 +301,7 @@ namespace HiLightManager
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 ColumnCount = 1,
                 RowCount = 3,
-                Margin = new Padding(0, 0, 0, 14)
+                Margin = new Padding(0, 0, 0, 12)
             };
             pnlActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             pnlActions.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -285,34 +309,46 @@ namespace HiLightManager
             pnlActions.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             cardFullInstall = CreateActionCard(
-                "🚀 1. Full Easy Install & Start",
-                "Compiles/installs the latest APK to your phone, launches app, and starts 8-LED lights control.",
-                Color.FromArgb(24, 24, 42),
-                Color.FromArgb(34, 34, 58),
-                Color.FromArgb(129, 140, 248),
-                Color.FromArgb(199, 210, 254),
+                "🚀 INSTALL & START",
+                Color.FromArgb(14, 42, 66),
+                Color.FromArgb(112, 210, 255),
+                "1. Full Easy Install & Start (New / Updated APK)",
+                "Compiles and installs the latest Hilight-Studio-PlusPlusV3 APK to your phone, launches the app, and starts the 8-LED hardware lighting controller.",
+                Color.FromArgb(17, 27, 44),
+                Color.FromArgb(24, 38, 62),
+                Color.FromArgb(32, 60, 96),
+                Color.FromArgb(112, 210, 255),
+                Color.FromArgb(203, 213, 225),
                 async () => await RunFullInstallAsync()
             );
             pnlActions.Controls.Add(cardFullInstall, 0, 0);
 
             cardStartAfterReboot = CreateActionCard(
-                "⚡ 2. Start Hi-Light (After Phone Reboot)",
-                "Fast 1-click startup: restarts the background 8-LED hardware renderer without reinstalling.",
-                Color.FromArgb(16, 36, 30),
-                Color.FromArgb(24, 50, 42),
-                Color.FromArgb(52, 211, 153),
-                Color.FromArgb(167, 243, 208),
+                "⚡ FAST START",
+                Color.FromArgb(16, 52, 38),
+                Color.FromArgb(110, 231, 183),
+                "2. Start Hi-Light (After Phone Reboot)",
+                "Fast 1-click startup: restarts the background 8-LED hardware lights daemon without reinstalling.",
+                Color.FromArgb(15, 33, 26),
+                Color.FromArgb(21, 46, 36),
+                Color.FromArgb(28, 72, 54),
+                Color.FromArgb(110, 231, 183),
+                Color.FromArgb(209, 250, 229),
                 async () => await RunStartRendererAsync()
             );
             pnlActions.Controls.Add(cardStartAfterReboot, 0, 1);
 
             cardKillSession = CreateActionCard(
-                "🛑 3. Stop / Kill ADB Session",
-                "Stops active background renderer and turns off / releases hardware lights control.",
-                Color.FromArgb(40, 20, 24),
-                Color.FromArgb(58, 28, 34),
-                Color.FromArgb(248, 113, 113),
-                Color.FromArgb(254, 202, 202),
+                "🛑 STOP SESSION",
+                Color.FromArgb(64, 20, 28),
+                Color.FromArgb(253, 164, 175),
+                "3. Stop / Kill ADB Session",
+                "Stops active background renderer and turns off / safely releases hardware lights control.",
+                Color.FromArgb(36, 17, 23),
+                Color.FromArgb(50, 23, 31),
+                Color.FromArgb(82, 30, 41),
+                Color.FromArgb(253, 164, 175),
+                Color.FromArgb(254, 205, 211),
                 async () => await RunKillSessionAsync()
             );
             pnlActions.Controls.Add(cardKillSession, 0, 2);
@@ -333,17 +369,17 @@ namespace HiLightManager
             mainLayout.Controls.Add(progressBar, 0, 3);
 
             // ==========================================
-            // ROW 4: TERMINAL LOG CONSOLE
+            // ROW 4: TERMINAL LOG CONSOLE (Material Surface Container Lowest)
             // ==========================================
             TableLayoutPanel pnlConsole = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
                 RowCount = 2,
-                Margin = new Padding(0, 4, 0, 0)
+                Margin = new Padding(0, 2, 0, 0)
             };
             pnlConsole.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            pnlConsole.RowStyles.Add(new RowStyle(SizeType.AutoSize));       // AutoSize for log header + clear button!
+            pnlConsole.RowStyles.Add(new RowStyle(SizeType.AutoSize));       // AutoSize for log header + clear button
             pnlConsole.RowStyles.Add(new RowStyle(SizeType.Percent, 100f)); // Remaining space for log textbox
 
             TableLayoutPanel pnlLogHeader = new TableLayoutPanel
@@ -364,14 +400,14 @@ namespace HiLightManager
             {
                 Text = "TERMINAL LOG & HARDWARE OUTPUT",
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(140, 140, 155),
+                ForeColor = Color.FromArgb(148, 163, 184),
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft,
                 AutoSize = true,
                 UseMnemonic = false
             };
 
-            btnClearLog = CreateStyledButton("🗑 Clear Console", Color.FromArgb(40, 40, 52), Color.FromArgb(200, 200, 220));
+            btnClearLog = CreateStyledButton("🗑 Clear Console", Color.FromArgb(32, 34, 46), Color.FromArgb(203, 213, 225));
             btnClearLog.Click += (s, e) => txtLog.Clear();
 
             pnlLogHeader.Controls.Add(lblLogHeader, 0, 0);
@@ -384,8 +420,8 @@ namespace HiLightManager
                 Multiline = true,
                 ReadOnly = true,
                 ScrollBars = ScrollBars.Vertical,
-                BackColor = Color.FromArgb(12, 12, 16),
-                ForeColor = Color.FromArgb(180, 230, 200),
+                BackColor = Color.FromArgb(11, 12, 16),
+                ForeColor = Color.FromArgb(187, 247, 208),
                 Font = new Font("Consolas", 9.5f, FontStyle.Regular),
                 BorderStyle = BorderStyle.FixedSingle
             };
@@ -394,7 +430,19 @@ namespace HiLightManager
             mainLayout.Controls.Add(pnlConsole, 0, 4);
         }
 
-        private Panel CreateActionCard(string title, string subtitle, Color bg, Color hoverBg, Color titleColor, Color subtitleColor, Func<Task> onClickAsync)
+        private Panel CreateActionCard(
+            string badgeText,
+            Color badgeBg,
+            Color badgeFg,
+            string title,
+            string subtitle,
+            Color bg,
+            Color hoverBg,
+            Color borderColor,
+            Color titleColor,
+            Color subtitleColor,
+            Func<Task> onClickAsync
+        )
         {
             Panel card = new Panel
             {
@@ -403,26 +451,66 @@ namespace HiLightManager
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = bg,
                 Cursor = Cursors.Hand,
-                Padding = new Padding(24, 14, 24, 14),
-                Margin = new Padding(0, 5, 0, 5)
+                Padding = new Padding(22, 16, 22, 16),
+                Margin = new Padding(0, 4, 0, 4)
             };
 
-            FlowLayoutPanel flow = new FlowLayoutPanel
+            TableLayoutPanel cardLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
+                ColumnCount = 3,
+                RowCount = 1,
                 BackColor = Color.Transparent,
                 Padding = new Padding(0)
             };
+            cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));      // Badge
+            cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f)); // Text (Title + Subtitle)
+            cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));      // Action Arrow
+            cardLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            // 1. Badge Pill
+            Label lblBadge = new Label
+            {
+                Text = badgeText,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = badgeFg,
+                BackColor = badgeBg,
+                Padding = new Padding(10, 6, 10, 6),
+                AutoSize = true,
+                UseMnemonic = false,
+                Margin = new Padding(0, 2, 16, 0)
+            };
+            lblBadge.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using var pen = new Pen(Color.FromArgb(Math.Min(255, badgeBg.R + 40), Math.Min(255, badgeBg.G + 40), Math.Min(255, badgeBg.B + 40)), 1);
+                using var path = CreateRoundedRectangle(new Rectangle(0, 0, lblBadge.Width - 1, lblBadge.Height - 1), 6);
+                e.Graphics.DrawPath(pen, path);
+            };
+
+            // 2. Title & Subtitle in TableLayoutPanel
+            TableLayoutPanel textFlow = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 1,
+                RowCount = 2,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0)
+            };
+            textFlow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            textFlow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            textFlow.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             Label lblTitle = new Label
             {
                 Text = title,
-                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
                 ForeColor = titleColor,
+                Dock = DockStyle.Fill,
                 AutoSize = true,
                 UseMnemonic = false,
                 BackColor = Color.Transparent,
@@ -434,25 +522,48 @@ namespace HiLightManager
                 Text = subtitle,
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
                 ForeColor = subtitleColor,
+                Dock = DockStyle.Fill,
                 AutoSize = true,
+                MaximumSize = new Size(860, 0),
                 UseMnemonic = false,
                 BackColor = Color.Transparent,
                 Margin = new Padding(0)
             };
 
-            flow.Controls.Add(lblTitle);
-            flow.Controls.Add(lblSubtitle);
-            card.Controls.Add(flow);
+            textFlow.Controls.Add(lblTitle, 0, 0);
+            textFlow.Controls.Add(lblSubtitle, 0, 1);
 
+            // 3. Arrow Action Indicator
+            Label lblArrow = new Label
+            {
+                Text = "➔",
+                Font = new Font("Segoe UI", 13f, FontStyle.Bold),
+                ForeColor = titleColor,
+                BackColor = Color.Transparent,
+                AutoSize = true,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Margin = new Padding(12, 6, 0, 0)
+            };
+
+            cardLayout.Controls.Add(lblBadge, 0, 0);
+            cardLayout.Controls.Add(textFlow, 1, 0);
+            cardLayout.Controls.Add(lblArrow, 2, 0);
+            card.Controls.Add(cardLayout);
+
+            bool isHovered = false;
             card.Paint += (s, e) =>
             {
-                using var pen = new Pen(Color.FromArgb(50, 50, 65), 1);
-                e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using var pen = new Pen(isHovered ? Color.FromArgb(Math.Min(255, borderColor.R + 40), Math.Min(255, borderColor.G + 40), Math.Min(255, borderColor.B + 40)) : borderColor, isHovered ? 1.5f : 1f);
+                using var path = CreateRoundedRectangle(new Rectangle(0, 0, card.Width - 1, card.Height - 1), 10);
+                e.Graphics.DrawPath(pen, path);
             };
 
             void SetHover(bool hover)
             {
+                isHovered = hover;
                 card.BackColor = hover ? hoverBg : bg;
+                card.Invalidate();
             }
 
             void TriggerClick()
@@ -463,19 +574,13 @@ namespace HiLightManager
                 }
             }
 
-            card.MouseEnter += (s, e) => SetHover(true);
-            card.MouseLeave += (s, e) => SetHover(false);
-            flow.MouseEnter += (s, e) => SetHover(true);
-            flow.MouseLeave += (s, e) => SetHover(false);
-            lblTitle.MouseEnter += (s, e) => SetHover(true);
-            lblTitle.MouseLeave += (s, e) => SetHover(false);
-            lblSubtitle.MouseEnter += (s, e) => SetHover(true);
-            lblSubtitle.MouseLeave += (s, e) => SetHover(false);
-
-            card.Click += (s, e) => TriggerClick();
-            flow.Click += (s, e) => TriggerClick();
-            lblTitle.Click += (s, e) => TriggerClick();
-            lblSubtitle.Click += (s, e) => TriggerClick();
+            Control[] interactiveControls = { card, cardLayout, lblBadge, textFlow, lblTitle, lblSubtitle, lblArrow };
+            foreach (var ctrl in interactiveControls)
+            {
+                ctrl.MouseEnter += (s, e) => SetHover(true);
+                ctrl.MouseLeave += (s, e) => SetHover(false);
+                ctrl.Click += (s, e) => TriggerClick();
+            }
 
             return card;
         }
@@ -494,16 +599,45 @@ namespace HiLightManager
                 UseMnemonic = false,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Padding = new Padding(16, 8, 16, 8),
-                Margin = new Padding(4, 2, 4, 2)
+                Padding = new Padding(12, 6, 12, 6),
+                Margin = new Padding(2, 2, 2, 2)
             };
             b.FlatAppearance.BorderSize = 1;
             b.FlatAppearance.BorderColor = Color.FromArgb(
-                Math.Min(255, bg.R + 30),
-                Math.Min(255, bg.G + 30),
-                Math.Min(255, bg.B + 30)
+                Math.Min(255, bg.R + 25),
+                Math.Min(255, bg.G + 25),
+                Math.Min(255, bg.B + 25)
             );
+            b.MouseEnter += (s, e) =>
+            {
+                b.BackColor = Color.FromArgb(
+                    Math.Min(255, bg.R + 18),
+                    Math.Min(255, bg.G + 18),
+                    Math.Min(255, bg.B + 18)
+                );
+            };
+            b.MouseLeave += (s, e) =>
+            {
+                b.BackColor = bg;
+            };
             return b;
+        }
+
+        private static GraphicsPath CreateRoundedRectangle(Rectangle bounds, int radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            int diameter = radius * 2;
+            Rectangle arc = new Rectangle(bounds.Location, new Size(diameter, diameter));
+
+            path.AddArc(arc, 180, 90);
+            arc.X = bounds.Right - diameter;
+            path.AddArc(arc, 270, 90);
+            arc.Y = bounds.Bottom - diameter;
+            path.AddArc(arc, 0, 90);
+            arc.X = bounds.Left;
+            path.AddArc(arc, 90, 90);
+            path.CloseFigure();
+            return path;
         }
 
         private static void OpenContentInTextEditor(string filenamePrefix, string content)
@@ -854,6 +988,26 @@ Current ADB Executable in Use:
             return false;
         }
 
+        private static string SanitizeLogMessage(string msg)
+        {
+            if (string.IsNullOrEmpty(msg)) return msg;
+            try
+            {
+                string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                if (!string.IsNullOrEmpty(userProfile))
+                {
+                    msg = msg.Replace(userProfile, "%USERPROFILE%", StringComparison.OrdinalIgnoreCase);
+                }
+                string userName = Environment.UserName;
+                if (!string.IsNullOrEmpty(userName) && userName.Length > 2)
+                {
+                    msg = msg.Replace(userName, "<user>", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch { }
+            return msg;
+        }
+
         private void Log(string msg)
         {
             if (txtLog.InvokeRequired)
@@ -861,8 +1015,9 @@ Current ADB Executable in Use:
                 txtLog.Invoke(new Action(() => Log(msg)));
                 return;
             }
+            string sanitized = SanitizeLogMessage(msg);
             string time = DateTime.Now.ToString("HH:mm:ss");
-            txtLog.AppendText($"[{time}] {msg}\r\n");
+            txtLog.AppendText($"[{time}] {sanitized}\r\n");
         }
 
         private void SetBusy(bool busy)
@@ -896,7 +1051,7 @@ Current ADB Executable in Use:
             {
                 if (!await EnsureAdbAsync())
                 {
-                    UpdateDeviceUI("● ADB Missing: Please click 'Change ADB Location...' or restart app", Color.FromArgb(239, 68, 68));
+                    UpdateDeviceUI("● ADB Missing: Please click 'Change ADB Location...' or restart app", Color.FromArgb(248, 113, 113));
                     return;
                 }
 
@@ -923,12 +1078,12 @@ Current ADB Executable in Use:
                     model = model.Trim();
                     if (string.IsNullOrEmpty(model)) model = "Pixel 11 Pro Fold";
 
-                    UpdateDeviceUI($"● Device Connected: {model} ({deviceSerial})", Color.FromArgb(34, 197, 94));
-                    Log($"[Device] Connected: {model} ({deviceSerial})");
+                    UpdateDeviceUI($"● Device Connected: {model} (Ready)", Color.FromArgb(52, 211, 153));
+                    Log($"[Device] Connected: {model} (Ready)");
                 }
                 else
                 {
-                    UpdateDeviceUI("● No Phone Detected (Please connect Pixel via USB with USB Debugging enabled)", Color.FromArgb(239, 68, 68));
+                    UpdateDeviceUI("● No Phone Detected (Please connect Pixel via USB with USB Debugging enabled)", Color.FromArgb(248, 113, 113));
                     Log("[Device] No device detected. Please connect your Pixel.");
                 }
             }

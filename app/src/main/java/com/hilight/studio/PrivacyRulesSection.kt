@@ -227,6 +227,11 @@ fun PrivacyRuleEditorDialog(
                     ColorPicker(
                         edited.secondColor,
                         { edited = edited.copy(secondColor = it) },
+                        stringResource(R.string.style_gradient_middle),
+                    )
+                    ColorPicker(
+                        edited.thirdColor,
+                        { edited = edited.copy(thirdColor = it) },
                         stringResource(R.string.style_gradient_end),
                     )
                 } else {

@@ -138,10 +138,22 @@ object Bridge {
         speedMs: Int,
         brightness: Float,
         source: AlertSource,
+        secondColor: Int = 0xFF00E5FF.toInt(),
+        thirdColor: Int = 0xFFFF4081.toInt(),
     ): JSONObject = JSONObject().apply {
         put("id", id)
         put("pattern", pattern.key)
-        put("color", color.toUInt().toLong())
+        if (pattern == Pattern.GRADIENT) {
+            put(
+                "colors",
+                org.json.JSONArray()
+                    .put(color.toUInt().toLong())
+                    .put(secondColor.toUInt().toLong())
+                    .put(thirdColor.toUInt().toLong())
+            )
+        } else {
+            put("color", color.toUInt().toLong())
+        }
         put("durationMs", durationMs)
         put("speedMs", speedMs)
         put("brightness", brightness.toDouble())

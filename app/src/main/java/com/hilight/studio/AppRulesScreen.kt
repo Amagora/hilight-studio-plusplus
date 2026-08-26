@@ -133,6 +133,7 @@ fun AppRulesScreen(store: Store) {
                         // test what the rule will actually do, including how long it stays lit
                         store.preview(
                             rule.pattern, rule.color, rule.speedMs, rule.brightness, rule.durationMs,
+                            rule.secondColor, rule.thirdColor,
                         )
                     },
                     onDelete = { store.removeRule(rule) },
@@ -269,7 +270,7 @@ fun AppRulesScreen(store: Store) {
                 store.upsertPrivacyRule(it, replacing = rule)
                 editingPrivacy = null
             },
-            onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.lightMs) },
+            onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.lightMs, it.secondColor, it.thirdColor) },
         )
     }
 }
@@ -321,11 +322,24 @@ private fun RuleCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (!rule.randomColor) {
-                    Box(
-                        Modifier
-                            .size(14.dp)
-                            .background(Color(rule.color), CircleShape)
-                    )
+                    if (rule.pattern == Pattern.GRADIENT) {
+                        Box(
+                            Modifier
+                                .size(20.dp, 14.dp)
+                                .background(
+                                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                        listOf(Color(rule.color), Color(rule.secondColor), Color(rule.thirdColor))
+                                    ),
+                                    androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
+                                )
+                        )
+                    } else {
+                        Box(
+                            Modifier
+                                .size(14.dp)
+                                .background(Color(rule.color), CircleShape)
+                        )
+                    }
                 }
                 Column {
                     if (perChat) {
@@ -586,6 +600,8 @@ private fun RuleEditorDialog(
                     Ambient(
                         pattern = r.pattern,
                         color = r.color,
+                        secondColor = r.secondColor,
+                        thirdColor = r.thirdColor,
                         speedMs = r.speedMs,
                         brightness = r.brightness,
                     ),
@@ -625,7 +641,25 @@ private fun RuleEditorDialog(
                     stringResource(R.string.rules_random_colour_each_time), r.randomColor,
                 ) { r = r.copy(randomColor = it) }
                 if (!r.randomColor) {
-                    ColorPicker(r.color, { r = r.copy(color = it) })
+                    if (r.pattern == Pattern.GRADIENT) {
+                        ColorPicker(
+                            r.color,
+                            { r = r.copy(color = it) },
+                            stringResource(R.string.style_gradient_start),
+                        )
+                        ColorPicker(
+                            r.secondColor,
+                            { r = r.copy(secondColor = it) },
+                            stringResource(R.string.style_gradient_middle),
+                        )
+                        ColorPicker(
+                            r.thirdColor,
+                            { r = r.copy(thirdColor = it) },
+                            stringResource(R.string.style_gradient_end),
+                        )
+                    } else {
+                        ColorPicker(r.color, { r = r.copy(color = it) })
+                    }
                 }
 
                 if (r.trigger == Trigger.NOTIFICATION) {

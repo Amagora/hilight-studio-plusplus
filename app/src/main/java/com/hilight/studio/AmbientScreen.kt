@@ -186,6 +186,11 @@ fun AmbientScreen(store: Store) {
                     ColorPicker(
                         ambient.secondColor,
                         { store.setAmbient(ambient.copy(secondColor = it)) },
+                        stringResource(R.string.style_gradient_middle),
+                    )
+                    ColorPicker(
+                        ambient.thirdColor,
+                        { store.setAmbient(ambient.copy(thirdColor = it)) },
                         stringResource(R.string.style_gradient_end),
                     )
                 }

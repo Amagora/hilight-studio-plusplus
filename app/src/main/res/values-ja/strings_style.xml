@@ -49,9 +49,11 @@
     <!-- "Wallpaper" — one of three equal-width buttons, so the two-character native word -->
     <string name="style_wallpaper">壁紙</string>
 
-    <!-- The two ends of a gradient -->
+    <!-- The stops of a gradient -->
     <!-- "Start" -->
     <string name="style_gradient_start">開始色</string>
+    <!-- "Middle" -->
+    <string name="style_gradient_middle">中間色</string>
     <!-- "End" -->
     <string name="style_gradient_end">終了色</string>
 

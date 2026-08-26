@@ -907,6 +907,8 @@ class Store private constructor(private val app: Context) {
                 speedMs = rule.speedMs,
                 brightness = rule.brightness,
                 source = AlertSource.NOTIFICATION,
+                secondColor = rule.secondColor,
+                thirdColor = rule.thirdColor,
             ),
             durationMs = rule.durationMs,
             arm = false,               // a notification must not extend the ambient window
@@ -978,6 +980,8 @@ class Store private constructor(private val app: Context) {
             speedMs = rule.speedMs,
             brightness = rule.brightness,
             source = AlertSource.FOREGROUND,
+            secondColor = rule.secondColor,
+            thirdColor = rule.thirdColor,
         )
         pushCurrent(arm = false)       // opening an app must not extend the ambient window either
     }
@@ -990,16 +994,29 @@ class Store private constructor(private val app: Context) {
     val previewLook: StateFlow<Ambient?> = _previewLook.asStateFlow()
 
     /** One-off preview used by the Test buttons. */
-    fun preview(pattern: Pattern, color: Int, speedMs: Int, brightness: Float, durationMs: Int = 4000) {
+    fun preview(
+        pattern: Pattern,
+        color: Int,
+        speedMs: Int,
+        brightness: Float,
+        durationMs: Int = 4000,
+        secondColor: Int = 0xFF00E5FF.toInt(),
+        thirdColor: Int = 0xFFFF4081.toInt(),
+    ) {
         holdAlert(
             alert = Bridge.alertJson(
                 Bridge.nextAlertId(), pattern, color, durationMs, speedMs, brightness,
-                AlertSource.PREVIEW,
+                AlertSource.PREVIEW, secondColor, thirdColor,
             ),
             durationMs = durationMs,
             arm = true,                // the user asked for this one, so it may open a window
             preview = Ambient(
-                pattern = pattern, color = color, speedMs = speedMs, brightness = brightness,
+                pattern = pattern,
+                color = color,
+                secondColor = secondColor,
+                thirdColor = thirdColor,
+                speedMs = speedMs,
+                brightness = brightness,
             ),
         )
     }

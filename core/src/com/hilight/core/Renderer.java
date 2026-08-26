@@ -47,9 +47,23 @@ public final class Renderer {
                 break;
 
             case "gradient": {
-                int a = palette[0];
-                int b = palette.length > 1 ? palette[1] : a;
-                for (int i = 0; i < n; i++) out[i] = mix(a, b, n == 1 ? 0 : (double) i / (n - 1));
+                if (palette.length >= 3) {
+                    int a = palette[0];
+                    int b = palette[1];
+                    int c = palette[2];
+                    for (int i = 0; i < n; i++) {
+                        double frac = n <= 1 ? 0 : (double) i / (n - 1);
+                        if (frac <= 0.5) {
+                            out[i] = mix(a, b, frac * 2.0);
+                        } else {
+                            out[i] = mix(b, c, (frac - 0.5) * 2.0);
+                        }
+                    }
+                } else {
+                    int a = palette[0];
+                    int b = palette.length > 1 ? palette[1] : a;
+                    for (int i = 0; i < n; i++) out[i] = mix(a, b, n == 1 ? 0 : (double) i / (n - 1));
+                }
                 break;
             }
 

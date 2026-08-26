@@ -37,8 +37,9 @@
     <!-- Fills the eight LEDs from the Material You scheme, which follows the wallpaper -->
     <string name="style_wallpaper">Wallpaper</string>
 
-    <!-- The two ends of a gradient -->
+    <!-- The stops of a gradient -->
     <string name="style_gradient_start">Start</string>
+    <string name="style_gradient_middle">Middle</string>
     <string name="style_gradient_end">End</string>
 
     <string name="style_off_body">The array stays dark until an app rule fires.</string>

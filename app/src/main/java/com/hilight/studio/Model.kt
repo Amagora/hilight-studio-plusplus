@@ -75,6 +75,7 @@ data class Ambient(
     val pattern: Pattern = Pattern.OFF,
     val color: Int = 0xFF7C4DFF.toInt(),
     val secondColor: Int = 0xFF00E5FF.toInt(),
+    val thirdColor: Int = 0xFFFF4081.toInt(),
     val perLed: List<Int> = List(LED_COUNT) { 0xFF7C4DFF.toInt() },
     val brightness: Float = 0.7f,
     val speedMs: Int = 2500,
@@ -99,7 +100,10 @@ data class Ambient(
             Pattern.CUSTOM -> put("colors", JSONArray().also { a -> perLed.forEach { a.put(it.toUInt().toLong()) } })
             Pattern.GRADIENT -> put(
                 "colors",
-                JSONArray().put(color.toUInt().toLong()).put(secondColor.toUInt().toLong())
+                JSONArray()
+                    .put(color.toUInt().toLong())
+                    .put(secondColor.toUInt().toLong())
+                    .put(thirdColor.toUInt().toLong())
             )
             else -> put("color", color.toUInt().toLong())
         }
@@ -110,6 +114,7 @@ data class Ambient(
             pattern = Pattern.of(o.optString("pattern", "off")),
             color = o.optLong("color", 0xFF7C4DFFL).toInt(),
             secondColor = o.optLong("secondColor", 0xFF00E5FFL).toInt(),
+            thirdColor = o.optLong("thirdColor", 0xFFFF4081L).toInt(),
             perLed = o.optJSONArray("perLed")?.let { a ->
                 (0 until a.length()).map { a.optLong(it).toInt() }
             }?.takeIf { it.size == LED_COUNT } ?: List(LED_COUNT) { 0xFF7C4DFF.toInt() },
@@ -129,6 +134,7 @@ data class Ambient(
         put("pattern", pattern.key)
         put("color", color.toUInt().toLong())
         put("secondColor", secondColor.toUInt().toLong())
+        put("thirdColor", thirdColor.toUInt().toLong())
         put("perLed", JSONArray().also { a -> perLed.forEach { a.put(it.toUInt().toLong()) } })
         put("brightness", brightness.toDouble())
         put("speedMs", speedMs)
@@ -150,6 +156,8 @@ data class AppRule(
     val pattern: Pattern = Pattern.PULSE,
     val randomColor: Boolean = false,
     val color: Int = 0xFF00E676.toInt(),
+    val secondColor: Int = 0xFF00E5FF.toInt(),
+    val thirdColor: Int = 0xFFFF4081.toInt(),
     val durationMs: Int = 10_000,
     val speedMs: Int = 800,
     val brightness: Float = 1f,
@@ -201,6 +209,8 @@ data class AppRule(
         put("pattern", pattern.key)
         put("randomColor", randomColor)
         put("color", color.toUInt().toLong())
+        put("secondColor", secondColor.toUInt().toLong())
+        put("thirdColor", thirdColor.toUInt().toLong())
         put("durationMs", durationMs)
         put("speedMs", speedMs)
         put("brightness", brightness.toDouble())
@@ -225,6 +235,8 @@ data class AppRule(
             pattern = Pattern.of(o.optString("pattern", "pulse")),
             randomColor = o.optBoolean("randomColor", false),
             color = o.optLong("color", 0xFF00E676L).toInt(),
+            secondColor = o.optLong("secondColor", 0xFF00E5FFL).toInt(),
+            thirdColor = o.optLong("thirdColor", 0xFFFF4081L).toInt(),
             durationMs = o.optInt("durationMs", 10_000),
             speedMs = o.optInt("speedMs", 800),
             brightness = o.optDouble("brightness", 1.0).toFloat(),
@@ -247,6 +259,7 @@ data class PrivacyRule(
     val pattern: Pattern = Pattern.BLINK,
     val color: Int,
     val secondColor: Int = 0xFF00E5FF.toInt(),
+    val thirdColor: Int = 0xFFFF4081.toInt(),
     val lightMs: Int = DEFAULT_LIGHT_MS,
     val cooldownMs: Int = DEFAULT_COOLDOWN_MS,
     val speedMs: Int = 800,
@@ -263,6 +276,7 @@ data class PrivacyRule(
         put("pattern", pattern.key)
         put("color", color.toUInt().toLong())
         put("secondColor", secondColor.toUInt().toLong())
+        put("thirdColor", thirdColor.toUInt().toLong())
         put("lightMs", lightMs)
         put("cooldownMs", cooldownMs)
         put("speedMs", speedMs)
@@ -280,7 +294,8 @@ data class PrivacyRule(
                 "colors",
                 JSONArray()
                     .put(color.toUInt().toLong())
-                    .put(secondColor.toUInt().toLong()),
+                    .put(secondColor.toUInt().toLong())
+                    .put(thirdColor.toUInt().toLong()),
             )
         } else {
             put("color", color.toUInt().toLong())
@@ -329,6 +344,10 @@ data class PrivacyRule(
                 secondColor = o.optLong(
                     "secondColor",
                     defaults.secondColor.toUInt().toLong(),
+                ).toInt(),
+                thirdColor = o.optLong(
+                    "thirdColor",
+                    defaults.thirdColor.toUInt().toLong(),
                 ).toInt(),
                 lightMs = o.optInt("lightMs", DEFAULT_LIGHT_MS)
                     .coerceIn(MIN_PHASE_MS, MAX_PHASE_MS),
