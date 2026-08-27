@@ -1056,6 +1056,23 @@ Current ADB Executable in Use:
             lblDeviceStatus.ForeColor = statusColor;
         }
 
+        private string FindApkPath()
+        {
+            string appDir = AppDomain.CurrentDomain.BaseDirectory;
+            string[] candidates = new[]
+            {
+                Path.Combine(workspaceRoot, @"app\build\outputs\apk\debug\app-debug.apk"),
+                Path.Combine(appDir, @"app\build\outputs\apk\debug\app-debug.apk"),
+                Path.Combine(workspaceRoot, "app-debug.apk"),
+                Path.Combine(appDir, "app-debug.apk")
+            };
+            foreach (var c in candidates)
+            {
+                if (!string.IsNullOrEmpty(c) && File.Exists(c)) return c;
+            }
+            return "";
+        }
+
         private async Task RefreshDeviceStatusAsync()
         {
             try
@@ -1066,7 +1083,7 @@ Current ADB Executable in Use:
                     return;
                 }
 
-                string output = await RunProcessAsync(adbPath, "devices", workspaceRoot);
+                string output = await RunAdbAsync("devices");
                 string[] lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
                 bool found = false;
                 string deviceSerial = "";
@@ -1085,9 +1102,9 @@ Current ADB Executable in Use:
 
                 if (found)
                 {
-                    string model = await RunProcessAsync(adbPath, $"-s {deviceSerial} shell getprop ro.product.model", workspaceRoot);
+                    string model = await RunAdbAsync("-s", deviceSerial, "shell", "getprop", "ro.product.model");
                     model = model.Trim();
-                    if (string.IsNullOrEmpty(model)) model = "Pixel 11 Pro Fold";
+                    if (string.IsNullOrEmpty(model)) model = "Pixel 11 Pro Series";
 
                     UpdateDeviceUI($"● Device Connected: {model} (Ready)", Color.FromArgb(52, 211, 153));
                     Log($"[Device] Connected: {model} (Ready)");
@@ -1109,26 +1126,60 @@ Current ADB Executable in Use:
             SetBusy(true);
             try
             {
+                if (!await EnsureAdbAsync())
+                {
+                    Log("❌ ADB is not configured. Please set ADB location.");
+                    return;
+                }
+
                 Log("=== [1/4] Checking APK Build ===");
-                string apkPath = Path.Combine(workspaceRoot, @"app\build\outputs\apk\debug\app-debug.apk");
-                if (!File.Exists(apkPath))
+                string apkPath = FindApkPath();
+                if (string.IsNullOrEmpty(apkPath))
                 {
                     Log("APK not found. Building with Gradle...");
                     string gradlew = Path.Combine(workspaceRoot, "gradlew.bat");
-                    string buildOut = await RunProcessAsync(gradlew, "assembleDebug", workspaceRoot);
-                    Log(buildOut);
+                    if (!File.Exists(gradlew))
+                    {
+                        gradlew = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "gradlew.bat");
+                    }
+                    if (File.Exists(gradlew))
+                    {
+                        string buildOut = await RunProcessWithArgsAsync(gradlew, new[] { "assembleDebug" }, workspaceRoot);
+                        if (!string.IsNullOrWhiteSpace(buildOut)) Log(buildOut);
+                        apkPath = FindApkPath();
+                    }
                 }
-                else
+
+                if (string.IsNullOrEmpty(apkPath) || !File.Exists(apkPath))
                 {
-                    Log($"Using compiled APK: {apkPath}");
+                    Log("❌ [Error] Could not find or build app-debug.apk. Please ensure app-debug.apk is present.");
+                    return;
                 }
+
+                Log($"Using compiled APK: {apkPath}");
 
                 Log("=== [2/4] Installing APK to Device ===");
-                string installOut = await RunProcessAsync(adbPath, $"install -r \"{apkPath}\"", workspaceRoot);
-                Log(installOut);
+                string installOut = await RunAdbAsync("install", "-r", "-d", apkPath);
+                if (!string.IsNullOrWhiteSpace(installOut)) Log(installOut.Trim());
 
-                Log("=== [3/4] Launching HiLight Studio ===");
-                await RunProcessAsync(adbPath, "shell am start -n com.hilight.studio/.MainActivity", workspaceRoot);
+                if (installOut.Contains("Failure") || installOut.Contains("INSTALL_FAILED"))
+                {
+                    Log("⚠️ Installation issue detected. Uninstalling previous version to clear signature...");
+                    string uninst = await RunAdbAsync("uninstall", "com.hilight.studio");
+                    if (!string.IsNullOrWhiteSpace(uninst)) Log(uninst.Trim());
+                    Log("Retrying clean installation...");
+                    installOut = await RunAdbAsync("install", "-r", "-d", apkPath);
+                    if (!string.IsNullOrWhiteSpace(installOut)) Log(installOut.Trim());
+                }
+
+                if (installOut.Contains("Failure") || installOut.Contains("INSTALL_FAILED"))
+                {
+                    Log("❌ [Error] APK installation failed. Please check device USB authorization.");
+                    return;
+                }
+
+                Log("=== [3/4] Launching HiLight Studio on Device ===");
+                await RunAdbAsync("shell", "am", "start", "-n", "com.hilight.studio/.MainActivity");
                 await Task.Delay(1500);
 
                 Log("=== [4/4] Starting 8-LED Hardware Renderer ===");
@@ -1152,6 +1203,12 @@ Current ADB Executable in Use:
             SetBusy(true);
             try
             {
+                if (!await EnsureAdbAsync())
+                {
+                    Log("❌ ADB is not configured. Please set ADB location.");
+                    return;
+                }
+
                 Log("=== Starting HiLight Renderer (Post-Reboot) ===");
                 await StartRendererInternalAsync();
                 Log("✓ SUCCESS: HiLight renderer is active on device!");
@@ -1170,16 +1227,16 @@ Current ADB Executable in Use:
         private async Task StartRendererInternalAsync()
         {
             Log("Stopping any existing instances...");
-            await RunProcessAsync(adbPath, "shell \"pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'\"", workspaceRoot);
+            await RunAdbAsync("shell", "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'");
 
             Log("Starting AdbHelper daemon...");
-            string startCmd = "shell \"CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &\"";
-            await RunProcessAsync(adbPath, startCmd, workspaceRoot);
+            string startScript = "CLASSPATH=$(pm path com.hilight.studio | head -n 1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper </dev/null >/data/local/tmp/hilight.log 2>&1 &";
+            await RunAdbAsync("shell", startScript);
 
             await Task.Delay(2000);
-            string status = await RunProcessAsync(adbPath, "shell \"cat /data/local/tmp/hilight.log\"", workspaceRoot);
+            string status = await RunAdbAsync("shell", "cat /data/local/tmp/hilight.log");
             Log("--- Renderer Log Output ---");
-            Log(status.Trim());
+            Log(string.IsNullOrWhiteSpace(status) ? "(Daemon started in background)" : status.Trim());
             Log("---------------------------");
         }
 
@@ -1188,9 +1245,15 @@ Current ADB Executable in Use:
             SetBusy(true);
             try
             {
+                if (!await EnsureAdbAsync())
+                {
+                    Log("❌ ADB is not configured.");
+                    return;
+                }
+
                 Log("=== Stopping HiLight ADB Session ===");
-                string killOut = await RunProcessAsync(adbPath, "shell \"pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'\"", workspaceRoot);
-                Log(killOut);
+                string killOut = await RunAdbAsync("shell", "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'");
+                if (!string.IsNullOrWhiteSpace(killOut)) Log(killOut.Trim());
                 await Task.Delay(1000);
                 Log("✓ SUCCESS: All HiLight ADB renderer processes terminated.");
             }
@@ -1204,6 +1267,60 @@ Current ADB Executable in Use:
             }
         }
 
+        private Task<string> RunAdbAsync(params string[] args)
+        {
+            return RunProcessWithArgsAsync(string.IsNullOrEmpty(adbPath) ? "adb" : adbPath, args, workspaceRoot);
+        }
+
+        private Task<string> RunProcessWithArgsAsync(string filename, string[] args, string workingDir)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    ProcessStartInfo psi = new ProcessStartInfo
+                    {
+                        FileName = filename,
+                        WorkingDirectory = string.IsNullOrEmpty(workingDir) ? AppDomain.CurrentDomain.BaseDirectory : workingDir,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        StandardOutputEncoding = Encoding.UTF8,
+                        StandardErrorEncoding = Encoding.UTF8
+                    };
+
+                    if (args != null)
+                    {
+                        foreach (var arg in args)
+                        {
+                            psi.ArgumentList.Add(arg);
+                        }
+                    }
+
+                    using Process p = new Process { StartInfo = psi };
+                    StringBuilder sb = new StringBuilder();
+                    p.OutputDataReceived += (s, e) => { if (e.Data != null) sb.AppendLine(e.Data); };
+                    p.ErrorDataReceived += (s, e) => { if (e.Data != null) sb.AppendLine(e.Data); };
+
+                    p.Start();
+                    p.BeginOutputReadLine();
+                    p.BeginErrorReadLine();
+                    bool exited = p.WaitForExit(15000);
+                    if (!exited)
+                    {
+                        try { p.Kill(true); } catch { }
+                    }
+
+                    return sb.ToString();
+                }
+                catch (Exception ex)
+                {
+                    return $"Process Error: {ex.Message}";
+                }
+            });
+        }
+
         private Task<string> RunProcessAsync(string filename, string args, string workingDir)
         {
             return Task.Run(() =>
@@ -1214,7 +1331,7 @@ Current ADB Executable in Use:
                     {
                         FileName = filename,
                         Arguments = args,
-                        WorkingDirectory = workingDir,
+                        WorkingDirectory = string.IsNullOrEmpty(workingDir) ? AppDomain.CurrentDomain.BaseDirectory : workingDir,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
                         UseShellExecute = false,
@@ -1231,7 +1348,11 @@ Current ADB Executable in Use:
                     p.Start();
                     p.BeginOutputReadLine();
                     p.BeginErrorReadLine();
-                    p.WaitForExit(30000);
+                    bool exited = p.WaitForExit(15000);
+                    if (!exited)
+                    {
+                        try { p.Kill(true); } catch { }
+                    }
 
                     return sb.ToString();
                 }
@@ -1241,6 +1362,7 @@ Current ADB Executable in Use:
                 }
             });
         }
+
 
         private void ShowLicenseDialog()
         {
