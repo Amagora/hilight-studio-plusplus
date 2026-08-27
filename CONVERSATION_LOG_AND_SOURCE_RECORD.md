@@ -1,6 +1,6 @@
 # hilight-studio-plusplus — Complete Conversation Log & Source Code Record
 
-**Build Version:** `a1.1.0` (Build Code `110`)  
+**Build Version:** `a1.1.1` (Build Code `111`)  
 **Target Hardware:** Google Pixel 11 Pro Series (Pixel 11 Pro, Pixel 11 Pro XL, Pixel 11 Pro Fold on Android 17 / API 37)  
 **Base Repository:** Forked from [DhananjayBhosale/hilight-studio](https://github.com/DhananjayBhosale/hilight-studio) (v1.0.8-experimental)  
 **Project Name:** `hilight-studio-plusplus`  
@@ -22,7 +22,7 @@
 
 ## 1. Executive Overview & Purpose
 
-This document provides an unedited, exhaustive technical log of the development, user directives, AI pair-programming interactions, bug fixes, architecture decisions, and full source code changes for **hilight-studio-plusplus** (Build `a1.1.0`).
+This document provides an unedited, exhaustive technical log of the development, user directives, AI pair-programming interactions, bug fixes, architecture decisions, and full source code changes for **hilight-studio-plusplus** (Build `a1.1.1`).
 
 **hilight-studio-plusplus** transforms the 8-LED rear camera ring array on Google Pixel 11 Pro series devices into a fully customizable ambient light, emergency strobe, tabletop video fill light, and battery fuel gauge, accompanied by a rootless background daemon (`AdbHelper`) and a native Windows desktop controller (`HiLight-Control.exe`).
 
@@ -244,7 +244,7 @@ Below is the complete chronological record of all user prompts, directives, issu
 ### 📱 Android Application (`app/`)
 | File Path | Description of Enhancements |
 |---|---|
-| [`app/build.gradle.kts`](app/build.gradle.kts) | Versioning `a1.1.0` (code `110`), Jetpack Compose, Material 3, Android 17 / API 37 compatibility. |
+| [`app/build.gradle.kts`](app/build.gradle.kts) | Versioning `a1.1.1` (code `111`), Jetpack Compose, Material 3, Android 17 / API 37 compatibility. |
 | [`app/src/main/AndroidManifest.xml`](app/src/main/AndroidManifest.xml) | App name `hilight-studio-plusplus`, battery broadcast receiver permissions, orientation configurations. |
 | [`app/src/main/java/com/hilight/studio/MainActivity.kt`](app/src/main/java/com/hilight/studio/MainActivity.kt) | Adaptive Dual-Pane layout for foldables, dynamic status bar insets controller (`isAppearanceLightStatusBars`), first-launch AI disclosure dialog. |
 | [`app/src/main/java/com/hilight/studio/Theme.kt`](app/src/main/java/com/hilight/studio/Theme.kt) | Material 3 Theming engine with AMOLED pitch black option (`#000000` surface). |

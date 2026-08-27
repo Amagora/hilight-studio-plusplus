@@ -1,6 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
-title hilight-studio-plusplus [v a1.1.0] - Universal Pixel 11 Pro ADB Control
+title hilight-studio-plusplus [v a1.1.1] - Universal Pixel 11 Pro ADB Control
 
 :: 1. Check standard SDK locations and local folder only
 set "ADB_PATH="
@@ -55,7 +55,7 @@ if "%ADB_PATH%"=="" (
 :MENU
 cls
 echo ======================================================================
-echo    hilight-studio-plusplus [v a1.1.0] - Universal Control Manager
+echo    hilight-studio-plusplus [v a1.1.1] - Universal Control Manager
 echo    Supports: Pixel 11 Pro / Pixel 11 Pro XL / Pixel 11 Pro Fold
 echo ======================================================================
 echo.

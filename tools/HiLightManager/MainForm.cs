@@ -65,7 +65,7 @@ namespace HiLightManager
 
         private void InitializeDarkUI()
         {
-            this.Text = "hilight-studio-plusplus — [v a1.1.0]";
+            this.Text = "hilight-studio-plusplus — [v a1.1.1]";
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.ClientSize = new Size(1250, 920);
             this.MinimumSize = new Size(1100, 820);
@@ -145,7 +145,7 @@ namespace HiLightManager
 
             Label lblVersion = new Label
             {
-                Text = "a1.1.0",
+                Text = "a1.1.1",
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(56, 189, 248), // Cyan
                 BackColor = Color.FromArgb(30, 41, 59),

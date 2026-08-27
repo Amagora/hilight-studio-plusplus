@@ -1,6 +1,6 @@
-# hilight-studio-plusplus (Build `a1.1.0`) - Changelog & Modifications Log
+# hilight-studio-plusplus (Build `a1.1.1`) - Changelog & Modifications Log
 
-This document provides a comprehensive record of all custom modifications, architectural enhancements, user directives, and privacy protections implemented in **hilight-studio-plusplus** (version `a1.1.0`, forked from [DhananjayBhosale/hilight-studio](https://github.com/DhananjayBhosale/hilight-studio) v1.0.8-experimental).
+This document provides a comprehensive record of all custom modifications, architectural enhancements, user directives, and privacy protections implemented in **hilight-studio-plusplus** (version `a1.1.1`, forked from [DhananjayBhosale/hilight-studio](https://github.com/DhananjayBhosale/hilight-studio) v1.0.8-experimental).
 
 ---
 
