@@ -157,12 +157,19 @@ public final class Engine {
                     alertId = id;
                     alert = a;
                     long asked = a.optLong("durationMs", 4000);
-                    // an open-ended alert (a "while this app is open" hold) still gets the global cap
-                    long dur = asked <= 0 ? ambientTimeoutMs : Math.min(asked, ALERT_MAX_MS);
+                    boolean isForeground = "foreground".equals(a.optString("source", ""));
+                    long dur;
+                    if (isForeground) {
+                        // While-open foreground holds: 0/negative means indefinite, otherwise up to 5 minutes
+                        dur = asked <= 0 ? (Long.MAX_VALUE / 4) : Math.min(asked, 300_000L);
+                    } else {
+                        dur = asked <= 0 ? ambientTimeoutMs : Math.min(asked, ALERT_MAX_MS);
+                    }
                     gate.startAlert(System.currentTimeMillis(), dur);
                     renderer.reset();
-                    Log.i("alert " + id + " " + a.optString("pattern", "pulse") + " for " + dur + "ms"
-                            + (dur != asked ? " (asked " + asked + ", capped)" : ""));
+                    Log.i("alert " + id + " " + a.optString("pattern", "pulse") + " for "
+                            + (dur == Long.MAX_VALUE / 4 ? "indefinite" : dur + "ms")
+                            + (dur != asked && dur != Long.MAX_VALUE / 4 ? " (asked " + asked + ", capped)" : ""));
                 }
             }
             appliedStateRevision = o.optLong("stateRevision", appliedStateRevision);

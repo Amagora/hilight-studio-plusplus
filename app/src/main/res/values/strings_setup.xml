@@ -27,12 +27,12 @@
     <string name="setup_warn_long_confirm_title">Are you sure?</string>
     <string name="setup_warn_long_confirm_body">Up to 5 minutes of continuous illumination will cost battery, and animations freeze lit if the phone sleeps. You can turn this back down at any time.</string>
 
-    <!-- Overdrive / Max Brightness -->
-    <string name="setup_overdrive_title">Max Brightness (Overdrive)</string>
+    <!-- Overdrive Brightness -->
+    <string name="setup_overdrive_title">Max Brightness Override</string>
     <string name="setup_overdrive_body">Bypasses the continuous light thermal taper and duty limits to run all 8 LEDs at maximum uninhibited brightness.</string>
-    <string name="setup_overdrive_warn_title">⚠️ Enable Max Brightness Overdrive?</string>
-    <string name="setup_overdrive_warn_body">Overdrive disables the 10-second thermal protection taper and duty cycle safety limiter. The LEDs will operate at maximum luminance continuously. This produces more heat and may accelerate hardware wear.\n\nAre you sure you want to enable Overdrive?</string>
-    <string name="setup_overdrive_enable_btn">Enable Overdrive</string>
+    <string name="setup_overdrive_warn_title">⚠️ Enable Max Brightness Override?</string>
+    <string name="setup_overdrive_warn_body">Override disables the 10-second thermal protection taper and duty cycle safety limiter. The LEDs will operate at maximum luminance continuously. This produces more heat and may accelerate hardware wear.\n\nAre you sure you want to enable Max Brightness Override?</string>
+    <string name="setup_overdrive_enable_btn">Enable Override</string>
 
     <!-- When to stay dark. The "Quiet hours" toggle reuses suppression_quiet_hours, which is the
          same words said of the same thing. -->
@@ -159,11 +159,13 @@
     <string name="setup_updates_none">No published releases were found.</string>
     <string name="setup_updates_failed">Could not check for updates. Check your connection and try again.</string>
 
-    <!-- Original Developer & Upstream Source -->
-    <string name="setup_original_developer_title">Original Creator &amp; GitHub Source</string>
-    <string name="setup_original_developer_body">HiLight Studio was originally conceived and built by Dhananjay Bhosale. View the upstream repository and original project on GitHub.</string>
-    <string name="setup_original_developer_button_repo">GitHub Repository</string>
-    <string name="setup_original_developer_button_author">Dhananjay Bhosale</string>
+    <!-- Original Source & This Build's Source -->
+    <string name="info_original_source_title">Original Source</string>
+    <string name="info_original_source_body">HiLight Studio was originally conceived and built by Dhananjay Bhosale. View the original upstream repository on GitHub.</string>
+    <string name="info_original_source_button">Original Repository</string>
+    <string name="info_this_build_source_title">This Build\'s Source</string>
+    <string name="info_this_build_source_body">HiLight Studio PlusPlus enhancements, 3-color modes, and desktop controls by Amagora.</string>
+    <string name="info_this_build_source_button">My GitHub Repository</string>
 
     <!-- About & License -->
     <string name="setup_license_title">About &amp; License</string>
@@ -180,11 +182,11 @@
 
     <!-- The self test posts a real notification from this app, so the channel name is seen in the
          system's own notification settings as well. -->
-    <string name="setup_test_title">End-to-end test</string>
-    <string name="setup_test_body">Posts a notification from this app. Add a rule for HiLight Studio first.</string>
-    <string name="setup_test_button">Post test notification</string>
-    <string name="setup_selftest_channel">Self test</string>
-    <string name="setup_selftest_title">HiLight self test</string>
+    <string name="setup_test_title">Notification Test</string>
+    <string name="setup_test_body">Posts a test notification from HiLight Studio to verify your lighting rules.</string>
+    <string name="setup_test_button">Post Test Notification</string>
+    <string name="setup_selftest_channel">Notification Test</string>
+    <string name="setup_selftest_title">HiLight Test Notification</string>
     <string name="setup_selftest_body">If a rule exists for this app, the LEDs just fired</string>
 
     <!-- Session priority. The badge shows the bare number, which is formatted in code. -->
@@ -201,5 +203,10 @@
     <string name="setup_root_active_body">HiLight is using root directly. No Shizuku or ADB setup is needed.</string>
     <string name="setup_root_error_body">Root could not be started. You can retry or use another setup method.</string>
     <string name="setup_root_retry">Retry root</string>
+
+    <!-- Background Service Notification Settings -->
+    <string name="setup_notification_service_title">Background Status Notification</string>
+    <string name="setup_notification_service_body">Shows an ongoing notification when HiLight is active in the background. You can also customize or silence this notification in Android Settings.</string>
+    <string name="setup_notification_service_toggle">Show background status notification</string>
 
 </resources>

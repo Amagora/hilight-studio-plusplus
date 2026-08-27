@@ -33,6 +33,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -124,28 +125,11 @@ fun SetupScreen(store: Store) {
     val quietDimPct by store.quietDimPct.collectAsStateWithLifecycle()
     val screenOffOnly by store.screenOffOnly.collectAsStateWithLifecycle()
     val overdriveBrightness by store.overdriveBrightness.collectAsStateWithLifecycle()
+    val persistentNotificationEnabled by store.persistentNotificationEnabled.collectAsStateWithLifecycle()
 
     var notifAccess by remember { mutableStateOf(hasNotificationAccess(ctx)) }
     var usageAccess by remember { mutableStateOf(ForegroundWatcher.hasUsageAccess(ctx)) }
-    var inspecting by remember { mutableStateOf(false) }
-    var forgetting by remember { mutableStateOf(false) }
     var confirmingOverdrive by remember { mutableStateOf(false) }
-    var showingLicense by remember { mutableStateOf(false) }
-    var showingAiDisclosure by remember { mutableStateOf(false) }
-    var checkingForUpdates by remember { mutableStateOf(false) }
-    var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
-    val updateScope = rememberCoroutineScope()
-    val conversations by store.conversations.collectAsStateWithLifecycle()
-
-    val checkForUpdates: () -> Unit = {
-        checkingForUpdates = true
-        updateScope.launch {
-            updateResult = withContext(Dispatchers.IO) {
-                GitHubUpdateChecker.check(BuildConfig.VERSION_NAME)
-            }
-            checkingForUpdates = false
-        }
-    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -182,22 +166,27 @@ fun SetupScreen(store: Store) {
         SectionTitle(
             stringResource(R.string.setup_overdrive_title),
             trailing = {
-                if (overdriveBrightness) {
-                    LivePill("OVERDRIVE", ok = false)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (overdriveBrightness) {
+                        LivePill("OVERDRIVE", ok = false)
+                    }
+                    Switch(
+                        checked = overdriveBrightness,
+                        onCheckedChange = { enabling ->
+                            if (enabling) {
+                                confirmingOverdrive = true
+                            } else {
+                                store.setOverdriveBrightness(false)
+                            }
+                        }
+                    )
                 }
             }
         )
         Caption(stringResource(R.string.setup_overdrive_body))
-        ToggleRow(
-            stringResource(R.string.setup_overdrive_title),
-            overdriveBrightness,
-        ) { enabling ->
-            if (enabling) {
-                confirmingOverdrive = true
-            } else {
-                store.setOverdriveBrightness(false)
-            }
-        }
     }
 
     if (confirmingOverdrive) {
@@ -277,6 +266,33 @@ fun SetupScreen(store: Store) {
                 { store.setBatteryGuard(true, it.toInt()) },
             ) { stringResource(R.string.setup_percent, it.toInt()) }
             Caption(stringResource(R.string.setup_battery_note))
+        }
+    }
+
+    PixelCard(tone = 2) {
+        SectionTitle(stringResource(R.string.setup_notification_service_title))
+        Caption(stringResource(R.string.setup_notification_service_body))
+        ToggleRow(
+            stringResource(R.string.setup_notification_service_toggle),
+            persistentNotificationEnabled,
+        ) { store.setPersistentNotificationEnabled(it) }
+    }
+
+    PixelCard(tone = 2) {
+        SectionTitle(stringResource(R.string.setup_priority_title))
+        Caption(stringResource(R.string.setup_priority_body))
+        PixelSlider(
+            label = stringResource(R.string.setup_priority_label),
+            value = priority.toFloat(),
+            range = -19f..19f,
+            onChange = { store.setPriority(it.toInt()) },
+        ) {
+            val v = it.toInt()
+            when {
+                v < 0 -> "High (-$v)"
+                v > 0 -> "Low (+$v)"
+                else -> "Default (0)"
+            }
         }
     }
 
@@ -363,25 +379,6 @@ fun SetupScreen(store: Store) {
         FilledTonalButton(
             onClick = { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
         ) { ButtonLabel(stringResource(R.string.setup_open_notif_access)) }
-        Caption(stringResource(R.string.setup_inspector_body))
-        TextButton(onClick = { inspecting = true }) {
-            ButtonLabel(stringResource(R.string.setup_inspector_button))
-        }
-        // The chat picker's convenience comes from a list of real contact names held on the device,
-        // so there has to be a way to be rid of it without uninstalling. Rules keep their own copy of
-        // the name they match on, so clearing this list leaves working rules working.
-        Caption(
-            if (conversations.isEmpty()) {
-                stringResource(R.string.setup_chats_none)
-            } else {
-                stringResource(R.string.setup_chats_remembered, conversations.size)
-            }
-        )
-        if (conversations.isNotEmpty()) {
-            TextButton(onClick = { forgetting = true }) {
-                ButtonLabel(stringResource(R.string.setup_forget_chats_button))
-            }
-        }
     }
 
     PixelCard {
@@ -450,240 +447,9 @@ fun SetupScreen(store: Store) {
             }
         }
     }
-
-    PixelCard {
-        SectionTitle(
-            stringResource(R.string.setup_updates_title),
-            trailing = {
-                Caption(
-                    stringResource(
-                        R.string.setup_updates_installed,
-                        BuildConfig.VERSION_NAME,
-                    )
-                )
-            },
-        )
-        when {
-            checkingForUpdates -> Caption(stringResource(R.string.setup_updates_checking))
-            updateResult == null -> Caption(stringResource(R.string.setup_updates_body))
-            updateResult is UpdateCheckResult.Available -> Caption(
-                stringResource(
-                    R.string.setup_updates_available,
-                    (updateResult as UpdateCheckResult.Available).release.versionName,
-                )
-            )
-            updateResult is UpdateCheckResult.Current ->
-                Caption(stringResource(R.string.setup_updates_current))
-            updateResult is UpdateCheckResult.NoPublishedRelease ->
-                Caption(stringResource(R.string.setup_updates_none))
-            else -> Caption(stringResource(R.string.setup_updates_failed))
-        }
-
-        val available = updateResult as? UpdateCheckResult.Available
-        if (available != null && !checkingForUpdates) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(onClick = { openRelease(ctx, available.release.pageUrl) }) {
-                    ButtonLabel(stringResource(R.string.setup_updates_view_release))
-                }
-                TextButton(onClick = checkForUpdates) {
-                    ButtonLabel(stringResource(R.string.setup_updates_check_again))
-                }
-            }
-        } else {
-            FilledTonalButton(
-                onClick = checkForUpdates,
-                enabled = !checkingForUpdates,
-            ) {
-                ButtonLabel(
-                    stringResource(
-                        if (checkingForUpdates) R.string.setup_updates_checking
-                        else R.string.setup_updates_check,
-                    )
-                )
-            }
-        }
-    }
-
-    PixelCard {
-        SectionTitle(stringResource(R.string.setup_original_developer_title))
-        Caption(stringResource(R.string.setup_original_developer_body))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilledTonalButton(
-                onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/DhananjayBhosale/hilight-studio"))
-                    ctx.startActivity(intent)
-                }
-            ) {
-                ButtonLabel(stringResource(R.string.setup_original_developer_button_repo))
-            }
-            FilledTonalButton(
-                onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/DhananjayBhosale"))
-                    ctx.startActivity(intent)
-                }
-            ) {
-                ButtonLabel(stringResource(R.string.setup_original_developer_button_author))
-            }
-        }
-    }
-
-    PixelCard {
-        SectionTitle(stringResource(R.string.setup_license_title))
-        Caption(stringResource(R.string.setup_license_body))
-        FilledTonalButton(onClick = { showingLicense = true }) {
-            ButtonLabel(stringResource(R.string.setup_license_button))
-        }
-    }
-
-    PixelCard {
-        SectionTitle(stringResource(R.string.setup_ai_disclosure_title))
-        Caption(stringResource(R.string.setup_ai_disclosure_body))
-        FilledTonalButton(onClick = { showingAiDisclosure = true }) {
-            ButtonLabel(stringResource(R.string.setup_ai_disclosure_button))
-        }
-    }
-
-    PixelCard {
-        SectionTitle(stringResource(R.string.setup_test_title))
-        Caption(stringResource(R.string.setup_test_body))
-        FilledTonalButton(onClick = { postSelfTestNotification(ctx) }) {
-            ButtonLabel(stringResource(R.string.setup_test_button))
-        }
-    }
-
-    PixelCard {
-        SectionTitle(stringResource(R.string.setup_priority_title))
-        Caption(stringResource(R.string.setup_priority_body))
-        PixelSlider(
-            stringResource(R.string.setup_priority_label),
-            priority.toFloat(),
-            -10f..10f,
-            { store.setPriority(it.toInt()) },
-        ) { it.toInt().toString() }
-    }
-
-    if (inspecting) {
-        NotificationInspectorDialog(store) { inspecting = false }
-    }
-
-    if (forgetting) {
-        AlertDialog(
-            onDismissRequest = { forgetting = false },
-            shape = MaterialTheme.shapes.extraLarge,
-            title = { Text(stringResource(R.string.setup_forget_chats_title)) },
-            text = {
-                Text(
-                    stringResource(R.string.setup_forget_chats_body),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        store.forgetConversations()
-                        forgetting = false
-                    },
-                ) { ButtonLabel(stringResource(R.string.setup_forget_chats_confirm)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { forgetting = false }) {
-                    ButtonLabel(stringResource(R.string.setup_forget_chats_dismiss))
-                }
-            },
-        )
-    }
-
-    if (showingLicense) {
-        AlertDialog(
-            onDismissRequest = { showingLicense = false },
-            shape = MaterialTheme.shapes.extraLarge,
-            title = { Text(stringResource(R.string.setup_license_dialog_title)) },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .heightIn(max = 360.dp)
-                        .verticalScroll(rememberScrollState()),
-                ) {
-                    Text(
-                        text = MIT_LICENSE_TEXT,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showingLicense = false }) {
-                    ButtonLabel(stringResource(R.string.common_close))
-                }
-            },
-        )
-    }
-
-    if (showingAiDisclosure) {
-        AiDisclosureDialog(
-            onDismiss = { showingAiDisclosure = false },
-            confirmButtonText = stringResource(R.string.common_close),
-        )
-    }
 }
 
-@Composable
-fun AiDisclosureDialog(
-    onDismiss: () -> Unit,
-    confirmButtonText: String = stringResource(R.string.setup_ai_disclosure_dialog_understand),
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = MaterialTheme.shapes.extraLarge,
-        title = { Text(stringResource(R.string.setup_ai_disclosure_dialog_title)) },
-        text = {
-            Column(
-                modifier = Modifier
-                    .heightIn(max = 380.dp)
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                Text(
-                    text = AI_DISCLOSURE_TEXT,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                ButtonLabel(confirmButtonText)
-            }
-        },
-    )
-}
 
-const val AI_DISCLOSURE_TEXT = """Artificial Intelligence (A.I.) Disclosure & Transparency Notice
-
-1. Use of Artificial Intelligence:
-Portions of the architectural design, user interface layout, Material 3 dynamic theming, and code enhancements in this fork of HiLight Studio were developed with the assistance of advanced Artificial Intelligence (AI) models, under explicit human direction, code review, and hardware testing on the Google Pixel 11 Pro Fold.
-
-2. Local Execution & Complete Privacy:
-The HiLight Studio application runs 100% locally on your device. It does not send your data, telemetry, hardware state, or personal information to any external AI servers, cloud providers, or third-party networks during runtime.
-
-3. Open Source & Hardware Safety:
-All modifications are fully open-source under the MIT License and designed to interact safely with the Google Pixel lights HAL (Hardware Abstraction Layer).
-
-4. Original Attribution:
-Original HiLight Studio architecture and concepts created by Dhananjay Bhosale and open-source contributors."""
-
-private const val MIT_LICENSE_TEXT = """MIT License
-
-Copyright (c) 2026 HiLight Studio contributors
-Copyright (c) 2026 HiLight Studio Fork contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
 
 @Composable
 private fun ShizukuCard(store: Store, state: ShizukuBackend.State) {
@@ -838,7 +604,7 @@ private fun openRelease(ctx: Context, pageUrl: String) {
         .onFailure { Toast.makeText(ctx, R.string.setup_no_browser, Toast.LENGTH_SHORT).show() }
 }
 
-private fun postSelfTestNotification(ctx: Context) {
+internal fun postSelfTestNotification(ctx: Context) {
     val nm = ctx.getSystemService(android.app.NotificationManager::class.java)
     // The channel id stays a literal — it is a key, not a label. The channel *name* is a label: it
     // appears in the system's own notification settings for this app.

@@ -54,18 +54,9 @@ enum class DeviceProfile(
     val aspect: Float,
     val lensCount: Int,
     val hasHiLight: Boolean,
-    val foldStyle: Boolean = false,
-    /** body width as a fraction of the canvas — over 1 means the device runs off the sides */
-    val zoom: Float = 0.93f,
-    /** where the body's left edge sits, as a fraction of the canvas */
-    val originX: Float = -1f,
 ) {
     PRO_XL("Pixel 11 Pro XL", aspect = 0.470f, lensCount = 3, hasHiLight = true),
     PRO("Pixel 11 Pro", aspect = 0.455f, lensCount = 3, hasHiLight = true),
-    FOLD(
-        "Pixel 11 Pro Fold", aspect = 0.950f, lensCount = 3, hasHiLight = true, foldStyle = true,
-        zoom = 1.15f, originX = 0.035f,
-    ),
     BASE("Pixel 11", aspect = 0.462f, lensCount = 2, hasHiLight = false),
     GENERIC("this device", labelRes = R.string.device_generic, aspect = 0.465f, lensCount = 3, hasHiLight = true),
     ;
@@ -76,7 +67,6 @@ enum class DeviceProfile(
             val m = model.lowercase()
             return when {
                 !m.contains("pixel") -> GENERIC
-                m.contains("fold") -> FOLD
                 m.contains("pro xl") -> PRO_XL
                 m.contains("pro") -> PRO
                 m.contains("pixel 11") -> BASE
@@ -140,24 +130,19 @@ fun DeviceHero(
                 ),
             )
 
-            // Only the top of the device is shown, framed on the camera bar the way Google's own
-            // close-ups are; the body deliberately runs off the bottom of the card.
-            val phoneW = size.width * profile.zoom
+            // Scale the phone illustration to fit both folded and unfolded screens comfortably.
+            // On wide/unfolded screens, bounding phoneW by size.height prevents the visor bar from
+            // being pushed down off the bottom of the hero card.
+            val maxWByHeight = size.height * 1.55f
+            val phoneW = minOf(size.width * 0.92f, maxWByHeight, 460.dp.toPx())
             val phoneH = phoneW / profile.aspect
-            val left =
-                if (profile.originX >= 0f) size.width * profile.originX
-                else (size.width - phoneW) / 2f
-            val top = size.height * 0.07f
-            val corner = phoneW * if (profile.foldStyle) 0.10f else 0.13f
+            val left = (size.width - phoneW) / 2f
+            val top = (size.height * 0.05f).coerceAtLeast(6.dp.toPx())
+            val corner = phoneW * 0.13f
 
             if (bloom > 0.01f) drawSpill(frame, left, top, phoneW, bloom)
             drawBody(left, top, phoneW, phoneH, corner)
-
-            if (profile.foldStyle) {
-                drawFoldCameraBlock(frame, left, top, phoneW, phoneH, bloom)
-            } else {
-                drawVisorBar(frame, left, top, phoneW, phoneH, profile, bloom)
-            }
+            drawVisorBar(frame, left, top, phoneW, phoneH, profile, bloom)
         }
     }
 }
@@ -237,44 +222,6 @@ private fun DrawScope.drawVisorBar(
         // non-Pro: plain flash, no array
         drawLens(left + inset + barW * 0.74f, cy, barH * 0.15f)
     }
-}
-
-/** Pro Fold: compact camera block in the top-left corner, HiLight inside it. */
-private fun DrawScope.drawFoldCameraBlock(
-    frame: IntArray,
-    left: Float,
-    top: Float,
-    phoneW: Float,
-    phoneH: Float,
-    bloom: Float,
-) {
-    val blockW = phoneW * 0.40f
-    val blockH = phoneW * 0.165f
-    val blockLeft = left + phoneW * 0.045f
-    val blockTop = top + phoneH * 0.055f
-    val cy = blockTop + blockH / 2f
-
-    drawRoundRect(Visor, Offset(blockLeft, blockTop), Size(blockW, blockH), CornerRadius(blockH * 0.42f))
-    drawRoundRect(
-        LensRing.copy(alpha = 0.5f),
-        Offset(blockLeft, blockTop),
-        Size(blockW, blockH),
-        CornerRadius(blockH * 0.42f),
-        style = Stroke(width = size.height * 0.003f),
-    )
-
-    // three rear cameras, then the array
-    val lensR = blockH * 0.28f
-    listOf(0.15f, 0.35f, 0.55f).forEach { fx -> drawLens(blockLeft + blockW * fx, cy, lensR) }
-    drawHiLightDisc(frame, Offset(blockLeft + blockW * 0.82f, cy), blockH * 0.30f, bloom)
-
-    // hinge seam, so the silhouette reads as the foldable
-    drawRoundRect(
-        BodyEdge.copy(alpha = 0.55f),
-        Offset(left + phoneW * 0.495f, top + phoneH * 0.02f),
-        Size(phoneW * 0.012f, phoneH * 0.96f),
-        CornerRadius(phoneW * 0.006f),
-    )
 }
 
 private fun DrawScope.drawLens(cx: Float, cy: Float, r: Float) {

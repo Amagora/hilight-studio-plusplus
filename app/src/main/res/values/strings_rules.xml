@@ -67,6 +67,15 @@
     <string name="rules_duration_warn_second_title">Are you sure?</string>
     <string name="rules_duration_warn_second_body">A busy app can fire often, so the LEDs may end up lit most of the time. You can turn this back down at any time.</string>
 
+    <!-- Foreground "While open" rule settings -->
+    <string name="rules_foreground_indefinite_title">Stay lit indefinitely</string>
+    <string name="rules_foreground_indefinite_hint">Overrules duration timer — LED will remain active for as long as this app is open.</string>
+    <string name="rules_stay_lit_for">Stay lit for</string>
+    <string name="rules_foreground_timer_hint">LED will run for this duration when the app is opened (up to 5 minutes).</string>
+    <string name="rules_warn_indefinite_title">Warning: Indefinite Lighting</string>
+    <string name="rules_warn_indefinite_body">Keeping the LED active continuously while this app is open may cause significant battery drain and potential hardware strain or overheating if used for extended periods. Do you want to enable indefinite lighting?</string>
+    <string name="rules_enable_indefinite">Enable Indefinite</string>
+
     <!-- Last thing read before Save, when the edit would land on top of another rule -->
     <string name="rules_replace_warning">An existing rule for this app already covers that, and saving will replace its settings with these.</string>
 

@@ -16,10 +16,12 @@
     <string name="tab_live">ライブ</string>
     <!-- "Style" -->
     <string name="tab_style">スタイル</string>
+    <string name="tab_test">テスト</string>
     <!-- "Apps" -->
     <string name="tab_apps">アプリ</string>
     <!-- "Setup" -->
     <string name="tab_setup">設定</string>
+    <string name="tab_info">情報</string>
 
     <!-- Patterns -->
     <!-- "Off" -->

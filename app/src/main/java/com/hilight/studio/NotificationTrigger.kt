@@ -45,11 +45,20 @@ class NotificationTrigger : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        if (isPackageSuspended() || !store.enabled.value) {
+            return
+        }
         // This is a system callback, and a listener that throws is a listener the framework may stop
         // trusting — which would take every rule with it. One catch around the whole path is worth
         // more than hoping each step in it behaves.
         runCatching { handlePosted(sbn) }
             .onFailure { Log.w(TAG, "could not handle notification", it) }
+    }
+
+    private fun isPackageSuspended(): Boolean {
+        return runCatching {
+            packageManager.isPackageSuspended
+        }.getOrDefault(false)
     }
 
     private fun handlePosted(sbn: StatusBarNotification) {

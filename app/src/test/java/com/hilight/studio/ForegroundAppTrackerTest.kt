@@ -82,7 +82,7 @@ class ForegroundAppTrackerTest {
     }
 
     @Test
-    fun `watcher runs only for enabled while-open rules`() {
+    fun `watcher runs only for enabled while-open rules or persistent notification`() {
         val foreground = AppRule(
             pkg = "com.discord",
             label = "Discord",
@@ -94,6 +94,8 @@ class ForegroundAppTrackerTest {
         assertFalse(ForegroundWatchPolicy.shouldRun(false, listOf(foreground)))
         assertFalse(ForegroundWatchPolicy.shouldRun(true, listOf(foreground.copy(enabled = false))))
         assertFalse(ForegroundWatchPolicy.shouldRun(true, listOf(notification)))
+        assertTrue(ForegroundWatchPolicy.shouldRun(true, listOf(notification), persistentNotification = true))
+        assertFalse(ForegroundWatchPolicy.shouldRun(false, listOf(notification), persistentNotification = true))
     }
 }
 

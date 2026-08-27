@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.DisplaySettings
 import androidx.compose.material.icons.rounded.Lightbulb
@@ -112,10 +113,10 @@ class MainActivity : ComponentActivity() {
 }
 
 private enum class Tab(@StringRes val labelRes: Int, val icon: ImageVector) {
-    LIVE(R.string.tab_live, Icons.Rounded.Lightbulb),
-    AMBIENT(R.string.tab_style, Icons.Rounded.Tune),
+    TEST(R.string.tab_test, Icons.Rounded.Tune),
     APPS(R.string.tab_apps, Icons.Rounded.Apps),
     SETUP(R.string.tab_setup, Icons.Rounded.DisplaySettings),
+    INFO(R.string.tab_info, Icons.Outlined.Info),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -251,10 +252,10 @@ private fun App(store: Store) {
                             .verticalScroll(rememberScrollState()),
                     ) {
                         when (current) {
-                            Tab.LIVE -> LiveScreen(store)
-                            Tab.AMBIENT -> AmbientScreen(store)
+                            Tab.TEST -> TestScreen(store)
                             Tab.APPS -> AppRulesScreen(store)
                             Tab.SETUP -> SetupScreen(store)
+                            Tab.INFO -> InfoScreen(store)
                         }
                         Spacer(Modifier.height(28.dp))
                     }

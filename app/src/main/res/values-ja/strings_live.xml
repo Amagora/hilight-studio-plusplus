@@ -39,10 +39,14 @@
     <string name="live_hint_take_over">下のスイッチで LED アレイの制御を引き継げます。</string>
 
     <!-- Master switch -->
-    <!-- "Driving HiLight" — this app is the one driving it -->
-    <string name="live_toggle_driving">HiLight を制御中</string>
-    <!-- "System has HiLight" — the mirror of the line above, with the system as the subject -->
-    <string name="live_toggle_system">システムが HiLight を制御中</string>
+    <!-- "HiLight Enabled" -->
+    <string name="live_toggle_enabled">HiLight 有効</string>
+    <!-- "Flip toggle to disable HiLight." -->
+    <string name="live_toggle_enabled_subtext">スイッチをタップして HiLight を無効にします。</string>
+    <!-- "HiLight Disabled" -->
+    <string name="live_toggle_disabled">HiLight 無効</string>
+    <!-- "Flip toggle to enable HiLight." -->
+    <string name="live_toggle_disabled_subtext">スイッチをタップして HiLight を有効にします。</string>
 
     <!-- Why the array is dark while the switch is on. These are the full explanations; the two-word
          forms the tile shows are suppression_* in strings_common.xml. -->

@@ -35,7 +35,12 @@
     <string name="setup_warn_long_confirm_title">本当に設定しますか</string>
     <!-- "Up to 5 minutes of continuous illumination will cost battery, and animations freeze lit if
          the phone sleeps. You can turn this back down at any time." -->
-    <string name="setup_warn_long_confirm_body">最大 5 分の連続点灯は電池を消費します。端末がスリープに入るとアニメーションは点灯したまま停止します。設定はいつでも戻せます。</string>
+    <!-- Overdrive Brightness -->
+    <string name="setup_overdrive_title">最大輝度オーバーライド</string>
+    <string name="setup_overdrive_body">明暗スライダーの設定に関わらず、すべての LED をハードウェアの最大輝度（100%）で点灯させます。長時間の点灯は発熱やバッテリー消費が増加する可能性があります。</string>
+    <string name="setup_overdrive_warn_title">⚠️ 最大輝度オーバーライドを有効にしますか？</string>
+    <string name="setup_overdrive_warn_body">オーバーライドは 10 秒間の熱保護減衰とデューティ比リミッターを解除します。すべての LED が最大輝度で点灯し続けます。より多くの熱が発生し、ハードウェアの摩耗を早める可能性があります。\n\n本当に最大輝度オーバーライドを有効にしますか？</string>
+    <string name="setup_overdrive_enable_btn">オーバーライドを有効化</string>
 
     <!-- When to stay dark -->
     <!-- "When to stay dark" -->
@@ -238,11 +243,13 @@
     <string name="setup_license_button">MIT ライセンスを表示</string>
     <string name="setup_license_dialog_title">MIT ライセンス</string>
 
-    <!-- Original Developer & Upstream Source -->
-    <string name="setup_original_developer_title">原作者および GitHub ソース</string>
-    <string name="setup_original_developer_body">HiLight Studio は元々 Dhananjay Bhosale によって考案・開発されました。GitHub で上流リポジトリとオリジナルプロジェクトをご覧いただけます。</string>
-    <string name="setup_original_developer_button_repo">GitHub リポジトリ</string>
-    <string name="setup_original_developer_button_author">Dhananjay Bhosale</string>
+    <!-- Original Source & This Build's Source -->
+    <string name="info_original_source_title">オリジナルソース</string>
+    <string name="info_original_source_body">HiLight Studio は元々 Dhananjay Bhosale によって考案・開発されました。GitHub で上流リポジトリをご覧いただけます。</string>
+    <string name="info_original_source_button">オリジナルのリポジトリ</string>
+    <string name="info_this_build_source_title">本ビルドのソース</string>
+    <string name="info_this_build_source_body">Amagora による HiLight Studio PlusPlus の機能拡張、3色モード、およびデスクトップ制御。</string>
+    <string name="info_this_build_source_button">私の GitHub リポジトリ</string>
 
     <!-- A.I. Disclosure -->
     <string name="setup_ai_disclosure_title">AI に関する開示事項</string>
@@ -252,16 +259,16 @@
     <string name="setup_ai_disclosure_dialog_understand">理解しました</string>
 
     <!-- The self test. The channel name is also seen in the system's notification settings. -->
-    <!-- "End-to-end test" -->
-    <string name="setup_test_title">通し動作テスト</string>
-    <!-- "Posts a notification from this app. Add a rule for HiLight Studio first." -->
-    <string name="setup_test_body">このアプリから通知を送信します。先に HiLight Studio のルールを追加してください。</string>
+    <!-- "Notification Test" -->
+    <string name="setup_test_title">通知テスト</string>
+    <!-- "Posts a test notification from this app. Add a rule for HiLight Studio first." -->
+    <string name="setup_test_body">HiLight Studio からテスト通知を送信し、LED 点灯ルールをテストします。</string>
     <!-- "Post test notification" -->
     <string name="setup_test_button">テスト通知を送信</string>
-    <!-- "Self test" -->
-    <string name="setup_selftest_channel">セルフテスト</string>
-    <!-- "HiLight self test" -->
-    <string name="setup_selftest_title">HiLight セルフテスト</string>
+    <!-- "Notification Test" -->
+    <string name="setup_selftest_channel">通知テスト</string>
+    <!-- "HiLight test notification" -->
+    <string name="setup_selftest_title">HiLight テスト通知</string>
     <!-- "If a rule exists for this app, the LEDs just fired" -->
     <string name="setup_selftest_body">このアプリのルールがあれば、今 LED が点灯しました</string>
 
@@ -282,5 +289,10 @@
     <string name="setup_root_active_body">HiLight は Root を直接使用しています。Shizuku や ADB の設定は不要です。</string>
     <string name="setup_root_error_body">Root を起動できませんでした。再試行するか、別の設定方法を使用できます。</string>
     <string name="setup_root_retry">Root を再試行</string>
+
+    <!-- Background Service Notification Settings -->
+    <string name="setup_notification_service_title">バックグラウンド常駐通知</string>
+    <string name="setup_notification_service_body">HiLight がバックグラウンドで動作しているときに常駐通知を表示します。Android の設定からも通知音や表示をカスタマイズできます。</string>
+    <string name="setup_notification_service_toggle">バックグラウンド常駐通知を表示</string>
 
 </resources>

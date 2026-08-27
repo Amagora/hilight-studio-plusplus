@@ -21,8 +21,10 @@
     <string name="live_hint_take_over">Take over the array with the switch below.</string>
 
     <!-- Master switch -->
-    <string name="live_toggle_driving">Driving HiLight</string>
-    <string name="live_toggle_system">System has HiLight</string>
+    <string name="live_toggle_enabled">HiLight Enabled</string>
+    <string name="live_toggle_enabled_subtext">Flip toggle to disable HiLight.</string>
+    <string name="live_toggle_disabled">HiLight Disabled</string>
+    <string name="live_toggle_disabled_subtext">Flip toggle to enable HiLight.</string>
 
     <!-- Why the array is dark while the switch is on. These are the full explanations; the two-word
          forms the tile shows are suppression_* in strings_common.xml. -->

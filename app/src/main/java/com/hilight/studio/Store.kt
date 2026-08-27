@@ -102,6 +102,11 @@ class Store private constructor(private val app: Context) {
     private val _respectDnd = MutableStateFlow(prefs.getBoolean("respectDnd", true))
     val respectDnd: StateFlow<Boolean> = _respectDnd.asStateFlow()
 
+    private val _persistentNotificationEnabled = MutableStateFlow(
+        prefs.getBoolean("persistentNotificationEnabled", true)
+    )
+    val persistentNotificationEnabled: StateFlow<Boolean> = _persistentNotificationEnabled.asStateFlow()
+
     private val _suppression = MutableStateFlow<Suppression?>(null)
     val suppression: StateFlow<Suppression?> = _suppression.asStateFlow()
 
@@ -296,20 +301,30 @@ class Store private constructor(private val app: Context) {
         root.refreshPresence()
     }
 
+    fun setPersistentNotificationEnabled(v: Boolean) {
+        _persistentNotificationEnabled.value = v
+        prefs.edit().putBoolean("persistentNotificationEnabled", v).apply()
+        syncForegroundWatcher()
+    }
+
     // ------------------------------------------------------------------ mutations
 
     fun setEnabled(v: Boolean) {
         _enabled.value = v
         prefs.edit().putBoolean("enabled", v).apply()
+        if (!v) {
+            foregroundOverride = null
+            _previewLook.value = null
+        }
         syncForegroundWatcher()
         if (v && root.state.value == RootBackend.State.AVAILABLE) beginRootStart()
-        else pushCurrent()
+        else pushCurrent(arm = false)
         HiLightTile.refresh(app)
     }
 
-    /** Restores or stops the service to match saved rules and the master switch. */
+    /** Restores or stops the service to match saved rules, persistent notification setting, and the master switch. */
     fun syncForegroundWatcher() =
-        ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value)
+        ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value, _persistentNotificationEnabled.value)
 
     fun setThemeMode(mode: ThemeMode) {
         _themeMode.value = mode
@@ -991,11 +1006,12 @@ class Store private constructor(private val app: Context) {
         }
         if (foregroundOverride?.first == pkg) return
         val color = if (rule.randomColor) randomColor() else rule.color
+        val durMs = if (rule.foregroundIndefinite) 0 else rule.durationMs.coerceIn(2_000, 300_000)
         foregroundOverride = pkg to Bridge.alertJson(
             id = Bridge.nextAlertId(),
             pattern = rule.pattern,
             color = color,
-            durationMs = 0,                 // hold until cleared
+            durationMs = durMs,
             speedMs = rule.speedMs,
             brightness = rule.brightness,
             source = AlertSource.FOREGROUND,

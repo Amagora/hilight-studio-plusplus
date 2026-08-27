@@ -44,7 +44,7 @@ internal class ForegroundAppTracker {
 
 /** Pure start/stop policy shared by restoration and rule updates. */
 internal object ForegroundWatchPolicy {
-    fun shouldRun(enabled: Boolean, rules: List<AppRule>): Boolean =
-        enabled && rules.any { it.enabled && it.trigger == Trigger.FOREGROUND }
+    fun shouldRun(enabled: Boolean, rules: List<AppRule>, persistentNotification: Boolean = false): Boolean =
+        enabled && (persistentNotification || rules.any { it.enabled && it.trigger == Trigger.FOREGROUND })
 }
 

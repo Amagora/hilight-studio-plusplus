@@ -15,8 +15,10 @@
     <!-- Tabs -->
     <string name="tab_live">Live</string>
     <string name="tab_style">Style</string>
+    <string name="tab_test">Test</string>
     <string name="tab_apps">Apps</string>
     <string name="tab_setup">Setup</string>
+    <string name="tab_info">Info</string>
 
     <!-- Patterns -->
     <string name="pattern_off">Off</string>
@@ -71,6 +73,7 @@
     <string name="common_edit">Edit</string>
     <string name="common_test">Test</string>
     <string name="common_delete">Delete</string>
+    <string name="common_copy">Copy</string>
     <string name="common_continue">Continue</string>
     <string name="common_keep_it_short">Keep it short</string>
     <string name="common_none">none</string>

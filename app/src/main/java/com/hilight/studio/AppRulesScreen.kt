@@ -591,6 +591,7 @@ private fun RuleEditorDialog(
     onStopTest: () -> Unit = {},
 ) {
     var r by remember { mutableStateOf(rule) }
+    var confirmingIndefinite by remember { mutableStateOf(false) }
 
     /*
      * Whether saving would land on a rule other than the one being edited.
@@ -856,6 +857,28 @@ private fun RuleEditorDialog(
                     ) {
                         r = r.copy(onlyWhenScreenOff = it)
                     }
+                } else if (r.trigger == Trigger.FOREGROUND) {
+                    ToggleRow(
+                        stringResource(R.string.rules_foreground_indefinite_title),
+                        r.foregroundIndefinite,
+                    ) { enabling ->
+                        if (enabling) {
+                            confirmingIndefinite = true
+                        } else {
+                            r = r.copy(foregroundIndefinite = false)
+                        }
+                    }
+                    if (r.foregroundIndefinite) {
+                        Caption(stringResource(R.string.rules_foreground_indefinite_hint))
+                    } else {
+                        PixelSlider(
+                            label = stringResource(R.string.rules_stay_lit_for),
+                            value = r.durationMs.toFloat(),
+                            range = 5_000f..300_000f,
+                            onChange = { r = r.copy(durationMs = it.toInt()) },
+                        ) { formatDuration(it.toInt()) }
+                        Caption(stringResource(R.string.rules_foreground_timer_hint))
+                    }
                 }
                 if (r.pattern.usesSpeed) {
                     PixelSlider(
@@ -908,6 +931,34 @@ private fun RuleEditorDialog(
             }
         },
     )
+
+    if (confirmingIndefinite) {
+        AlertDialog(
+            onDismissRequest = { confirmingIndefinite = false },
+            shape = MaterialTheme.shapes.extraLarge,
+            title = { Text(stringResource(R.string.rules_warn_indefinite_title)) },
+            text = { Text(stringResource(R.string.rules_warn_indefinite_body)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        r = r.copy(foregroundIndefinite = true)
+                        confirmingIndefinite = false
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
+                ) {
+                    ButtonLabel(stringResource(R.string.rules_enable_indefinite))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingIndefinite = false }) {
+                    ButtonLabel(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
 }
 
 /**

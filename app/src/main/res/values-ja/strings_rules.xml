@@ -118,6 +118,22 @@
          back down at any time." -->
     <string name="rules_duration_warn_second_body">通知の多いアプリでは頻繁に発動するため、LED がほとんどの時間点灯したままになることがあります。設定はいつでも戻せます。</string>
 
+    <!-- Foreground "While open" rule settings -->
+    <!-- "Stay lit indefinitely" -->
+    <string name="rules_foreground_indefinite_title">アプリ表示中ずっと点灯</string>
+    <!-- "Overrules duration timer — LED will remain active for as long as this app is open." -->
+    <string name="rules_foreground_indefinite_hint">タイマー設定を上書きし、アプリが表示されている間 LED が点灯し続けます。</string>
+    <!-- "Stay lit for" -->
+    <string name="rules_stay_lit_for">点灯時間</string>
+    <!-- "LED will run for this duration when the app is opened (up to 5 minutes)." -->
+    <string name="rules_foreground_timer_hint">アプリが開かれたときに LED を点灯させる時間 (最長 5 分)。</string>
+    <!-- "Warning: Indefinite Lighting" -->
+    <string name="rules_warn_indefinite_title">警告: 無制限点灯</string>
+    <!-- "Keeping the LED active continuously while this app is open may cause significant battery drain and potential hardware strain or overheating if used for extended periods. Do you want to enable indefinite lighting?" -->
+    <string name="rules_warn_indefinite_body">アプリ表示中に LED を連続して点灯させ続けると、バッテリーの消耗が早くなり、長時間の使用により発熱やハードウェアへの負荷が生じる恐れがあります。無制限点灯を有効にしますか？</string>
+    <!-- "Enable Indefinite" -->
+    <string name="rules_enable_indefinite">無制限を有効にする</string>
+
     <!-- Last thing read before Save, when the edit would land on top of another rule -->
     <!-- "An existing rule for this app already covers that, and saving will replace its settings with
          these." -->

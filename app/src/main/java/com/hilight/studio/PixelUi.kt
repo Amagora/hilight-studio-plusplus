@@ -11,6 +11,7 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -22,11 +23,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.ripple
@@ -568,6 +573,70 @@ fun PerLedEditor(
                 },
                 modifier = Modifier.weight(1f),
             ) { ButtonLabel(stringResource(R.string.style_fill_all)) }
+        }
+    }
+}
+
+/** Scrolling pattern picker whose selection animates in colour and size. */
+@Composable
+fun PatternCarousel(
+    selected: Pattern,
+    options: List<Pattern> = Pattern.entries,
+    onSelect: (Pattern) -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        options.forEach { p ->
+            val isSelected = p == selected
+            val haptics = LocalHapticFeedback.current
+            val bg = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+            val fg = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+            Box(
+                Modifier
+                    .background(bg, MaterialTheme.shapes.medium)
+                    .clickable {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onSelect(p)
+                    }
+                    .padding(horizontal = 18.dp, vertical = 11.dp),
+            ) {
+                Text(stringResource(p.labelRes), style = MaterialTheme.typography.labelLarge, color = fg)
+            }
+        }
+    }
+}
+
+/** Tonal chip for saved presets. */
+@Composable
+fun PresetChip(
+    name: String,
+    active: Boolean,
+    onApply: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val haptics = LocalHapticFeedback.current
+    val bg = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+    val fg = if (active) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Row(
+        Modifier
+            .background(bg, MaterialTheme.shapes.medium)
+            .padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            name,
+            style = MaterialTheme.typography.labelLarge,
+            color = fg,
+            modifier = Modifier.clickable {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                onApply()
+            },
+        )
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.common_delete), tint = fg)
         }
     }
 }

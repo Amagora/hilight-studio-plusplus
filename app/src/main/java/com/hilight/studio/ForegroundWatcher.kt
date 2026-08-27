@@ -1,9 +1,10 @@
 package com.hilight.studio
 
+import android.app.AppOpsManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.AppOpsManager
+import android.app.PendingIntent
 import android.app.Service
 import android.app.usage.UsageStatsManager
 import android.content.Context
@@ -18,6 +19,7 @@ import android.util.Log
 
 /**
  * Applies FOREGROUND rules: while a chosen app is on screen, HiLight holds that app's look.
+ * Also maintains the active background service status notification when enabled.
  *
  * Uses UsageStatsManager event queries (needs Usage access, which the user grants in Settings)
  * because no non-privileged API reports the foreground package directly.
@@ -44,6 +46,16 @@ class ForegroundWatcher : Service() {
 
     private val tick = object : Runnable {
         override fun run() {
+            if (isPackageSuspended() || !store.enabled.value) {
+                main.post {
+                    if (!stopped) {
+                        store.setForegroundOverride(null, null)
+                    }
+                }
+                stopSelf()
+                return
+            }
+
             val pkg = currentForegroundPackage()
             if (forceRefresh || pkg != lastPkg) {
                 forceRefresh = false
@@ -80,10 +92,20 @@ class ForegroundWatcher : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (isPackageSuspended() || !store.enabled.value) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         // syncRunning also calls start when the service already exists. Re-evaluate the same package
         // so enabling or editing its rule cannot be ignored just because the app did not change.
         forceRefresh = true
-        return START_STICKY
+        return START_NOT_STICKY
+    }
+
+    private fun isPackageSuspended(): Boolean {
+        return runCatching {
+            packageManager.isPackageSuspended
+        }.getOrDefault(false)
     }
 
     private var lastEventTimeMs = Long.MIN_VALUE
@@ -132,24 +154,30 @@ class ForegroundWatcher : Service() {
         return foreground.currentPackage()
     }
 
-
-
     private fun notification(): Notification {
         val nm = getSystemService(NotificationManager::class.java)
-        // A Service has no composition, so getString rather than stringResource. CHANNEL is the id
-        // the notification is registered under and is never read by a person; the name beside it is
-        // the label shown in the system notification settings, so that one is translated.
         nm.createNotificationChannel(
             NotificationChannel(
                 CHANNEL,
                 getString(R.string.service_watcher_channel_name),
-                NotificationManager.IMPORTANCE_MIN,
-            )
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                setShowBadge(false)
+            }
         )
+        val openIntent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            openIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
         return Notification.Builder(this, CHANNEL)
             .setContentTitle(getString(R.string.service_watcher_title))
             .setContentText(getString(R.string.service_watcher_text))
             .setSmallIcon(R.drawable.hilight_logo)
+            .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
     }
@@ -160,9 +188,9 @@ class ForegroundWatcher : Service() {
         private const val QUERY_OVERLAP_MS = 2_000L
         private const val BOOTSTRAP_LOOKBACK_MS = 24 * 60 * 60_000L
 
-        /** Starts or stops the watcher to match the current rule set. */
-        fun syncRunning(ctx: Context, rules: List<AppRule>, enabled: Boolean) {
-            val needed = ForegroundWatchPolicy.shouldRun(enabled, rules)
+        /** Starts or stops the watcher to match the current rule set, master switch, and notification preference. */
+        fun syncRunning(ctx: Context, rules: List<AppRule>, enabled: Boolean, persistentNotification: Boolean = true) {
+            val needed = ForegroundWatchPolicy.shouldRun(enabled, rules, persistentNotification)
             val intent = Intent(ctx, ForegroundWatcher::class.java)
             runCatching {
                 if (needed) ctx.startForegroundService(intent) else ctx.stopService(intent)

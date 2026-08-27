@@ -48,7 +48,7 @@
     <string name="style_color_primary">Primary Color</string>
     <string name="style_color_secondary">Secondary Color</string>
     <string name="style_color_accent">Accent Color</string>
-    <string name="style_customize_per_led">Customize Each LED (8 LEDs)</string>
+    <string name="style_customize_per_led">Customize All LEDs</string>
     <string name="style_customize_per_led_hint">Assign specific individual colors to each of the 8 LEDs for this effect.</string>
     <string name="style_fill_gradient_3">3-Color Gradient</string>
     <string name="style_fill_all">Fill All</string>
