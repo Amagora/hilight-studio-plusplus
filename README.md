@@ -67,7 +67,7 @@
 <tr>
 <td align="center"><sub><b>1. Test &amp; Effects</b></sub></td>
 <td align="center"><sub><b>2. Apps &amp; Triggers</b></sub></td>
-<td align="center"><sub><b>3. Setup &amp; Safety</b></sub></td>
+<td align="center"><sub><b>3. Setup &amp; Access</b></sub></td>
 <td align="center"><sub><b>4. Info &amp; Disclosures</b></sub></td>
 </tr>
 </table>
