@@ -555,6 +555,8 @@ fun PerLedEditor(
                 },
                 modifier = Modifier.weight(1f),
             ) { ButtonLabel(stringResource(Pattern.RAINBOW.shortLabelRes)) }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilledTonalButton(
                 onClick = { onChange(wallpaper) },
                 modifier = Modifier.weight(1f),

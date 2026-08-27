@@ -42,9 +42,21 @@ public final class Renderer {
             case "off":
                 break;
 
-            case "solid":
-                for (int i = 0; i < n; i++) out[i] = palette[i % palette.length];
+            case "solid": {
+                if (palette.length >= n) {
+                    for (int i = 0; i < n; i++) out[i] = palette[i];
+                } else if (palette.length >= 3) {
+                    for (int i = 0; i < n; i++) {
+                        double frac = n <= 1 ? 0 : (double) i / (n - 1);
+                        if (frac < 0.35) out[i] = palette[0];
+                        else if (frac < 0.68) out[i] = palette[1];
+                        else out[i] = palette[2];
+                    }
+                } else {
+                    for (int i = 0; i < n; i++) out[i] = palette[i % palette.length];
+                }
                 break;
+            }
 
             case "gradient": {
                 if (palette.length >= n) {

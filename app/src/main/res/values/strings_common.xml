@@ -77,6 +77,9 @@
     <string name="common_i_understand">I understand</string>
     <string name="common_percent">%1$d%%</string>
 
+    <string name="common_stop_test">Stop</string>
+    <string name="common_turn_off_lights">Turn Off Lights</string>
+
     <!-- Said of a phone HiLight has no drawing for, in place of a model name -->
     <string name="device_generic">this device</string>
 

@@ -81,6 +81,9 @@ class Store private constructor(private val app: Context) {
         MutableStateFlow(prefs.getBoolean("aiDisclosureAcknowledged", false))
     val aiDisclosureAcknowledged: StateFlow<Boolean> = _aiDisclosureAcknowledged.asStateFlow()
 
+    private val _overdriveBrightness = MutableStateFlow(prefs.getBoolean("overdriveBrightness", false))
+    val overdriveBrightness: StateFlow<Boolean> = _overdriveBrightness.asStateFlow()
+
     private val _batteryGuard = MutableStateFlow(prefs.getBoolean("batteryGuard", true))
     val batteryGuard: StateFlow<Boolean> = _batteryGuard.asStateFlow()
 
@@ -368,6 +371,12 @@ class Store private constructor(private val app: Context) {
         _screenOffOnly.value = v
         prefs.edit().putBoolean("screenOffOnly", v).apply()
         pushCurrent()
+    }
+
+    fun setOverdriveBrightness(v: Boolean) {
+        _overdriveBrightness.value = v
+        prefs.edit().putBoolean("overdriveBrightness", v).apply()
+        pushCurrent(arm = false)
     }
 
     fun setBatteryGuard(enabled: Boolean, minPct: Int = _batteryMinPct.value) {
@@ -1019,9 +1028,10 @@ class Store private constructor(private val app: Context) {
         usePerLed: Boolean = false,
         perLed: List<Int> = emptyList(),
     ) {
+        val safeBrightness = brightness.coerceIn(0.05f, 1f)
         holdAlert(
             alert = Bridge.alertJson(
-                Bridge.nextAlertId(), pattern, color, durationMs, speedMs, brightness,
+                Bridge.nextAlertId(), pattern, color, durationMs, speedMs, safeBrightness,
                 AlertSource.PREVIEW, secondColor, thirdColor, advancedColors, usePerLed, perLed,
             ),
             durationMs = durationMs,
@@ -1035,9 +1045,19 @@ class Store private constructor(private val app: Context) {
                 usePerLed = usePerLed,
                 perLed = if (perLed.size == LED_COUNT) perLed else List(LED_COUNT) { color },
                 speedMs = speedMs,
-                brightness = brightness,
+                brightness = safeBrightness,
             ),
         )
+    }
+
+    fun stopTestOrTurnOff() {
+        if (alertIsPreview) {
+            stopPreview()
+        } else {
+            cancelAlert()
+            setForegroundOverride(null, null)
+            pushCurrent(arm = false)
+        }
     }
 
     /**
@@ -1155,9 +1175,11 @@ class Store private constructor(private val app: Context) {
             return
         }
         val revision = ++stateRevision
+        val currentDim = if (activeAlert != null && alertIsPreview) 1.0f else dimFactor()
         val json = Bridge.stateJson(
             enabled && blocked == null,
-            _priority.value, _ambient.value, alert, _ambientTimeoutMs.value, arm, dimFactor(),
+            _priority.value, _ambient.value, alert, _ambientTimeoutMs.value, arm, currentDim,
+            overdrive = _overdriveBrightness.value,
             privacyRules = _privacyRules.value,
             privacyObserverEnabled = privacyAllowed,
             privacyOutputEnabled = privacyAllowed,

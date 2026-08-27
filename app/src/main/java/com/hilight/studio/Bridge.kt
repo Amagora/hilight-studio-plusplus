@@ -53,6 +53,7 @@ object Bridge {
         arm: Boolean = true,
         /** scales every frame, ambient and alert alike — used by dimmed quiet hours */
         dim: Float = 1f,
+        overdrive: Boolean = false,
         privacyRules: List<PrivacyRule> = emptyList(),
         privacyObserverEnabled: Boolean = false,
         privacyOutputEnabled: Boolean = privacyObserverEnabled,
@@ -66,6 +67,7 @@ object Bridge {
             put("ambientTimeoutMs", ambientTimeoutMs)
             put("arm", arm)
             put("dim", dim.toDouble())
+            put("overdrive", overdrive)
             put("ambient", ambient.toJson())
             put("privacyObserverEnabled", privacyObserverEnabled)
             put("privacyOutputEnabled", privacyOutputEnabled)

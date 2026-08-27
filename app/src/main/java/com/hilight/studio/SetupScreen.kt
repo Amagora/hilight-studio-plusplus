@@ -123,11 +123,13 @@ fun SetupScreen(store: Store) {
     val quietDim by store.quietDim.collectAsStateWithLifecycle()
     val quietDimPct by store.quietDimPct.collectAsStateWithLifecycle()
     val screenOffOnly by store.screenOffOnly.collectAsStateWithLifecycle()
+    val overdriveBrightness by store.overdriveBrightness.collectAsStateWithLifecycle()
 
     var notifAccess by remember { mutableStateOf(hasNotificationAccess(ctx)) }
     var usageAccess by remember { mutableStateOf(ForegroundWatcher.hasUsageAccess(ctx)) }
     var inspecting by remember { mutableStateOf(false) }
     var forgetting by remember { mutableStateOf(false) }
+    var confirmingOverdrive by remember { mutableStateOf(false) }
     var showingLicense by remember { mutableStateOf(false) }
     var showingAiDisclosure by remember { mutableStateOf(false) }
     var checkingForUpdates by remember { mutableStateOf(false) }
@@ -173,6 +175,55 @@ fun SetupScreen(store: Store) {
             warnSecond = stringResource(R.string.setup_warn_long_confirm_title) to
                 stringResource(R.string.setup_warn_long_confirm_body),
             onChange = { store.setAmbientTimeoutMs(it) },
+        )
+    }
+
+    PixelCard(tone = if (overdriveBrightness) 0 else 1) {
+        SectionTitle(
+            stringResource(R.string.setup_overdrive_title),
+            trailing = {
+                if (overdriveBrightness) {
+                    LivePill("OVERDRIVE", ok = false)
+                }
+            }
+        )
+        Caption(stringResource(R.string.setup_overdrive_body))
+        ToggleRow(
+            stringResource(R.string.setup_overdrive_title),
+            overdriveBrightness,
+        ) { enabling ->
+            if (enabling) {
+                confirmingOverdrive = true
+            } else {
+                store.setOverdriveBrightness(false)
+            }
+        }
+    }
+
+    if (confirmingOverdrive) {
+        AlertDialog(
+            onDismissRequest = { confirmingOverdrive = false },
+            title = { Text(stringResource(R.string.setup_overdrive_warn_title)) },
+            text = { Text(stringResource(R.string.setup_overdrive_warn_body)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        confirmingOverdrive = false
+                        store.setOverdriveBrightness(true)
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
+                ) {
+                    ButtonLabel(stringResource(R.string.setup_overdrive_enable_btn))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingOverdrive = false }) {
+                    ButtonLabel(stringResource(R.string.common_cancel))
+                }
+            },
         )
     }
 

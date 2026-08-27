@@ -27,6 +27,13 @@
     <string name="setup_warn_long_confirm_title">Are you sure?</string>
     <string name="setup_warn_long_confirm_body">Up to 5 minutes of continuous illumination will cost battery, and animations freeze lit if the phone sleeps. You can turn this back down at any time.</string>
 
+    <!-- Overdrive / Max Brightness -->
+    <string name="setup_overdrive_title">Max Brightness (Overdrive)</string>
+    <string name="setup_overdrive_body">Bypasses the continuous light thermal taper and duty limits to run all 8 LEDs at maximum uninhibited brightness.</string>
+    <string name="setup_overdrive_warn_title">⚠️ Enable Max Brightness Overdrive?</string>
+    <string name="setup_overdrive_warn_body">Overdrive disables the 10-second thermal protection taper and duty cycle safety limiter. The LEDs will operate at maximum luminance continuously. This produces more heat and may accelerate hardware wear.\n\nAre you sure you want to enable Overdrive?</string>
+    <string name="setup_overdrive_enable_btn">Enable Overdrive</string>
+
     <!-- When to stay dark. The "Quiet hours" toggle reuses suppression_quiet_hours, which is the
          same words said of the same thing. -->
     <string name="setup_dark_title">When to stay dark</string>

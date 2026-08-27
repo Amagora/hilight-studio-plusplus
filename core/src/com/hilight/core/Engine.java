@@ -73,6 +73,7 @@ public final class Engine {
     private long appliedStateRevision;
 
     private double dim = 1.0;
+    private boolean overdrive = false;
     private long ambientTimeoutMs = DEFAULT_AMBIENT_TIMEOUT_MS;
 
     public Engine() {
@@ -133,6 +134,7 @@ public final class Engine {
             }
             ambientTimeoutMs = Math.max(1_000, o.optLong("ambientTimeoutMs", DEFAULT_AMBIENT_TIMEOUT_MS));
             dim = Math.max(0.02, Math.min(1.0, o.optDouble("dim", 1.0)));
+            overdrive = o.optBoolean("overdrive", false);
             // Only a deliberate user action ("arm") may start a fresh window. Automatic pushes — an
             // alert firing, a foreground override, the app being backgrounded — must not, or the array
             // could be kept lit indefinitely in 30-second increments.
@@ -182,6 +184,7 @@ public final class Engine {
                 o.put("alertId", alertId);
                 o.put("timeoutMs", ambientTimeoutMs);
                 o.put("dim", dim);
+                o.put("overdrive", overdrive);
                 o.put("ambientRemainingMs", gate.ambientRemainingMs(System.currentTimeMillis()));
                 o.put("ambientHeld", gate.isAmbientHeld());
                 o.put("resting", safety.isResting());
@@ -298,6 +301,7 @@ public final class Engine {
                     noteDark(now);
                     return;
             }
+
             int[] frame = renderer.frame(cfg, t, Math.max(1, lights.ledCount()));
             int[] output = protect(frame, now);
 
@@ -327,7 +331,7 @@ public final class Engine {
      * of the current window, and tapers brightness under sustained light.
      */
     private int[] protect(int[] frame, long now) {
-        return safety.apply(frame, now, dim);
+        return safety.apply(frame, now, dim, overdrive);
     }
 
     /**
@@ -339,7 +343,7 @@ public final class Engine {
      * array had actually been resting.
      */
     private void noteDark(long now) {
-        safety.apply(BLANK, now, dim);
+        safety.apply(BLANK, now, dim, overdrive);
     }
 
     /** Hands the array back to Android, if we are holding it. */

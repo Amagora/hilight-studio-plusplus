@@ -46,6 +46,8 @@ fun PrivacyRulesSection(
     onEdit: (PrivacyRule) -> Unit,
     onTest: (PrivacyRule) -> Unit,
     onDelete: (PrivacyRule) -> Unit,
+    isTesting: Boolean = false,
+    onStopTest: () -> Unit = {},
 ) {
     PixelCard(tone = 2) {
         SectionTitle(stringResource(R.string.privacy_section_title))
@@ -126,8 +128,21 @@ fun PrivacyRulesSection(
                 FilledTonalButton(onClick = { onEdit(rule) }, modifier = Modifier.weight(1f)) {
                     ButtonLabel(stringResource(R.string.common_edit))
                 }
-                FilledTonalButton(onClick = { onTest(rule) }, modifier = Modifier.weight(1f)) {
-                    ButtonLabel(stringResource(R.string.common_test))
+                if (isTesting) {
+                    FilledTonalButton(
+                        onClick = onStopTest,
+                        modifier = Modifier.weight(1f),
+                        colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        ),
+                    ) {
+                        ButtonLabel(stringResource(R.string.common_stop_test))
+                    }
+                } else {
+                    FilledTonalButton(onClick = { onTest(rule) }, modifier = Modifier.weight(1f)) {
+                        ButtonLabel(stringResource(R.string.common_test))
+                    }
                 }
                 TextButton(onClick = { onDelete(rule) }, modifier = Modifier.weight(1f)) {
                     ButtonLabel(stringResource(R.string.common_delete))
@@ -190,6 +205,8 @@ fun PrivacyRuleEditorDialog(
     onDismiss: () -> Unit,
     onSave: (PrivacyRule) -> Unit,
     onTest: (PrivacyRule) -> Unit,
+    isTesting: Boolean = false,
+    onStopTest: () -> Unit = {},
 ) {
     var edited by remember(rule) { mutableStateOf(rule) }
     val replacesAnother = existing.any { it.id == edited.id && it != rule }
@@ -215,7 +232,7 @@ fun PrivacyRuleEditorDialog(
         },
         text = {
             Column(
-                Modifier.heightIn(max = 540.dp).verticalScroll(rememberScrollState()),
+                Modifier.heightIn(max = 600.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 LedStrip(
@@ -273,7 +290,7 @@ fun PrivacyRuleEditorDialog(
                                 edited = edited.copy(
                                     color = newCol,
                                     perLed = generateGradient8(newCol, edited.secondColor, edited.thirdColor),
-                                )
+                                    )
                             },
                             stringResource(R.string.style_gradient_start),
                         )
@@ -381,8 +398,26 @@ fun PrivacyRuleEditorDialog(
                 ) { stringResource(R.string.common_percent, (it * 100).toInt()) }
 
                 Caption(stringResource(R.string.privacy_one_minute_cap))
-                FilledTonalButton(onClick = { onTest(edited) }, modifier = Modifier.fillMaxWidth()) {
-                    ButtonLabel(stringResource(R.string.rules_test_on_leds))
+                if (isTesting) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FilledTonalButton(onClick = { onTest(edited) }, modifier = Modifier.weight(1f)) {
+                            ButtonLabel(stringResource(R.string.rules_test_on_leds))
+                        }
+                        FilledTonalButton(
+                            onClick = onStopTest,
+                            modifier = Modifier.weight(1f),
+                            colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                            ),
+                        ) {
+                            ButtonLabel(stringResource(R.string.common_stop_test))
+                        }
+                    }
+                } else {
+                    FilledTonalButton(onClick = { onTest(edited) }, modifier = Modifier.fillMaxWidth()) {
+                        ButtonLabel(stringResource(R.string.rules_test_on_leds))
+                    }
                 }
                 if (replacesAnother) Caption(stringResource(R.string.privacy_replace_warning))
             }

@@ -51,6 +51,10 @@ final class SafetyGuard {
     }
 
     int[] apply(int[] frame, long now, double dim) {
+        return apply(frame, now, dim, false);
+    }
+
+    int[] apply(int[] frame, long now, double dim, boolean overdrive) {
         if (windowStart == Long.MIN_VALUE || now - windowStart >= dutyWindowMs) {
             windowStart = now;
             litMsInWindow = 0;
@@ -66,6 +70,13 @@ final class SafetyGuard {
             int[] dimmed = new int[frame.length];
             for (int i = 0; i < frame.length; i++) dimmed[i] = Renderer.scale(frame[i], dim);
             frame = dimmed;
+        }
+
+        if (overdrive) {
+            // Overdrive bypasses thermal taper and duty window limits to maximize illumination
+            continuousLitMs = 0;
+            resting = false;
+            return frame;
         }
 
         if (resting) return new int[]{0};

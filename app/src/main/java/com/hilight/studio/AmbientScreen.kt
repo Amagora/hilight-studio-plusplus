@@ -59,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun AmbientScreen(store: Store) {
     val ambient by store.ambient.collectAsStateWithLifecycle()
     val enabled by store.enabled.collectAsStateWithLifecycle()
+    val previewLook by store.previewLook.collectAsStateWithLifecycle()
     var editingLed by rememberSaveable { mutableIntStateOf(0) }
 
     PresetsCard(store)
@@ -66,6 +67,18 @@ fun AmbientScreen(store: Store) {
     PixelCard(tone = 2) {
         SectionTitle(stringResource(R.string.style_always_on_style))
         LedStrip(ambient.pattern, ambient, active = enabled, heightDp = 46)
+        if (previewLook != null) {
+            FilledTonalButton(
+                onClick = store::stopTestOrTurnOff,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                ),
+            ) {
+                ButtonLabel(stringResource(R.string.common_turn_off_lights))
+            }
+        }
         PatternCarousel(
             selected = ambient.pattern,
             options = Pattern.entries,

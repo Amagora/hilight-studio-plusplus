@@ -23,7 +23,22 @@ object Renderer {
 
         when (pattern) {
             Pattern.OFF -> Unit
-            Pattern.SOLID -> for (i in 0 until n) out[i] = if (cfg.usePerLed) cfg.perLed[i] else base
+            Pattern.SOLID -> {
+                if (cfg.usePerLed) {
+                    for (i in 0 until n) out[i] = cfg.perLed[i]
+                } else if (cfg.advancedColors) {
+                    for (i in 0 until n) {
+                        val frac = i.toDouble() / (n - 1)
+                        out[i] = when {
+                            frac < 0.35 -> cfg.color
+                            frac < 0.68 -> cfg.secondColor
+                            else -> cfg.thirdColor
+                        }
+                    }
+                } else {
+                    for (i in 0 until n) out[i] = base
+                }
+            }
             Pattern.CUSTOM -> for (i in 0 until n) out[i] = cfg.perLed[i % cfg.perLed.size]
             Pattern.GRADIENT -> {
                 if (cfg.usePerLed) {

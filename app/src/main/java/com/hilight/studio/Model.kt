@@ -56,6 +56,7 @@ enum class Pattern(
 
 val Pattern.supportsMultiColor: Boolean
     get() = this in setOf(
+        Pattern.SOLID,
         Pattern.BREATHE,
         Pattern.BLINK,
         Pattern.PULSE,

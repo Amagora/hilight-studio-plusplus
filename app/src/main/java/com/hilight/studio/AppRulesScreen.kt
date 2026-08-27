@@ -113,10 +113,11 @@ fun AppRulesScreen(store: Store) {
             )
         }
     }
+    val previewLook by store.previewLook.collectAsStateWithLifecycle()
+    val isTesting = previewLook != null
 
     ordered.forEachIndexed { index, rule ->
         key(rule.id) {
-            // cards ease in rather than appearing, staggered down the list
             AnimatedVisibility(
                 visible = true,
                 enter = fadeIn(tween(220, delayMillis = index * 40)) +
@@ -136,6 +137,8 @@ fun AppRulesScreen(store: Store) {
                             rule.secondColor, rule.thirdColor, rule.advancedColors, rule.usePerLed, rule.perLed,
                         )
                     },
+                    isTesting = isTesting,
+                    onStopTest = store::stopPreview,
                     onDelete = { store.removeRule(rule) },
                 )
             }
@@ -150,8 +153,15 @@ fun AppRulesScreen(store: Store) {
         },
         onToggle = { store.upsertPrivacyRule(it.copy(enabled = !it.enabled), replacing = it) },
         onEdit = { editingPrivacy = it },
-        onTest = { store.preview(it.pattern, it.color, it.speedMs, it.brightness, it.lightMs, it.secondColor, it.thirdColor, it.advancedColors) },
+        onTest = {
+            store.preview(
+                it.pattern, it.color, it.speedMs, it.brightness, it.lightMs,
+                it.secondColor, it.thirdColor, it.advancedColors, it.usePerLed, it.perLed,
+            )
+        },
         onDelete = store::removePrivacyRule,
+        isTesting = isTesting,
+        onStopTest = store::stopPreview,
     )
 
     if (picking) {
@@ -224,9 +234,11 @@ fun AppRulesScreen(store: Store) {
             onTest = {
                 store.preview(
                     it.pattern, it.color, it.speedMs, it.brightness, it.durationMs,
-                    it.secondColor, it.thirdColor, it.advancedColors,
+                    it.secondColor, it.thirdColor, it.advancedColors, it.usePerLed, it.perLed,
                 )
             },
+            isTesting = isTesting,
+            onStopTest = store::stopPreview,
             onAddPrivacy = if (rule.isConversationRule || rule.isCatchAll) null else ({
                 editing = null
                 privacyPrefilledApp = InstalledApp(rule.pkg, rule.label, null)
@@ -307,6 +319,8 @@ private fun RuleCard(
     onEdit: () -> Unit,
     onTest: () -> Unit,
     onDelete: () -> Unit,
+    isTesting: Boolean = false,
+    onStopTest: () -> Unit = {},
 ) {
     val haptics = LocalHapticFeedback.current
     val perChat = rule.isConversationRule
@@ -434,8 +448,21 @@ private fun RuleCard(
             FilledTonalButton(onClick = onEdit, modifier = Modifier.weight(1f)) {
                 ButtonLabel(stringResource(R.string.common_edit))
             }
-            FilledTonalButton(onClick = onTest, modifier = Modifier.weight(1f)) {
-                ButtonLabel(stringResource(R.string.common_test))
+            if (isTesting) {
+                FilledTonalButton(
+                    onClick = onStopTest,
+                    modifier = Modifier.weight(1f),
+                    colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    ),
+                ) {
+                    ButtonLabel(stringResource(R.string.common_stop_test))
+                }
+            } else {
+                FilledTonalButton(onClick = onTest, modifier = Modifier.weight(1f)) {
+                    ButtonLabel(stringResource(R.string.common_test))
+                }
             }
             TextButton(onClick = onDelete, modifier = Modifier.weight(1f)) {
                 ButtonLabel(stringResource(R.string.common_delete))
@@ -560,6 +587,8 @@ private fun RuleEditorDialog(
     onSave: (AppRule) -> Unit,
     onTest: (AppRule) -> Unit,
     onAddPrivacy: (() -> Unit)?,
+    isTesting: Boolean = false,
+    onStopTest: () -> Unit = {},
 ) {
     var r by remember { mutableStateOf(rule) }
 
@@ -601,7 +630,7 @@ private fun RuleEditorDialog(
         text = {
             Column(
                 Modifier
-                    .heightIn(max = 520.dp)
+                    .heightIn(max = 620.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
@@ -658,78 +687,123 @@ private fun RuleEditorDialog(
                         stringResource(R.string.style_customize_per_led), r.usePerLed,
                     ) { r = r.copy(usePerLed = it) }
                     if (r.usePerLed) {
-                        PerLedEditor(
-                            perLed = r.perLed,
-                            onChange = { r = r.copy(perLed = it) },
-                            primaryColor = r.color,
-                            secondColor = r.secondColor,
-                            thirdColor = r.thirdColor,
-                        )
+                        androidx.compose.material3.Card(
+                            colors = androidx.compose.material3.CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                            ),
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        ) {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text(
+                                    stringResource(R.string.style_per_led_colours),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                PerLedEditor(
+                                    perLed = r.perLed,
+                                    onChange = { r = r.copy(perLed = it) },
+                                    primaryColor = r.color,
+                                    secondColor = r.secondColor,
+                                    thirdColor = r.thirdColor,
+                                )
+                            }
+                        }
                     } else if (r.pattern == Pattern.GRADIENT) {
-                        key("rule_color_start") {
-                            ColorPicker(
-                                r.color,
-                                {
-                                    val newCol = it
-                                    r = r.copy(
-                                        color = newCol,
-                                        perLed = generateGradient8(newCol, r.secondColor, r.thirdColor),
+                        androidx.compose.material3.Card(
+                            colors = androidx.compose.material3.CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                            ),
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        ) {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text(
+                                    stringResource(R.string.pattern_gradient),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                key("rule_color_start") {
+                                    ColorPicker(
+                                        r.color,
+                                        {
+                                            val newCol = it
+                                            r = r.copy(
+                                                color = newCol,
+                                                perLed = generateGradient8(newCol, r.secondColor, r.thirdColor),
+                                            )
+                                        },
+                                        stringResource(R.string.style_gradient_start),
                                     )
-                                },
-                                stringResource(R.string.style_gradient_start),
-                            )
-                        }
-                        key("rule_color_middle") {
-                            ColorPicker(
-                                r.secondColor,
-                                {
-                                    val newCol = it
-                                    r = r.copy(
-                                        secondColor = newCol,
-                                        perLed = generateGradient8(r.color, newCol, r.thirdColor),
+                                }
+                                key("rule_color_middle") {
+                                    ColorPicker(
+                                        r.secondColor,
+                                        {
+                                            val newCol = it
+                                            r = r.copy(
+                                                secondColor = newCol,
+                                                perLed = generateGradient8(r.color, newCol, r.thirdColor),
+                                            )
+                                        },
+                                        stringResource(R.string.style_gradient_middle),
                                     )
-                                },
-                                stringResource(R.string.style_gradient_middle),
-                            )
-                        }
-                        key("rule_color_end") {
-                            ColorPicker(
-                                r.thirdColor,
-                                {
-                                    val newCol = it
-                                    r = r.copy(
-                                        thirdColor = newCol,
-                                        perLed = generateGradient8(r.color, r.secondColor, newCol),
+                                }
+                                key("rule_color_end") {
+                                    ColorPicker(
+                                        r.thirdColor,
+                                        {
+                                            val newCol = it
+                                            r = r.copy(
+                                                thirdColor = newCol,
+                                                perLed = generateGradient8(r.color, r.secondColor, newCol),
+                                            )
+                                        },
+                                        stringResource(R.string.style_gradient_end),
                                     )
-                                },
-                                stringResource(R.string.style_gradient_end),
-                            )
+                                }
+                            }
                         }
                     } else if (r.pattern.supportsMultiColor) {
                         ToggleRow(
                             stringResource(R.string.style_advanced_colors), r.advancedColors,
                         ) { r = r.copy(advancedColors = it) }
                         if (r.advancedColors) {
-                            key("rule_color_multi_1") {
-                                ColorPicker(
-                                    r.color,
-                                    { r = r.copy(color = it) },
-                                    stringResource(R.string.style_color_primary),
-                                )
-                            }
-                            key("rule_color_multi_2") {
-                                ColorPicker(
-                                    r.secondColor,
-                                    { r = r.copy(secondColor = it) },
-                                    stringResource(R.string.style_color_secondary),
-                                )
-                            }
-                            key("rule_color_multi_3") {
-                                ColorPicker(
-                                    r.thirdColor,
-                                    { r = r.copy(thirdColor = it) },
-                                    stringResource(R.string.style_color_accent),
-                                )
+                            androidx.compose.material3.Card(
+                                colors = androidx.compose.material3.CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                ),
+                                shape = MaterialTheme.shapes.medium,
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            ) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Text(
+                                        stringResource(R.string.style_advanced_colors),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                    key("rule_color_multi_1") {
+                                        ColorPicker(
+                                            r.color,
+                                            { r = r.copy(color = it) },
+                                            stringResource(R.string.style_color_primary),
+                                        )
+                                    }
+                                    key("rule_color_multi_2") {
+                                        ColorPicker(
+                                            r.secondColor,
+                                            { r = r.copy(secondColor = it) },
+                                            stringResource(R.string.style_color_secondary),
+                                        )
+                                    }
+                                    key("rule_color_multi_3") {
+                                        ColorPicker(
+                                            r.thirdColor,
+                                            { r = r.copy(thirdColor = it) },
+                                            stringResource(R.string.style_color_accent),
+                                        )
+                                    }
+                                }
                             }
                         } else {
                             key("rule_color_single") {
@@ -797,8 +871,26 @@ private fun RuleEditorDialog(
                     { r = r.copy(brightness = it) },
                 ) { stringResource(R.string.common_percent, (it * 100).toInt()) }
 
-                FilledTonalButton(onClick = { onTest(r) }, modifier = Modifier.fillMaxWidth()) {
-                    ButtonLabel(stringResource(R.string.rules_test_on_leds))
+                if (isTesting) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FilledTonalButton(onClick = { onTest(r) }, modifier = Modifier.weight(1f)) {
+                            ButtonLabel(stringResource(R.string.rules_test_on_leds))
+                        }
+                        FilledTonalButton(
+                            onClick = onStopTest,
+                            modifier = Modifier.weight(1f),
+                            colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                            ),
+                        ) {
+                            ButtonLabel(stringResource(R.string.common_stop_test))
+                        }
+                    }
+                } else {
+                    FilledTonalButton(onClick = { onTest(r) }, modifier = Modifier.fillMaxWidth()) {
+                        ButtonLabel(stringResource(R.string.rules_test_on_leds))
+                    }
                 }
 
                 if (onAddPrivacy != null) {
