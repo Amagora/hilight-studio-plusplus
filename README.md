@@ -19,39 +19,39 @@
 > **Hilight-Studio-PlusPlusV3.5** is an open-source enhancement supporting all devices across the **Pixel 11 Pro line** (Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold) on Android 17 (API 37).
 
 <p align="center">
-  <img src="docs/media/screen-live.png" alt="Live tab controlling the HiLight array on a Pixel 11 Pro Fold" width="380">
+  <img src="docs/media/screen-test.png" alt="Test tab controlling the HiLight array on a Pixel 11 Pro Fold" width="380">
 </p>
 
 ## Features
 
+- **Unified Clean UI (V3.5 Navigation)**:
+  - **Test Tab**: Combines real-time effects preview, master switch, 12 signature presets/effects, 3-color pattern tuning, individual 8-LED customizations, Tabletop lighting tools (SOS Beacon, Video Fill Light, Fuel Gauge), and instant Notification Tests.
+  - **Apps Tab**: Configure per-app notification colors, keyword triggers, and While-Open indefinite/custom-timer holds.
+  - **Setup Tab**: Background status notification toggle, auto-off protection, Max Brightness Override, Session Priority slider, and Root / Shizuku / ADB access controls.
+  - **Info Tab**: AI disclosures, MIT open source license, diagnostic peek inspector, and direct links to original creator and fork source repositories.
+- **Enhanced "While Open" Controls**:
+  - Optional **Stay Lit Indefinitely** toggle (with safety confirmation dialog) or customizable timer slider from 5 seconds up to **5 minutes**.
+- **Max Brightness Override**:
+  - 1-click header switch to bypass continuous dimming tapers and force 100% luminance across all 8 LEDs.
 - **Material 3 Theming Engine**:
-  - **Theme Modes**: System Follow, Light, Dark, and AMOLED Pitch Black (pure `#000000` power-saving mode for OLED and foldable screens)
-  - **Material 3 Palettes**: Dynamic Material You (wallpaper colors), Pixel Indigo, Ocean Blue, Emerald Green, Coral Peach, Amber Gold, Berry Rose, and Monochrome
+  - **Theme Modes**: System Follow, Light, Dark, and AMOLED Pitch Black (pure `#000000` power-saving mode for OLED and foldable screens).
+  - **Material 3 Palettes**: Dynamic Material You (wallpaper colors), Pixel Indigo, Ocean Blue, Emerald Green, Coral Peach, Amber Gold, Berry Rose, and Monochrome.
 - **Foldable Adaptive Dual-Pane Layout**:
   - Automatically switches between single-column navigation and dual-pane side `NavigationRail` with persistent real-time 8-LED `DeviceHero` when unfolded on the Pixel 11 Pro Fold inner screen (`>= 600dp`).
-- **Tabletop Video Fill Light & Emergency Strobe Beacon**:
+- **Tabletop Video Fill Light & Emergency SOS Beacon**:
   - Tuned continuous lighting for video calls, selfies, and tabletop shooting with color temperature presets: Warm (2700K), Soft (3800K), Neutral (4500K), and Cool (6500K).
-  - High-visibility emergency beacon and SOS strobe modes.
+  - High-visibility emergency SOS beacon.
 - **8-LED Battery & Charging Fuel Gauge**:
   - Visual battery level indicator that lights LEDs proportionally (1–8) and breathes green when plugged in or charging.
-- **Signature Curated Presets Pack**:
-  - Built-in one-tap lighting themes: *Aurora Borealis*, *Cyberpunk Neon*, *Campfire Ember*, *Deep Ocean*, *Pixel Spectrum*, and *Matrix Pulse*.
 - **Desktop GUI Control Manager (`HiLight-Control.exe`)**:
   - Native Windows desktop application with 3 one-click actions:
     1. *Full Easy Install & Flash*: Automatically installs/updates APK, launches the app, and starts the 8-LED renderer.
     2. *Start HiLight (Post-Reboot)*: Restarts the background ADB daemon in 1 click after phone reboot.
     3. *Stop / Kill ADB Session*: Cleanly terminates the background renderer and frees hardware lights control.
-    4. *Live Device Status*: Real-time connection badge (Pixel 11 Pro Fold) and integrated console log output.
-- Solid colours and animated patterns across all eight LEDs on Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold
-- Per-app rules for foreground use and notifications
-- Customisable microphone and camera activity rules, with any built-in animation and colour, for any app or one selected app
-- Per-contact rules: a colour for one person or one chat, picked from the chats HiLight has seen
-- Saved presets with import and export
-- Wallpaper-derived colours and a Quick Settings tile
-- Quiet hours, Do Not Disturb, Battery Saver, and low-battery controls
-- English and Japanese, selectable per app from Android's own language settings
-- Automatic root access when available, with Shizuku and ADB as fallbacks
-- Manual update checks against GitHub releases
+    4. *Live Device Status*: Real-time connection badge and integrated console log output.
+- **Hardware & Lifecycle Safety Guards**:
+  - Honors Android's "Pause app" and Digital Wellbeing timers, stopping background activity when suspended.
+  - `START_NOT_STICKY` service behavior ensures clean force-stops via Android Settings without unwanted respawns.
 
 ## Screenshots
 
@@ -59,21 +59,23 @@
 
 <table>
 <tr>
-<td width="33%"><img src="docs/media/screen-style.png" alt="Style tab with presets, patterns, and colour controls"></td>
-<td width="33%"><img src="docs/media/screen-apps.png" alt="Apps tab with per-app rules"></td>
-<td width="33%"><img src="docs/media/screen-setup.png" alt="Setup tab with access and safety controls"></td>
+<td width="25%"><img src="docs/media/screen-test.png" alt="Test tab with effects, presets, and live controls"></td>
+<td width="25%"><img src="docs/media/screen-apps.png" alt="Apps tab with per-app and notification rules"></td>
+<td width="25%"><img src="docs/media/screen-setup.png" alt="Setup tab with access and safety controls"></td>
+<td width="25%"><img src="docs/media/screen-info.png" alt="Info tab with disclosures and diagnostics"></td>
 </tr>
 <tr>
-<td align="center"><sub><b>Style &amp; Signature Presets</b></sub></td>
-<td align="center"><sub><b>Apps &amp; Notification Rules</b></sub></td>
-<td align="center"><sub><b>Setup &amp; Safety Controls</b></sub></td>
+<td align="center"><sub><b>1. Test &amp; Effects</b></sub></td>
+<td align="center"><sub><b>2. Apps &amp; Triggers</b></sub></td>
+<td align="center"><sub><b>3. Setup &amp; Safety</b></sub></td>
+<td align="center"><sub><b>4. Info &amp; Disclosures</b></sub></td>
 </tr>
 </table>
 
 ### 🖥️ Windows Desktop Control Manager (`HiLight-Control.exe`)
 
 <p align="center">
-  <img src="docs/media/screen-desktop-manager.png" alt="hilight-studio-plusplus Windows Desktop Control Manager" width="850">
+  <img src="docs/media/screen-desktop-manager.png" alt="Hilight-Studio-PlusPlus Windows Desktop Control Manager" width="850">
 </p>
 
 ## 🖥️ Desktop Companion Suite (`HiLight-Control.exe`)
@@ -91,12 +93,10 @@
   - **Explicit User Consent**: If ADB is not found, provides an interactive opt-in dialog to download official Google platform-tools directly from `dl.google.com`, or select an existing `adb.exe` manually.
 - **📐 High-DPI Adaptive Geometry & Resizable Windows**:
   - Built with dynamic `SizeType.AutoSize` architecture that looks crisp and legible on all monitor scaling factors (100%, 125%, 150%, 175%, 4K).
-  - All sub-menus (ADB Setup, MIT License, A.I. Disclosure, Request Log) are fully resizable and maximizable.
 - **📝 Text Editor & Notepad Integration**:
-  - Every informational dialog features **`📝 Open in Text Editor`** (opens in your default system editor) and **`📄 Open in Notepad`** buttons for instant viewing and editing.
+  - Every informational dialog features **`📝 Open in Text Editor`** and **`📄 Open in Notepad`** buttons for instant viewing and editing.
 - **📜 Live Output Console**:
   - Real-time scrolling terminal output stream with timestamped execution feedback and a 1-click **`🗑️ Clear Console`** action.
-
 
 ## Build & Install on Google Pixel 11 Pro Series
 
@@ -128,7 +128,7 @@ adb uninstall com.hilight.studio
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-hilight-studio-plusplus needs privileged access to the Android lights service. Choose one of the privilege methods below:
+Hilight-Studio-PlusPlus needs privileged access to the Android lights service. Choose one of the privilege methods below:
 
 ### Root
 
@@ -166,32 +166,13 @@ adb shell "CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup
 
 Keep the two commands separate. The `pkill -f` pattern can match the shell that starts the helper if both operations are merged.
 
-Command Prompt passes the pipe, parentheses, redirects, and `$()` through inside the double quotes. The phone resolves the installed app path.
-
 Check the helper log:
 
 ```bash
 adb shell cat /data/local/tmp/hilight.log
 ```
 
-A successful start reports `connected: 8 HiLight LEDs`. An empty log usually means the command was quoted for the wrong shell.
-
-### If the app connects but the LEDs stay dark
-
-Only one renderer can drive the array. A leftover renderer can keep sending black while the app still reports a connection.
-
-Count active sessions:
-
-```bash
-adb shell dumpsys lights | grep -c "Session token="
-```
-
-There should be exactly one. If there are more, run the reset command and then the start command again.
-
-After setup, grant **Notification access** for notification rules and **Usage access** for
-foreground-app rules. Privacy activity rules observe Android's active microphone or camera state in
-the privileged renderer and do not need either permission. Turn on **Live**, then choose a look in
-**Style**. A new installation starts with its always-on style set to **Off**.
+A successful start reports `connected: 8 HiLight LEDs`.
 
 ## Safety limits
 
@@ -199,62 +180,18 @@ The renderer enforces these limits even if app state is edited:
 
 - Ambient effects stop after 30 seconds by default and can be raised to 5 minutes.
 - Notification effects are limited to 1 minute.
-- Privacy activity rules run only while the microphone or camera remains active. Their default rhythm
-  is 10 seconds on, 10 seconds off, with a 1-minute maximum per continuous use.
-- Sustained brightness tapers after 10 seconds of continuous light.
+- Privacy activity rules run only while the microphone or camera remains active.
+- Sustained brightness tapers after 10 seconds of continuous light (can be overridden via Max Brightness Override).
 - The array can be active for at most half of any 10-minute window.
 - Battery Saver, low-battery, quiet-hours, screen-state, and Do Not Disturb rules can pause output.
 
-Long, continuous use of the HiLight LEDs has not been tested. If you build the project yourself, you can change the timing and safety values in your copy. Custom builds are your responsibility.
-
-See [Technical details](docs/TECHNICAL.md) for the renderer architecture, hardware findings, device verification, and known limits.
-
 ## Privacy
 
-HiLight Studio has no analytics, account system, or telemetry. It uses the internet only when you
-tap **Check for updates** under Setup, which fetches public release information from GitHub. No app
-rules, notification data, or settings are sent. App rules and presets stay on the device.
-Notification and usage access are optional and are used locally for the rules you enable. Privacy
-activity rules observe only whether Android reports the microphone or camera as active; HiLight never
-reads or records audio, video, or their contents.
+HiLight Studio has no analytics, account system, or telemetry. It operates entirely offline on your device. No app rules, notification data, or settings are ever transmitted over the network.
+Notification and usage access are optional and are used strictly locally for the rules you enable. Privacy activity rules observe only whether Android reports the microphone or camera as active; HiLight never reads or records audio, video, or their contents.
 
-Per-contact rules read the sender's name from the notification itself, so they need no contacts permission — picking a contact by hand uses the system picker, which hands over only the row you tap. HiLight remembers the names of chats it has seen so the picker needs no typing; that list is stored on the device, is capped, and can be cleared at any time with **Forget remembered chats** under Setup. Message text is never stored, never logged, and never included in anything the notification inspector copies or shares.
-
-## Build from source
-
-Requirements:
-
-- JDK 21
-- Android SDK platform 37.0
-- Android Studio or a command-line Android SDK installation
-
-```bash
-git clone https://github.com/DhananjayBhosale/hilight-studio.git
-cd hilight-studio
-./gradlew :app:testDebugUnitTest :app:build :app:lint
-```
-
-Build an installable developer APK with:
-
-```bash
-./gradlew :app:assembleDebug
-```
-
-The APK is written under `app/build/outputs/apk/debug/`. You may fork the repository, change the source, and build your own version under the terms of the MIT License.
-
-## Contributing
-
-Issues and pull requests are welcome. Hardware reports should include the Pixel model, Android build, renderer transport, and exact steps to reproduce. Do not include notification contents or other personal data.
-
-Read [Contributing](CONTRIBUTING.md) before opening a pull request. Security issues must follow the private process in [Security policy](SECURITY.md).
-
-## Project documents
-
-- [Changelog](CHANGELOG.md)
-- [Technical details](docs/TECHNICAL.md)
-- [Release process](docs/RELEASING.md)
-- [Code of Conduct](CODE_OF_CONDUCT.md)
+Message text is never stored, never logged, and never included in anything the notification inspector copies or shares.
 
 ## License
 
-[MIT](LICENSE). You may use, modify, redistribute, and sell the project. Redistributed copies must retain the license notice.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
