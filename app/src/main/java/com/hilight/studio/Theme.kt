@@ -465,17 +465,22 @@ private val MonochromeLight = lightColorScheme(
 )
 
 /**
- * Transforms any dark ColorScheme into AMOLED pitch-black mode with pure #000000 background and surface.
+ * Transforms any dark ColorScheme into AMOLED pitch-black mode with pure #000000 background and surface,
+ * and ultra-dark containers/buttons with high-contrast subtle outlines.
  */
 private fun ColorScheme.toAmoled(): ColorScheme = copy(
     background = Color.Black,
     surface = Color.Black,
     surfaceDim = Color.Black,
+    surfaceBright = Color(0xFF0C0C0F),
+    surfaceVariant = Color(0xFF0C0C0F),
     surfaceContainerLowest = Color.Black,
-    surfaceContainerLow = Color(0xFF0C0C0E),
-    surfaceContainer = Color(0xFF141417),
-    surfaceContainerHigh = Color(0xFF1E1E22),
-    surfaceContainerHighest = Color(0xFF28282D),
+    surfaceContainerLow = Color(0xFF050507),
+    surfaceContainer = Color(0xFF09090C),
+    surfaceContainerHigh = Color(0xFF0F0F13),
+    surfaceContainerHighest = Color(0xFF15151A),
+    outline = Color(0xFF1F1F26),
+    outlineVariant = Color(0xFF121217),
 )
 
 /** Rounder than stock Material 3 — Pixel's system surfaces sit around 28-32dp. */
@@ -506,6 +511,7 @@ private val PixelTypography = Typography().let { base ->
 fun HiLightTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     themePalette: ThemePalette = ThemePalette.DYNAMIC,
+    amoledDark: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val ctx = LocalContext.current
@@ -515,7 +521,7 @@ fun HiLightTheme(
         ThemeMode.LIGHT -> false
         ThemeMode.DARK, ThemeMode.AMOLED_BLACK -> true
     }
-    val isAmoled = themeMode == ThemeMode.AMOLED_BLACK
+    val isAmoled = isDark && (themeMode == ThemeMode.AMOLED_BLACK || amoledDark)
 
     val baseScheme: ColorScheme = if (themePalette == ThemePalette.DYNAMIC && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         if (isDark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)

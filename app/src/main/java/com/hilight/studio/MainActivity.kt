@@ -78,7 +78,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by store.themeMode.collectAsStateWithLifecycle()
             val themePalette by store.themePalette.collectAsStateWithLifecycle()
-            HiLightTheme(themeMode = themeMode, themePalette = themePalette) {
+            val amoledDark by store.amoledDark.collectAsStateWithLifecycle()
+            HiLightTheme(
+                themeMode = themeMode,
+                themePalette = themePalette,
+                amoledDark = amoledDark,
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
@@ -152,6 +157,7 @@ private fun App(store: Store) {
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -188,12 +194,19 @@ private fun App(store: Store) {
                         modifier = Modifier.padding(end = 16.dp),
                     )
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                ),
                 scrollBehavior = scrollBehavior,
             )
         },
         bottomBar = {
             if (!isWide) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ) {
                     Tab.entries.forEach { t ->
                         NavigationBarItem(
                             selected = tab == t,
@@ -217,7 +230,7 @@ private fun App(store: Store) {
         ) {
             if (isWide) {
                 NavigationRail(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.background,
                     modifier = Modifier.fillMaxHeight(),
                 ) {
                     Spacer(Modifier.height(8.dp))

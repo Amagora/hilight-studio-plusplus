@@ -200,6 +200,8 @@
     <string name="theme_mode_light">ライト</string>
     <string name="theme_mode_dark">ダーク</string>
     <string name="theme_mode_amoled">AMOLED</string>
+    <string name="setup_amoled_pure_black_title">ピュアAMOLED漆黒モード</string>
+    <string name="setup_amoled_pure_black_subtitle">ダークテーマ有効時（夜間スケジュールを含む）に完全な#000000ピクセルを使用します</string>
     <string name="setup_theme_palette">カラーパレット</string>
     <!-- "Wallpaper colours" -->
     <string name="setup_wallpaper_colours">壁紙の色</string>

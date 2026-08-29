@@ -148,6 +148,7 @@ fun SetupScreen(store: Store) {
     val priority by store.priority.collectAsStateWithLifecycle()
     val themeMode by store.themeMode.collectAsStateWithLifecycle()
     val themePalette by store.themePalette.collectAsStateWithLifecycle()
+    val amoledDark by store.amoledDark.collectAsStateWithLifecycle()
     val dynamicColor by store.dynamicColor.collectAsStateWithLifecycle()
     val timeoutMs by store.ambientTimeoutMs.collectAsStateWithLifecycle()
     val quietEnabled by store.quietEnabled.collectAsStateWithLifecycle()
@@ -485,6 +486,14 @@ fun SetupScreen(store: Store) {
                 }
             }
         }
+
+        Spacer(Modifier.height(8.dp))
+        PixelToggleRow(
+            title = stringResource(R.string.setup_amoled_pure_black_title),
+            subtitle = stringResource(R.string.setup_amoled_pure_black_subtitle),
+            checked = amoledDark,
+            onChange = { store.setAmoledDark(it) },
+        )
     }
 
     PixelCard(tone = 2) {

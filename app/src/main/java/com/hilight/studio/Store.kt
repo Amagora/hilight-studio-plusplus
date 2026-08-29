@@ -292,6 +292,9 @@ class Store private constructor(private val app: Context) {
     )
     val themePalette: StateFlow<ThemePalette> = _themePalette.asStateFlow()
 
+    private val _amoledDark = MutableStateFlow(prefs.getBoolean("amoledDark", true))
+    val amoledDark: StateFlow<Boolean> = _amoledDark.asStateFlow()
+
     private val _dynamicColor = MutableStateFlow(prefs.getBoolean("dynamicColor", true))
     val dynamicColor: StateFlow<Boolean> = _dynamicColor.asStateFlow()
 
@@ -810,6 +813,11 @@ class Store private constructor(private val app: Context) {
     fun setThemePalette(palette: ThemePalette) {
         _themePalette.value = palette
         prefs.edit().putString("themePalette", palette.name).apply()
+    }
+
+    fun setAmoledDark(v: Boolean) {
+        _amoledDark.value = v
+        prefs.edit().putBoolean("amoledDark", v).apply()
     }
 
     fun acknowledgeAiDisclosure() {

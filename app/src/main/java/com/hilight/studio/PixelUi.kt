@@ -91,6 +91,7 @@ fun PixelCard(
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
+    val isAmoled = MaterialTheme.colorScheme.background == Color.Black
     val color = when (tone) {
         0 -> MaterialTheme.colorScheme.surfaceContainerLow
         2 -> MaterialTheme.colorScheme.surfaceContainerHigh
@@ -99,22 +100,26 @@ fun PixelCard(
     }
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    var base = modifier
+    val base = modifier
         .fillMaxWidth()
         .padding(horizontal = 16.dp, vertical = 6.dp)
+        .then(if (isAmoled) Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape) else Modifier)
+
     if (onClick != null) {
-        base = base
-            .pressSquash(pressed)
-            .clip(shape)
-            .clickable(interactionSource = interaction, indication = ripple(), onClick = onClick)
-        Box(base.background(color)) {
+        Box(
+            base
+                .pressSquash(pressed)
+                .clip(shape)
+                .background(color)
+                .clickable(interactionSource = interaction, indication = ripple(), onClick = onClick)
+        ) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 content()
             }
         }
         return
     }
-    Box(base.background(color, shape)) {
+    Box(base.clip(shape).background(color)) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             content()
         }
@@ -197,6 +202,7 @@ fun PixelTile(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val haptics = LocalHapticFeedback.current
+    val isAmoled = MaterialTheme.colorScheme.background == Color.Black
     val container by animateColorAsState(
         if (enabled) accent.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceContainerHigh,
         label = "tileBg",
@@ -204,6 +210,7 @@ fun PixelTile(
     Column(
         modifier
             .pressSquash(pressed, min = 0.94f)
+            .then(if (isAmoled && !enabled) Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium) else Modifier)
             // clip first: an unclipped ripple paints a rectangle outside the tile's rounded shape
             .clip(MaterialTheme.shapes.medium)
             .background(container)
