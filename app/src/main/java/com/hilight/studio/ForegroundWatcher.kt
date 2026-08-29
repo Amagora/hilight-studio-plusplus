@@ -117,7 +117,13 @@ class ForegroundWatcher : Service() {
         super.onCreate()
         thread = HandlerThread("fg-watch").also { it.start() }
         handler = Handler(thread.looper)
-        startForeground(1, notification())
+        val showNotif = store.persistentNotificationEnabled.value
+        if (showNotif) {
+            startForeground(NOTIF_ID, notification())
+        } else {
+            startForeground(NOTIF_ID, notification())
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        }
         val filter = android.content.IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_SCREEN_OFF)
@@ -143,10 +149,27 @@ class ForegroundWatcher : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        // syncRunning also calls start when the service already exists. Re-evaluate the same package
-        // so enabling or editing its rule cannot be ignored just because the app did not change.
+        val showNotif = intent?.getBooleanExtra(
+            EXTRA_PERSISTENT_NOTIF,
+            store.persistentNotificationEnabled.value
+        ) ?: store.persistentNotificationEnabled.value
+
+        updateNotificationState(showNotif)
         forceRefresh = true
         return START_NOT_STICKY
+    }
+
+    private fun updateNotificationState(showNotif: Boolean) {
+        val hasForegroundRules = store.rules.value.any { it.enabled && it.trigger == Trigger.FOREGROUND }
+        if (showNotif) {
+            startForeground(NOTIF_ID, notification())
+        } else {
+            if (!hasForegroundRules) {
+                stopSelf()
+            } else {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            }
+        }
     }
 
     private fun isPackageSuspended(): Boolean {
@@ -230,6 +253,8 @@ class ForegroundWatcher : Service() {
     }
 
     companion object {
+        const val EXTRA_PERSISTENT_NOTIF = "extra_persistent_notif"
+        private const val NOTIF_ID = 1
         private const val CHANNEL = "fg_watch"
         private const val POLL_MS = 1000L
         private const val QUERY_OVERLAP_MS = 2_000L
@@ -238,7 +263,9 @@ class ForegroundWatcher : Service() {
         /** Starts or stops the watcher to match the current rule set, master switch, and notification preference. */
         fun syncRunning(ctx: Context, rules: List<AppRule>, enabled: Boolean, persistentNotification: Boolean = false) {
             val needed = ForegroundWatchPolicy.shouldRun(enabled, rules, persistentNotification)
-            val intent = Intent(ctx, ForegroundWatcher::class.java)
+            val intent = Intent(ctx, ForegroundWatcher::class.java).apply {
+                putExtra(EXTRA_PERSISTENT_NOTIF, persistentNotification)
+            }
             runCatching {
                 if (needed) ctx.startForegroundService(intent) else ctx.stopService(intent)
             }.onFailure { Log.w("HiLightForeground", "could not update foreground watcher", it) }
