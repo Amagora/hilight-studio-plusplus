@@ -295,6 +295,11 @@ class Store private constructor(private val app: Context) {
     private val _amoledDark = MutableStateFlow(prefs.getBoolean("amoledDark", true))
     val amoledDark: StateFlow<Boolean> = _amoledDark.asStateFlow()
 
+    private val _railPosition = MutableStateFlow(
+        FoldableRailPosition.fromName(prefs.getString("foldableRailPosition", null))
+    )
+    val railPosition: StateFlow<FoldableRailPosition> = _railPosition.asStateFlow()
+
     private val _dynamicColor = MutableStateFlow(prefs.getBoolean("dynamicColor", true))
     val dynamicColor: StateFlow<Boolean> = _dynamicColor.asStateFlow()
 
@@ -818,6 +823,11 @@ class Store private constructor(private val app: Context) {
     fun setAmoledDark(v: Boolean) {
         _amoledDark.value = v
         prefs.edit().putBoolean("amoledDark", v).apply()
+    }
+
+    fun setRailPosition(pos: FoldableRailPosition) {
+        _railPosition.value = pos
+        prefs.edit().putString("foldableRailPosition", pos.name).apply()
     }
 
     fun acknowledgeAiDisclosure() {

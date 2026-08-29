@@ -154,6 +154,28 @@ private fun App(store: Store) {
 
     val config = LocalConfiguration.current
     val isWide = config.screenWidthDp >= 600
+    val railPosition by store.railPosition.collectAsStateWithLifecycle()
+
+    val navigationRailContent: @Composable () -> Unit = {
+        NavigationRail(
+            containerColor = MaterialTheme.colorScheme.background,
+            modifier = Modifier.fillMaxHeight(),
+        ) {
+            Spacer(Modifier.height(8.dp))
+            Tab.entries.forEach { t ->
+                NavigationRailItem(
+                    selected = tab == t,
+                    onClick = {
+                        if (tab != t) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        tabIndex = t.ordinal
+                    },
+                    icon = { Icon(t.icon, contentDescription = stringResource(t.labelRes)) },
+                    label = { Text(stringResource(t.labelRes)) },
+                    alwaysShowLabel = true,
+                )
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -228,25 +250,8 @@ private fun App(store: Store) {
                 .fillMaxSize()
                 .padding(pad),
         ) {
-            if (isWide) {
-                NavigationRail(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    modifier = Modifier.fillMaxHeight(),
-                ) {
-                    Spacer(Modifier.height(8.dp))
-                    Tab.entries.forEach { t ->
-                        NavigationRailItem(
-                            selected = tab == t,
-                            onClick = {
-                                if (tab != t) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                tabIndex = t.ordinal
-                            },
-                            icon = { Icon(t.icon, contentDescription = stringResource(t.labelRes)) },
-                            label = { Text(stringResource(t.labelRes)) },
-                            alwaysShowLabel = true,
-                        )
-                    }
-                }
+            if (isWide && railPosition == FoldableRailPosition.LEFT) {
+                navigationRailContent()
             }
 
             AnimatedContent(
@@ -281,6 +286,10 @@ private fun App(store: Store) {
                         Spacer(Modifier.height(28.dp))
                     }
                 }
+            }
+
+            if (isWide && railPosition == FoldableRailPosition.RIGHT) {
+                navigationRailContent()
             }
         }
     }

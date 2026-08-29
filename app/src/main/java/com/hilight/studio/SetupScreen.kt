@@ -149,6 +149,7 @@ fun SetupScreen(store: Store) {
     val themeMode by store.themeMode.collectAsStateWithLifecycle()
     val themePalette by store.themePalette.collectAsStateWithLifecycle()
     val amoledDark by store.amoledDark.collectAsStateWithLifecycle()
+    val railPosition by store.railPosition.collectAsStateWithLifecycle()
     val dynamicColor by store.dynamicColor.collectAsStateWithLifecycle()
     val timeoutMs by store.ambientTimeoutMs.collectAsStateWithLifecycle()
     val quietEnabled by store.quietEnabled.collectAsStateWithLifecycle()
@@ -493,6 +494,19 @@ fun SetupScreen(store: Store) {
             subtitle = stringResource(R.string.setup_amoled_pure_black_subtitle),
             checked = amoledDark,
             onChange = { store.setAmoledDark(it) },
+        )
+
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(R.string.setup_foldable_dock_position),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SegmentedSelector(
+            options = FoldableRailPosition.entries,
+            selected = railPosition,
+            label = { stringResource(it.labelRes) },
+            onSelect = { store.setRailPosition(it) },
         )
     }
 

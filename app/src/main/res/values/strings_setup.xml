@@ -134,6 +134,9 @@
     <string name="theme_mode_amoled">AMOLED</string>
     <string name="setup_amoled_pure_black_title">Pure AMOLED Pitch Black</string>
     <string name="setup_amoled_pure_black_subtitle">Use true #000000 pixels whenever Dark Theme is active (including scheduled evening hours)</string>
+    <string name="setup_foldable_dock_position">Foldable dock position (unfolded)</string>
+    <string name="setup_rail_position_left">Left</string>
+    <string name="setup_rail_position_right">Right</string>
     <string name="setup_theme_palette">Color palette</string>
     <string name="setup_wallpaper_colours">Wallpaper colours</string>
     <string name="palette_dynamic">Dynamic</string>

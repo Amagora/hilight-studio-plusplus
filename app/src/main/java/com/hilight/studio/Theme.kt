@@ -42,6 +42,17 @@ enum class ThemeMode(@StringRes val labelRes: Int) {
     }
 }
 
+enum class FoldableRailPosition(@StringRes val labelRes: Int) {
+    LEFT(R.string.setup_rail_position_left),
+    RIGHT(R.string.setup_rail_position_right),
+    ;
+
+    companion object {
+        fun fromName(name: String?): FoldableRailPosition =
+            entries.firstOrNull { it.name == name } ?: LEFT
+    }
+}
+
 enum class ThemePalette(@StringRes val labelRes: Int, val primaryAccent: Color) {
     DYNAMIC(R.string.palette_dynamic, Color(0xFF6750A4)),
     INDIGO(R.string.palette_indigo, Color(0xFF5B3FBF)),
