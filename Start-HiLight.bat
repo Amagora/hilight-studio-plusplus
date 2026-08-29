@@ -1,6 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
-title Hilight-Studio-PlusPlusV3.5 [v a1.2.5] - Universal Pixel 11 Pro ADB Control
+title Hilight-Studio-PlusPlusV3.9 [v a1.2.9] - Universal Pixel 11 Pro ADB Control
 
 :: 1. Check standard SDK locations and local folder only
 set "ADB_PATH="
@@ -53,7 +53,7 @@ if "%ADB_PATH%"=="" (
 :MENU
 cls
 echo ============================================================
-echo   Hilight-Studio-PlusPlusV3.5 [v a1.2.5] - Universal Control Launcher
+echo   Hilight-Studio-PlusPlusV3.9 [v a1.2.9] - Universal Control Launcher
 echo   Supports: Pixel 11 Pro / Pixel 11 Pro XL / Pixel 11 Pro Fold
 echo ============================================================
 echo.
@@ -85,7 +85,7 @@ echo [1/2] Resetting existing renderers...
 "%ADB_PATH%" shell "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'" >nul 2>nul
 
 echo [2/2] Starting HiLight AdbHelper renderer on Pixel...
-"%ADB_PATH%" shell "CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &"
+"%ADB_PATH%" shell "instance=adb-$(cat /proc/sys/kernel/random/uuid); CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper --owner adb --instance $instance --exclusive > /data/local/tmp/hilight.log 2>&1 &"
 timeout /t 2 >nul
 
 echo.
@@ -129,7 +129,7 @@ echo [3/3] Launching app and starting renderer...
 "%ADB_PATH%" shell am start -n com.hilight.studio/.MainActivity >nul 2>nul
 timeout /t 2 >nul
 "%ADB_PATH%" shell "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'" >nul 2>nul
-"%ADB_PATH%" shell "CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &"
+"%ADB_PATH%" shell "instance=adb-$(cat /proc/sys/kernel/random/uuid); CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper --owner adb --instance $instance --exclusive > /data/local/tmp/hilight.log 2>&1 &"
 timeout /t 2 >nul
 
 echo --- Renderer Status ---

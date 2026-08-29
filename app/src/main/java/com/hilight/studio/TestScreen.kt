@@ -37,12 +37,14 @@ import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material.icons.rounded.Waves
 import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,9 +60,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Explains what the safety limits are doing, so a dark array never looks like a fault.
@@ -70,9 +74,11 @@ import kotlinx.coroutines.delay
 private fun SafetyState(status: HelperStatus) {
     var elapsedMs by remember(status.ambientRemainingMs, status.ambientHeld) { mutableLongStateOf(0L) }
     LaunchedEffect(status.ambientRemainingMs, status.ambientHeld) {
-        while (true) {
-            delay(500)
-            elapsedMs += 500
+        if (!status.ambientHeld && status.ambientRemainingMs > 0L) {
+            while (status.ambientRemainingMs - elapsedMs > 0L) {
+                delay(500)
+                elapsedMs += 500
+            }
         }
     }
     val remaining = (status.ambientRemainingMs - elapsedMs).coerceAtLeast(0)
@@ -121,17 +127,47 @@ fun TestScreen(store: Store) {
     val suppression by store.suppression.collectAsStateWithLifecycle()
     val previewLook by store.previewLook.collectAsStateWithLifecycle()
     val presets by store.presets.collectAsStateWithLifecycle()
+    val testOverdrive by store.testOverdrive.collectAsStateWithLifecycle()
+    val overdriveBrightness by store.overdriveBrightness.collectAsStateWithLifecycle()
 
     val profile = rememberDeviceProfile()
     val modelName = profile.labelRes?.let { stringResource(it) } ?: profile.label
 
+    var isClearedFeedback by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    var confirmingTestOverdrive by remember { mutableStateOf(false) }
+    var showOverdriveLockedAlert by remember { mutableStateOf(false) }
+
+    var testDurationSec by remember { mutableFloatStateOf(4f) }
+
+    val runTest: (Pattern, Int, Int, Int, Int, Boolean, Boolean, List<Int>) -> Unit = { pattern, color, speedMs, secondColor, thirdColor, advancedColors, usePerLed, perLed ->
+        val durMs = (testDurationSec * 1000).toInt()
+        val testBright = if (overdriveBrightness || testOverdrive) 1.0f else ambient.brightness
+        store.preview(
+            pattern = pattern,
+            color = color,
+            speedMs = speedMs,
+            brightness = testBright,
+            durationMs = durMs,
+            secondColor = secondColor,
+            thirdColor = thirdColor,
+            advancedColors = advancedColors,
+            usePerLed = usePerLed,
+            perLed = perLed,
+        )
+    }
+
     // 1. Hardware Hero & Real-time State Card
     PixelCard(tone = 0) {
-        val shown = previewLook ?: ambient
+        val isTesting = previewLook != null && !isClearedFeedback
+        val heroActive = isTesting && status.alive
+        val heroPattern = if (isTesting) previewLook!!.pattern else Pattern.OFF
+        val heroCfg = if (isTesting) previewLook!! else ambient.copy(pattern = Pattern.OFF)
+
         DeviceHero(
-            pattern = if (enabled) shown.pattern else Pattern.OFF,
-            cfg = shown,
-            active = enabled && status.alive,
+            pattern = heroPattern,
+            cfg = heroCfg,
+            active = heroActive,
             profile = profile,
         )
         Row(
@@ -140,18 +176,7 @@ fun TestScreen(store: Store) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                when {
-                    !profile.hasHiLight -> stringResource(R.string.live_status_unavailable)
-                    previewLook != null -> stringResource(
-                        R.string.live_status_testing,
-                        stringResource(shown.pattern.labelRes),
-                    )
-                    enabled -> stringResource(
-                        R.string.live_status_on,
-                        stringResource(ambient.pattern.labelRes),
-                    )
-                    else -> stringResource(R.string.live_status_system)
-                },
+                stringResource(R.string.live_status_clear_test),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f, fill = false),
             )
@@ -159,32 +184,35 @@ fun TestScreen(store: Store) {
             Caption(modelName)
         }
         Caption(
-            when {
-                !profile.hasHiLight ->
-                    stringResource(R.string.live_hint_no_array, modelName)
-                !status.alive -> stringResource(R.string.live_hint_no_renderer)
-                enabled -> stringResource(R.string.live_hint_look)
-                else -> stringResource(R.string.live_hint_take_over)
+            if (isClearedFeedback) {
+                stringResource(R.string.live_hint_config_cleared)
+            } else {
+                stringResource(R.string.live_hint_press_to_clear)
             }
         )
 
-        // Turn Off Lights button when a test/preview is actively running
-        if (previewLook != null || (enabled && status.alive)) {
-            FilledTonalButton(
-                onClick = { store.stopTestOrTurnOff() },
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                ),
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.PowerSettingsNew,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-                ButtonLabel(stringResource(R.string.common_turn_off_lights))
-            }
+        // Turn Off Lights button to clear active light tests
+        FilledTonalButton(
+            onClick = {
+                store.stopTestOrTurnOff()
+                isClearedFeedback = true
+                coroutineScope.launch {
+                    delay(3000)
+                    isClearedFeedback = false
+                }
+            },
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            ),
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.PowerSettingsNew,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 8.dp),
+            )
+            ButtonLabel(stringResource(R.string.common_turn_off_lights))
         }
     }
 
@@ -415,82 +443,170 @@ fun TestScreen(store: Store) {
                 onChange = { store.setAmbient(ambient.copy(brightness = it)) },
             ) { stringResource(R.string.style_percent, (it * 100).toInt()) }
             Caption(stringResource(R.string.style_brightness_note))
+
+            PixelSlider(
+                label = stringResource(R.string.live_test_duration),
+                value = testDurationSec,
+                range = 1f..30f,
+                onChange = { testDurationSec = it },
+            ) { stringResource(R.string.live_test_duration_format, it.toInt()) }
+
+            val isTaperDisabledForTests = overdriveBrightness || testOverdrive
+            PixelToggleRow(
+                title = stringResource(R.string.test_disable_taper_title),
+                subtitle = stringResource(R.string.test_disable_taper_body),
+                checked = isTaperDisabledForTests,
+                enabled = !overdriveBrightness,
+                onDisabledClick = {
+                    showOverdriveLockedAlert = true
+                },
+                onChange = { enabling ->
+                    if (enabling) {
+                        confirmingTestOverdrive = true
+                    } else {
+                        store.setTestOverdrive(false)
+                    }
+                },
+            )
+
+            FilledTonalButton(
+                onClick = {
+                    runTest(
+                        ambient.pattern,
+                        ambient.color,
+                        ambient.speedMs,
+                        ambient.secondColor,
+                        ambient.thirdColor,
+                        ambient.advancedColors,
+                        ambient.usePerLed,
+                        ambient.perLed,
+                    )
+                },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.FlashOn,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+                ButtonLabel(stringResource(R.string.style_test_current_style))
+            }
         }
     }
 
-    // 4. Interactive "Try an Effect" Options (Base Patterns & Signature Presets)
+    if (confirmingTestOverdrive) {
+        AlertDialog(
+            onDismissRequest = { confirmingTestOverdrive = false },
+            title = { Text(stringResource(R.string.test_disable_taper_warn_title)) },
+            text = { Text(stringResource(R.string.test_disable_taper_warn_body)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        confirmingTestOverdrive = false
+                        store.setTestOverdrive(true)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
+                ) {
+                    ButtonLabel(stringResource(R.string.test_disable_taper_enable_btn))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingTestOverdrive = false }) {
+                    ButtonLabel(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
+
+    if (showOverdriveLockedAlert) {
+        AlertDialog(
+            onDismissRequest = { showOverdriveLockedAlert = false },
+            title = { Text(stringResource(R.string.test_disable_taper_locked_title)) },
+            text = { Text(stringResource(R.string.test_disable_taper_locked_body)) },
+            confirmButton = {
+                TextButton(onClick = { showOverdriveLockedAlert = false }) {
+                    ButtonLabel(stringResource(R.string.common_i_understand))
+                }
+            },
+        )
+    }
+
+    // 5. Interactive "Try an Effect" Options (Base Patterns & Signature Presets)
     val effectTiles: List<EffectTileSpec> = listOf(
         EffectTileSpec(
             label = stringResource(Pattern.RAINBOW.shortLabelRes),
             icon = Icons.Rounded.AutoAwesome,
-            accent = Color(0xFF7C4DFF),
-        ) { store.preview(Pattern.RAINBOW, 0xFFFFFFFF.toInt(), 1200, 1f) },
+            accent = Color(0xFF8000FF),
+        ) { runTest(Pattern.RAINBOW, 0xFFFFFFFF.toInt(), 1200, 0xFF00FFFF.toInt(), 0xFFFF00FF.toInt(), false, false, emptyList()) },
 
         EffectTileSpec(
             label = stringResource(R.string.live_test_random),
             icon = Icons.Rounded.Casino,
-            accent = Color(0xFFFFD600),
-        ) { store.preview(Pattern.RANDOM, 0xFFFFFFFF.toInt(), 1200, 1f) },
+            accent = Color(0xFFFFFF00),
+        ) { runTest(Pattern.RANDOM, 0xFFFFFFFF.toInt(), 1200, 0xFF00FFFF.toInt(), 0xFFFF00FF.toInt(), false, false, emptyList()) },
 
         EffectTileSpec(
             label = stringResource(Pattern.COMET.shortLabelRes),
             icon = Icons.Rounded.Flare,
-            accent = Color(0xFF00E5FF),
-        ) { store.preview(Pattern.COMET, 0xFF00E5FF.toInt(), 1200, 1f) },
+            accent = Color(0xFF00FFFF),
+        ) { runTest(Pattern.COMET, 0xFF00FFFF.toInt(), 1200, 0xFF00FFFF.toInt(), 0xFFFF00FF.toInt(), false, false, emptyList()) },
 
         EffectTileSpec(
             label = stringResource(Pattern.PULSE.shortLabelRes),
             icon = Icons.Rounded.Bolt,
-            accent = Color(0xFFFF1744),
-        ) { store.preview(Pattern.PULSE, 0xFFFF1744.toInt(), 1200, 1f) },
+            accent = Color(0xFFFF0000),
+        ) { runTest(Pattern.PULSE, 0xFFFF0000.toInt(), 1200, 0xFF00FFFF.toInt(), 0xFFFF00FF.toInt(), false, false, emptyList()) },
 
         EffectTileSpec(
             label = stringResource(Pattern.BREATHE.shortLabelRes),
             icon = Icons.Rounded.Nightlight,
-            accent = Color(0xFF7C4DFF),
-        ) { store.preview(Pattern.BREATHE, 0xFF7C4DFF.toInt(), 1200, 1f) },
+            accent = Color(0xFF8000FF),
+        ) { runTest(Pattern.BREATHE, 0xFF8000FF.toInt(), 1200, 0xFF00FFFF.toInt(), 0xFFFF00FF.toInt(), false, false, emptyList()) },
 
         EffectTileSpec(
             label = stringResource(Pattern.WAVE.shortLabelRes),
             icon = Icons.Rounded.Waves,
-            accent = Color(0xFF00E676),
-        ) { store.preview(Pattern.WAVE, 0xFF00E676.toInt(), 1200, 1f) },
+            accent = Color(0xFF00FF00),
+        ) { runTest(Pattern.WAVE, 0xFF00FF00.toInt(), 1200, 0xFF00FFFF.toInt(), 0xFFFF00FF.toInt(), false, false, emptyList()) },
 
         EffectTileSpec(
             label = stringResource(R.string.preset_aurora),
             icon = Icons.Rounded.Water,
-            accent = Color(0xFF00E5FF),
-        ) { store.preview(Pattern.WAVE, 0xFF00E5FF.toInt(), 2400, 0.85f) },
+            accent = Color(0xFF00FFFF),
+        ) { runTest(Pattern.WAVE, 0xFF00FFFF.toInt(), 2400, 0xFF00FF00.toInt(), 0xFF8000FF.toInt(), true, false, emptyList()) },
 
         EffectTileSpec(
             label = stringResource(R.string.preset_cyberpunk),
             icon = Icons.Rounded.FlashOn,
-            accent = Color(0xFFFF0055),
-        ) { store.preview(Pattern.CHASE, 0xFFFF0055.toInt(), 1200, 0.90f) },
+            accent = Color(0xFFFF007F),
+        ) { runTest(Pattern.CHASE, 0xFFFF007F.toInt(), 1200, 0xFF00FFFF.toInt(), 0xFFFFFF00.toInt(), true, false, emptyList()) },
 
         EffectTileSpec(
             label = stringResource(R.string.preset_campfire),
             icon = Icons.Rounded.Whatshot,
-            accent = Color(0xFFFF3D00),
-        ) { store.preview(Pattern.BREATHE, 0xFFFF3D00.toInt(), 1800, 0.80f) },
+            accent = Color(0xFFFF4500),
+        ) { runTest(Pattern.BREATHE, 0xFFFF4500.toInt(), 1800, 0xFFFFFF00.toInt(), 0xFFFF0000.toInt(), true, false, emptyList()) },
 
         EffectTileSpec(
             label = stringResource(R.string.preset_ocean),
             icon = Icons.Rounded.WaterDrop,
-            accent = Color(0xFF0055FF),
-        ) { store.preview(Pattern.PULSE, 0xFF0055FF.toInt(), 2000, 0.75f) },
+            accent = Color(0xFF0066FF),
+        ) { runTest(Pattern.PULSE, 0xFF0066FF.toInt(), 2000, 0xFF00FFFF.toInt(), 0xFF8000FF.toInt(), true, false, emptyList()) },
 
         EffectTileSpec(
             label = stringResource(R.string.preset_spectrum),
             icon = Icons.Rounded.Palette,
-            accent = Color(0xFFFF4081),
-        ) { store.preview(Pattern.RAINBOW, 0xFFFFFFFF.toInt(), 2500, 1.0f) },
+            accent = Color(0xFFFF00FF),
+        ) { runTest(Pattern.RAINBOW, 0xFFFFFFFF.toInt(), 2500, 0xFF00FFFF.toInt(), 0xFFFF00FF.toInt(), false, false, emptyList()) },
 
         EffectTileSpec(
             label = stringResource(R.string.preset_matrix),
             icon = Icons.Rounded.Terminal,
-            accent = Color(0xFF00E676),
-        ) { store.preview(Pattern.RANDOM, 0xFF00E676.toInt(), 1500, 0.85f) },
+            accent = Color(0xFF00FF00),
+        ) { runTest(Pattern.RANDOM, 0xFF00FF00.toInt(), 1500, 0xFF00FF00.toInt(), 0xFF00FF00.toInt(), false, false, emptyList()) },
     )
 
     PixelCard {
@@ -517,13 +633,12 @@ fun TestScreen(store: Store) {
         }
     }
 
-    // 5. Lighting Tools Card (2x2 Video Fill Light & Symmetrical SOS / Battery Gauge)
-    var fillBrightness by remember { mutableFloatStateOf(0.85f) }
+    // 6. Lighting Tools Card (2x2 Video Fill Light & Symmetrical SOS / Battery Gauge)
     val fillTemps = listOf(
-        Triple(R.string.live_fill_warm, 0xFFFFB366.toInt(), Color(0xFFFFB366)),
-        Triple(R.string.live_fill_soft, 0xFFFFE0B2.toInt(), Color(0xFFFFE0B2)),
-        Triple(R.string.live_fill_neutral, 0xFFFFF0E0.toInt(), Color(0xFFFFF0E0)),
-        Triple(R.string.live_fill_cool, 0xFFE0F0FF.toInt(), Color(0xFFE0F0FF)),
+        Triple(R.string.live_fill_warm, 0xFFFF9933.toInt(), Color(0xFFFF9933)),
+        Triple(R.string.live_fill_soft, 0xFFFFD7A8.toInt(), Color(0xFFFFD7A8)),
+        Triple(R.string.live_fill_neutral, 0xFFFFFFFF.toInt(), Color(0xFFFFFFFF)),
+        Triple(R.string.live_fill_cool, 0xFFCCE5FF.toInt(), Color(0xFFCCE5FF)),
     )
 
     PixelCard(tone = 2) {
@@ -544,7 +659,7 @@ fun TestScreen(store: Store) {
                 ) {
                     row.forEach { (labelRes, colorInt, accentColor) ->
                         FilledTonalButton(
-                            onClick = { store.preview(Pattern.SOLID, colorInt, 1000, fillBrightness) },
+                            onClick = { runTest(Pattern.SOLID, colorInt, 1000, 0xFF00FFFF.toInt(), 0xFFFF00FF.toInt(), false, false, emptyList()) },
                             enabled = enabled && status.alive,
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.filledTonalButtonColors(
@@ -559,19 +674,7 @@ fun TestScreen(store: Store) {
             }
         }
 
-        PixelSlider(
-            label = stringResource(R.string.widget_intensity),
-            value = fillBrightness,
-            range = 0.1f..1.0f,
-            onChange = { fillBrightness = it },
-        ) { stringResource(R.string.widget_percent, (it * 100).toInt()) }
-
-        Spacer(Modifier.height(12.dp))
-        Text(
-            stringResource(R.string.live_strobe_title),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.error,
-        )
+        Spacer(Modifier.height(8.dp))
 
         Row(
             Modifier.fillMaxWidth(),
@@ -583,15 +686,15 @@ fun TestScreen(store: Store) {
                 accent = Color(0xFFFF9100),
                 enabled = enabled && status.alive,
                 modifier = Modifier.weight(1f),
-            ) { store.preview(Pattern.PULSE, 0xFFFF0000.toInt(), 300, 1.0f) }
+            ) { runTest(Pattern.PULSE, 0xFFFF0000.toInt(), 300, 0xFF00FFFF.toInt(), 0xFFFF00FF.toInt(), false, false, emptyList()) }
 
             PixelTile(
                 label = stringResource(R.string.setup_battery_indicator_title),
                 icon = Icons.Rounded.BatteryChargingFull,
-                accent = Color(0xFF00E676),
+                accent = Color(0xFF00FF00),
                 enabled = enabled && status.alive,
                 modifier = Modifier.weight(1f),
-            ) { store.preview(Pattern.CUSTOM, 0xFF00E676.toInt(), 1000, 0.85f) }
+            ) { runTest(Pattern.CUSTOM, 0xFF00FF00.toInt(), 1000, 0xFF00FF00.toInt(), 0xFF00FF00.toInt(), false, false, emptyList()) }
         }
     }
 

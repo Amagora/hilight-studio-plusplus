@@ -73,6 +73,12 @@ class NotificationTrigger : NotificationListenerService() {
 
         if (info.isGroupSummary) return                 // the app's own "3 new messages" wrapper
         if (info.isOngoing) return                      // media/progress notifications repeat a lot
+
+        // Ignore contentless background pings (no title, text, or sender) unless specifically matched by an app-specific rule
+        if (info.title.isNullOrBlank() && info.text.isNullOrBlank() && info.sender.isNullOrBlank() && !info.isConversation) {
+            val appSpecificRule = store.rules.value.firstOrNull { it.enabled && it.trigger == Trigger.NOTIFICATION && it.pkg == info.pkg && !it.isCatchAll }
+            if (appSpecificRule == null) return
+        }
         if (!isNewMessage(info)) {
             // The stamps go in the line because they are the only way to tell a genuine duplicate
             // (identical stamp) from a message that arrived carrying an older one — a resend, or a
@@ -86,6 +92,13 @@ class NotificationTrigger : NotificationListenerService() {
         }
 
         val rule = store.ruleForMessage(info) ?: return
+
+        // Respect app timers, paused apps (Digital Wellbeing / Focus Mode), and force-stopped apps
+        if (store.isPackagePausedOrStopped(info.pkg)) {
+            Log.i(TAG, "matched ${info.pkg} but suppressed because target app is paused by timer or force-stopped")
+            store.noteRuleFired(rule, info)
+            return
+        }
 
         // These two guards silence the flash, but the rule did match, and the rules screen shows
         // exactly that: "last matched". Returning before recording it would leave a working rule

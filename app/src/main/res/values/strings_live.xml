@@ -8,6 +8,9 @@
 <resources>
 
     <!-- Hero card: what HiLight is doing right now. %1$s is the pattern name. -->
+    <string name="live_status_clear_test">Clear Light Test</string>
+    <string name="live_hint_press_to_clear">Press button to clear light test.</string>
+    <string name="live_hint_config_cleared">Light config cleared</string>
     <string name="live_status_unavailable">HiLight not available</string>
     <string name="live_status_testing">Testing · %1$s</string>
     <string name="live_status_on">HiLight · %1$s</string>
@@ -50,8 +53,17 @@
     <!-- One-tap effects. The tiles borrow the pattern names from strings_common.xml, except that a
          third of a row is too narrow for "Random colours". -->
     <string name="live_tests_title">Try an effect</string>
-    <string name="live_tests_caption">Fires for four seconds on the real LEDs, then returns to your style.</string>
+    <string name="live_tests_caption">Fires a preview on the real LEDs using your configured timer, then returns to idle.</string>
     <string name="live_test_random">Random</string>
+    <string name="live_test_duration">Test Duration</string>
+    <string name="live_test_duration_format">%1$d seconds</string>
+    <string name="test_disable_taper_title">Disable Taper</string>
+    <string name="test_disable_taper_body">Bypasses the 10-second thermal safety taper and duty limits during test previews on this tab.</string>
+    <string name="test_disable_taper_warn_title">⚠️ Disable Light Tapering for Tests?</string>
+    <string name="test_disable_taper_warn_body">Disabling taper removes the 10-second light protection taper during testing. The LEDs will operate at full designated brightness continuously, which produces more heat and may accelerate hardware wear.\n\nAre you sure you want to disable light tapering for tests?</string>
+    <string name="test_disable_taper_enable_btn">Disable Taper</string>
+    <string name="test_disable_taper_locked_title">Max Brightness Override Active</string>
+    <string name="test_disable_taper_locked_body">Please disable Max Brightness Override in Setup tab to configure this setting individually.</string>
 
     <!-- The rules list. %1$d is how many rules are on. In the per-rule line %1$s is the colour or
          pattern and %2$s is what sets the rule off. -->

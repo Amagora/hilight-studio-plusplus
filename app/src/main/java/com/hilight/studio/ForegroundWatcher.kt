@@ -44,6 +44,27 @@ class ForegroundWatcher : Service() {
      */
     private var stopped = false
 
+    private val screenReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> {
+                    forceRefresh = true
+                    handler.removeCallbacks(tick)
+                    handler.post(tick)
+                }
+                Intent.ACTION_SCREEN_OFF -> {
+                    handler.removeCallbacks(tick)
+                    lastPkg = null
+                    main.post {
+                        if (!stopped) {
+                            store.setForegroundOverride(null, null)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private val tick = object : Runnable {
         override fun run() {
             if (isPackageSuspended() || !store.enabled.value) {
@@ -56,16 +77,35 @@ class ForegroundWatcher : Service() {
                 return
             }
 
+            val pm = getSystemService(android.os.PowerManager::class.java)
+            val km = getSystemService(android.app.KeyguardManager::class.java)
+            val isInteractive = pm?.isInteractive ?: true
+            val isLocked = km?.isKeyguardLocked ?: false
+
+            if (!isInteractive || isLocked) {
+                if (lastPkg != null) {
+                    lastPkg = null
+                    main.post {
+                        if (!stopped) {
+                            store.setForegroundOverride(null, null)
+                        }
+                    }
+                }
+                // Screen is off or locked — do not schedule further polls until screen wakes up
+                return
+            }
+
             val pkg = currentForegroundPackage()
-            if (forceRefresh || pkg != lastPkg) {
+            val activePkg = pkg?.takeIf { !store.isPackagePausedOrStopped(it) }
+            if (forceRefresh || activePkg != lastPkg) {
                 forceRefresh = false
-                lastPkg = pkg
+                lastPkg = activePkg
                 // Store is a main-thread object: every other caller mutates it from there, and its
                 // override field and file writes are not synchronized.
                 main.post {
                     if (!stopped) {
-                        val rule = pkg?.let { store.ruleFor(it, Trigger.FOREGROUND) }
-                        store.setForegroundOverride(pkg?.takeIf { rule != null }, rule)
+                        val rule = activePkg?.let { store.ruleFor(it, Trigger.FOREGROUND) }
+                        store.setForegroundOverride(activePkg?.takeIf { rule != null }, rule)
                     }
                 }
             }
@@ -78,11 +118,18 @@ class ForegroundWatcher : Service() {
         thread = HandlerThread("fg-watch").also { it.start() }
         handler = Handler(thread.looper)
         startForeground(1, notification())
+        val filter = android.content.IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        registerReceiver(screenReceiver, filter)
         handler.post(tick)
     }
 
     override fun onDestroy() {
         stopped = true
+        runCatching { unregisterReceiver(screenReceiver) }
         handler.removeCallbacksAndMessages(null)
         thread.quitSafely()
         main.post { store.setForegroundOverride(null, null) }

@@ -66,7 +66,8 @@ namespace HiLightManager
 
         private void InitializeDarkUI()
         {
-            this.Text = "Hilight-Studio-PlusPlusV3.5 — [v a1.2.5]";
+            string versionStr = GetAppVersion();
+            this.Text = $"Hilight-Studio-PlusPlusV3.9 — [Version: {versionStr}]";
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.ClientSize = new Size(1240, 860);
             this.MinimumSize = new Size(1050, 750);
@@ -144,7 +145,7 @@ namespace HiLightManager
 
             lblHeaderTitle = new Label
             {
-                Text = "Hilight-Studio-PlusPlusV3.5",
+                Text = "Hilight-Studio-PlusPlusV3.9",
                 Font = new Font("Segoe UI", 16f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(248, 250, 252),
                 AutoSize = true,
@@ -154,7 +155,7 @@ namespace HiLightManager
 
             Label lblVersion = new Label
             {
-                Text = "a1.2.5",
+                Text = $"Version: {versionStr}",
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(208, 188, 255), // Material 3 Primary Container Text
                 BackColor = Color.FromArgb(56, 30, 114),  // Material 3 Primary Container
@@ -1056,6 +1057,29 @@ Current ADB Executable in Use:
             lblDeviceStatus.ForeColor = statusColor;
         }
 
+        private string GetAppVersion()
+        {
+            try
+            {
+                string[] candidates = new[]
+                {
+                    Path.Combine(workspaceRoot, "app", "build.gradle.kts"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app", "build.gradle.kts"),
+                    Path.Combine(workspaceRoot, "build.gradle.kts")
+                };
+                foreach (var path in candidates)
+                {
+                    if (File.Exists(path))
+                    {
+                        var match = System.Text.RegularExpressions.Regex.Match(File.ReadAllText(path), @"versionName\s*=\s*""([^""]+)""");
+                        if (match.Success) return match.Groups[1].Value;
+                    }
+                }
+            }
+            catch { }
+            return "a1.2.9";
+        }
+
         private string FindApkPath()
         {
             string appDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -1230,7 +1254,7 @@ Current ADB Executable in Use:
             await RunAdbAsync("shell", "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'");
 
             Log("Starting AdbHelper daemon...");
-            string startScript = "CLASSPATH=$(pm path com.hilight.studio | head -n 1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper </dev/null >/data/local/tmp/hilight.log 2>&1 &";
+            string startScript = "instance=adb-$(cat /proc/sys/kernel/random/uuid); CLASSPATH=$(pm path com.hilight.studio | head -n 1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper --owner adb --instance \"$instance\" --exclusive </dev/null >/data/local/tmp/hilight.log 2>&1 &";
             await RunAdbAsync("shell", startScript);
 
             await Task.Delay(2000);

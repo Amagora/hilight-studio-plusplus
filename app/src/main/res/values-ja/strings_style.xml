@@ -121,6 +121,7 @@
 
     <!-- Signature Presets -->
     <string name="style_signature_presets">おすすめプリセット</string>
+    <string name="style_test_current_style">現在のスタイルをテスト</string>
     <string name="preset_aurora">オーロラ</string>
     <string name="preset_cyberpunk">サイバーパンク</string>
     <string name="preset_campfire">焚き火</string>

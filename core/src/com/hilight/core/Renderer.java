@@ -16,11 +16,20 @@ import java.util.Random;
  */
 public final class Renderer {
 
-    private final Random rnd = new Random();
+    private final Random rnd;
 
     // random-mode fade state
     private int[] randFrom, randTo;
     private long randStart, randDuration = 1500;
+
+    public Renderer() {
+        this(new Random());
+    }
+
+    /** Deterministic host-test constructor. */
+    Renderer(Random rnd) {
+        this.rnd = rnd;
+    }
 
     /** Discards animation state so the next frame starts a pattern cleanly. */
     public void reset() {
@@ -28,13 +37,18 @@ public final class Renderer {
         randTo = null;
     }
 
+    /** Renders a frame at a caller-supplied monotonic animation time. */
     public int[] frame(JSONObject cfg, long t, int n) {
+        return frame(cfg, t, n, false);
+    }
+
+    public int[] frame(JSONObject cfg, long t, int n, boolean overdrive) {
         int[] out = new int[n];
         if (cfg == null) return out;
 
         // ambient configs carry "mode", alerts carry "pattern" — accept either
         String mode = cfg.optString("mode", cfg.optString("pattern", "off"));
-        double bright = clamp01(cfg.optDouble("brightness", 1.0));
+        double bright = overdrive ? 1.0 : clamp01(cfg.optDouble("brightness", 1.0));
         long speed = Math.max(60, cfg.optLong("speedMs", 2000));
         int[] palette = colors(cfg);
 
@@ -217,14 +231,13 @@ public final class Renderer {
                 long interval = Math.max(120, cfg.optLong("randomIntervalMs", 1500));
                 boolean perLed = cfg.optBoolean("randomPerLed", true);
                 boolean smooth = cfg.optBoolean("randomSmooth", true);
-                long now = System.currentTimeMillis();
-                if (randFrom == null || randFrom.length != n || now - randStart >= randDuration) {
+                if (randFrom == null || randFrom.length != n || t - randStart >= randDuration) {
                     randFrom = (randTo != null && randTo.length == n) ? randTo : randomColors(n, perLed, cfg);
                     randTo = randomColors(n, perLed, cfg);
-                    randStart = now;
+                    randStart = t;
                     randDuration = interval;
                 }
-                double k = smooth ? clamp01((now - randStart) / (double) randDuration) : 0;
+                double k = smooth ? clamp01((t - randStart) / (double) randDuration) : 0;
                 for (int i = 0; i < n; i++) out[i] = mix(randFrom[i], randTo[i], k);
                 break;
             }
@@ -272,17 +285,20 @@ public final class Renderer {
 
     static int scale(int color, double k) {
         k = clamp01(k);
-        int r = (int) (((color >> 16) & 0xFF) * k);
-        int g = (int) (((color >> 8) & 0xFF) * k);
-        int b = (int) ((color & 0xFF) * k);
+        if (k >= 0.9999) return color | 0xFF000000;
+        int r = Math.min(255, (int) Math.round(((color >> 16) & 0xFF) * k));
+        int g = Math.min(255, (int) Math.round(((color >> 8) & 0xFF) * k));
+        int b = Math.min(255, (int) Math.round((color & 0xFF) * k));
         return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 
     static int mix(int a, int b, double k) {
         k = clamp01(k);
-        int r = (int) (((a >> 16) & 0xFF) * (1 - k) + ((b >> 16) & 0xFF) * k);
-        int g = (int) (((a >> 8) & 0xFF) * (1 - k) + ((b >> 8) & 0xFF) * k);
-        int bl = (int) ((a & 0xFF) * (1 - k) + (b & 0xFF) * k);
+        if (k <= 0.0001) return a | 0xFF000000;
+        if (k >= 0.9999) return b | 0xFF000000;
+        int r = Math.min(255, (int) Math.round(((a >> 16) & 0xFF) * (1 - k) + ((b >> 16) & 0xFF) * k));
+        int g = Math.min(255, (int) Math.round(((a >> 8) & 0xFF) * (1 - k) + ((b >> 8) & 0xFF) * k));
+        int bl = Math.min(255, (int) Math.round((a & 0xFF) * (1 - k) + (b & 0xFF) * k));
         return 0xFF000000 | (r << 16) | (g << 8) | bl;
     }
 
@@ -298,8 +314,8 @@ public final class Renderer {
             default: r = c; g = 0; b = x;
         }
         return 0xFF000000
-                | ((int) ((r + m) * 255) << 16)
-                | ((int) ((g + m) * 255) << 8)
-                | (int) ((b + m) * 255);
+                | (Math.min(255, (int) Math.round((r + m) * 255)) << 16)
+                | (Math.min(255, (int) Math.round((g + m) * 255)) << 8)
+                | Math.min(255, (int) Math.round((b + m) * 255));
     }
 }

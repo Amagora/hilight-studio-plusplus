@@ -1,8 +1,8 @@
-# Hilight-Studio-PlusPlusV3.5
+# Hilight-Studio-PlusPlusV3.9
 
-**Version: `a1.2.5`** — Universal Hardware Lighting Control for Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold devices on Android 17 (API 37).
+**Version: `a1.2.9`** — Universal Hardware Lighting Control for Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold devices on Android 17 (API 37).
 
-[![Build Version](https://img.shields.io/badge/version-a1.2.5-blue.svg)](CHANGELOG.md)
+[![Build Version](https://img.shields.io/badge/version-a1.2.9-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f81f7.svg)](LICENSE)
 [![Changelog](https://img.shields.io/badge/changelog-custom%20modifications-blue.svg)](CHANGELOG.md)
 
@@ -16,7 +16,7 @@
 > See [CHANGELOG.md](CHANGELOG.md) for the detailed log of custom additions, user requests, architectural enhancements, and privacy guarantees.
 
 > [!IMPORTANT]
-> **Hilight-Studio-PlusPlusV3.5** is an open-source enhancement supporting all devices across the **Pixel 11 Pro line** (Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold) on Android 17 (API 37).
+> **Hilight-Studio-PlusPlusV3.9** is an open-source enhancement supporting all devices across the **Pixel 11 Pro line** (Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold) on Android 17 (API 37).
 
 <p align="center">
   <img src="docs/media/screen-test.png" alt="Test tab controlling the HiLight array on a Pixel 11 Pro Fold" width="380">
@@ -24,7 +24,7 @@
 
 ## Features
 
-- **Unified Clean UI (V3.5 Navigation)**:
+- **Unified Clean UI (V3.9 Navigation)**:
   - **Test Tab**: Combines real-time effects preview, master switch, 12 signature presets/effects, 3-color pattern tuning, individual 8-LED customizations, Tabletop lighting tools (SOS Beacon, Video Fill Light, Fuel Gauge), and instant Notification Tests.
   - **Apps Tab**: Configure per-app notification colors, keyword triggers, and While-Open indefinite/custom-timer holds.
   - **Setup Tab**: Background status notification toggle, auto-off protection, Max Brightness Override, Session Priority slider, and Root / Shizuku / ADB access controls.

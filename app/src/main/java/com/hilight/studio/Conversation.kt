@@ -285,11 +285,24 @@ object ConversationMatch {
             ?.let { return it to MatchStrength.APP }
 
         // Note that a catch-all rule still fires for everything this app's conversation rules did not
-        // match. That is intended — the catch-all is the "everything else" colour — but it does make a
-        // per-chat rule look as though it fires for everyone until the catch-all is turned off.
-        return candidates.firstOrNull { it.isCatchAll && !it.isConversationRule }
-            ?.let { it to MatchStrength.CATCH_ALL }
+        // match. That is intended — the catch-all is the "everything else" colour — but internal system/AI
+        // background sync pings must not trigger it unless specifically targeted by an app-specific rule.
+        if (info.pkg !in INTERNAL_SYSTEM_OR_AI_PKGS) {
+            candidates.firstOrNull { it.isCatchAll && !it.isConversationRule }
+                ?.let { return it to MatchStrength.CATCH_ALL }
+        }
+        return null
     }
+
+    val INTERNAL_SYSTEM_OR_AI_PKGS = setOf(
+        "android",
+        "com.android.systemui",
+        "com.google.android.as",
+        "com.google.android.aicore",
+        "com.google.android.apps.scone",
+        "com.google.android.odad",
+        "com.google.android.ambientindication",
+    )
 
     /**
      * Does this notification carry a newer message than the last one handled for the same chat?

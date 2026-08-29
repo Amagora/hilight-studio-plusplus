@@ -1,6 +1,7 @@
 package com.hilight.studio
 
 import androidx.annotation.StringRes
+import com.hilight.core.RendererContract
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -50,7 +51,7 @@ enum class Pattern(
     val shortLabelRes: Int get() = narrowLabelRes ?: labelRes
 
     companion object {
-        fun of(key: String) = entries.firstOrNull { it.key == key } ?: SOLID
+        fun of(key: String) = entries.firstOrNull { it.key == key } ?: OFF
     }
 }
 
@@ -84,13 +85,13 @@ enum class PrivacyActivity(val key: String, val appOp: String) {
 /** The always-on look: what HiLight shows when nothing else is happening. */
 data class Ambient(
     val pattern: Pattern = Pattern.OFF,
-    val color: Int = 0xFF7C4DFF.toInt(),
-    val secondColor: Int = 0xFF00E5FF.toInt(),
-    val thirdColor: Int = 0xFFFF4081.toInt(),
+    val color: Int = 0xFF8000FF.toInt(),
+    val secondColor: Int = 0xFF00FFFF.toInt(),
+    val thirdColor: Int = 0xFFFF00FF.toInt(),
     val advancedColors: Boolean = false,
     val usePerLed: Boolean = false,
-    val perLed: List<Int> = List(LED_COUNT) { 0xFF7C4DFF.toInt() },
-    val brightness: Float = 0.7f,
+    val perLed: List<Int> = List(LED_COUNT) { 0xFF8000FF.toInt() },
+    val brightness: Float = 1.0f,
     val speedMs: Int = 2500,
     val rainbowSpread: Boolean = true,
     val randomIntervalMs: Int = 1500,
@@ -125,15 +126,15 @@ data class Ambient(
     companion object {
         fun fromJson(o: JSONObject) = Ambient(
             pattern = Pattern.of(o.optString("pattern", "off")),
-            color = o.optLong("color", 0xFF7C4DFFL).toInt(),
-            secondColor = o.optLong("secondColor", 0xFF00E5FFL).toInt(),
-            thirdColor = o.optLong("thirdColor", 0xFFFF4081L).toInt(),
+            color = o.optLong("color", 0xFF8000FFL).toInt(),
+            secondColor = o.optLong("secondColor", 0xFF00FFFFL).toInt(),
+            thirdColor = o.optLong("thirdColor", 0xFFFF00FFL).toInt(),
             advancedColors = o.optBoolean("advancedColors", false),
             usePerLed = o.optBoolean("usePerLed", false),
             perLed = o.optJSONArray("perLed")?.let { a ->
                 (0 until a.length()).map { a.optLong(it).toInt() }
-            }?.takeIf { it.size == LED_COUNT } ?: List(LED_COUNT) { 0xFF7C4DFF.toInt() },
-            brightness = o.optDouble("brightness", 0.7).toFloat(),
+            }?.takeIf { it.size == LED_COUNT } ?: List(LED_COUNT) { 0xFF8000FF.toInt() },
+            brightness = o.optDouble("brightness", 1.0).toFloat(),
             speedMs = o.optInt("speedMs", 2500),
             rainbowSpread = o.optBoolean("rainbowSpread", true),
             randomIntervalMs = o.optInt("randomIntervalMs", 1500),
@@ -446,6 +447,9 @@ object Limits {
     const val WARN_ABOVE_MS = 30_000            // anything longer than this warns twice
 }
 
+/** Whether the privileged process is provably running the renderer bundled with this app. */
+enum class RendererCompatibility { CURRENT, INCOMPATIBLE, UNKNOWN }
+
 /** What the helper is reporting back. */
 data class HelperStatus(
     val alive: Boolean,
@@ -453,8 +457,44 @@ data class HelperStatus(
     val pid: Int = -1,
     val uid: Int = -1,
     val owner: String = "",
+    /** Per-process nonce emitted by file-bridge helpers; prevents another writer hiding the source. */
+    val rendererInstanceId: String = "",
+    /** False only when the latest file-bridge read could not prove a complete process identity. */
+    val identityResolved: Boolean = true,
     val ledCount: Int = 0,
     val sessionOpen: Boolean = false,
+    /** the renderer still owes the framework a two-step black clear */
+    val blackClearPending: Boolean = false,
+    /** true once the current cycle can no longer make forward progress without a new trigger */
+    val blackClearTerminal: Boolean = false,
+    val blackClearResult: String = "not_requested",
+    val blackClearAttemptResult: String = "not_requested",
+    val blackClearStage: String = "idle",
+    val blackClearTimestampElapsedMs: Long = 0,
+    val blackClearCycleId: Long = 0,
+    /** Whether the current bounded cleanup cycle was automatic or explicitly requested. */
+    val blackClearCycleSource: String = "automatic",
+    val blackClearAttemptsUsed: Int = 0,
+    /** bounded post-release recovery attempts left for the most recent visible frame */
+    val blackClearAttemptsRemaining: Int = 0,
+    val blackClearStopAttemptAvailable: Boolean = false,
+    val blackClearCloseFailures: Int = 0,
+    /** Final close override also failed; ownership remains unresolved until this process exits. */
+    val blackClearUnreleasedFatal: Boolean = false,
+    val lightMinUpdatePeriodMs: Long = 0,
+    val blackClearStrategy: String = "unknown",
+    val blackClearStrategyVersion: Int = 0,
+    /** Actual build loaded by the privileged renderer; distinct from the installed app build. */
+    val rendererVersionCode: Int = -1,
+    val rendererVersionName: String = "",
+    val rendererContractVersion: Int = -1,
+    val rendererImplementationRevision: Int = -1,
+    val rendererStatusSchemaVersion: Int = -1,
+    val rendererClearAlgorithmVersion: Int = -1,
+    /** Composite lifecycle version used by Shizuku; unavailable for file-bridge renderers. */
+    val rendererServiceVersion: Int = -1,
+    /** Shizuku reports this explicitly; a live ADB/root helper has already started its engine. */
+    val rendererReady: Boolean = false,
     val mode: String = "-",
     /** ms left on the ambient auto-off window at the moment this status was read */
     val ambientRemainingMs: Long = 0,
@@ -464,10 +504,47 @@ data class HelperStatus(
     val resting: Boolean = false,
     /** how much of the duty allowance is used, 0-100 */
     val dutyPct: Int = 0,
+    /** Legacy alias for [receivedStateRevision], kept for v1.0.8 bridge compatibility. */
     val appliedStateRevision: Long = 0,
+    val receivedStateRevision: Long = appliedStateRevision,
+    val settledStateRevision: Long = 0,
+    val releasedStateRevision: Long = 0,
+    val lastSeenManualBlackClearRequestId: Long = 0,
+    val lastAcceptedManualBlackClearRequestId: Long = 0,
     val privacyObserverEnabled: Boolean = false,
     val privacyObserverState: String = "stopped",
     val privacyPhase: String = "inactive",
+) {
+    val rendererCompatibility: RendererCompatibility
+        get() = when {
+            rendererContractVersion < 0 || rendererImplementationRevision < 0 ||
+                rendererStatusSchemaVersion < 0 || rendererClearAlgorithmVersion < 0 ->
+                RendererCompatibility.UNKNOWN
+            RendererContract.isCompatible(
+                rendererContractVersion,
+                rendererImplementationRevision,
+                rendererStatusSchemaVersion,
+                rendererClearAlgorithmVersion,
+            ) -> RendererCompatibility.CURRENT
+            else -> RendererCompatibility.INCOMPATIBLE
+        }
+
+    /**
+     * A recorded process remains stale even after its heartbeat expires when its renderer is legacy,
+     * incompatible or not ready. Absence (no PID) and an expired proven-current renderer are not
+     * stale; callers can distinguish the latter through [pid] and [alive].
+     */
+    val rendererStale: Boolean
+        get() = (alive || pid > 0) &&
+            (rendererCompatibility != RendererCompatibility.CURRENT || !rendererReady)
+}
+
+/** One internally consistent renderer sample used when the user copies diagnostics. */
+data class RendererStatusSnapshot(
+    val status: HelperStatus,
+    val selectedTransport: Transport,
+    val activeTransport: Transport,
+    val capturedAtEpochMs: Long,
 )
 
 const val LED_COUNT = 8

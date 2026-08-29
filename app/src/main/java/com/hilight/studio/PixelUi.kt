@@ -237,15 +237,27 @@ fun PixelToggleRow(
     subtitle: String?,
     checked: Boolean,
     onChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
+    onDisabledClick: (() -> Unit)? = null,
 ) {
     val haptics = LocalHapticFeedback.current
     Row(
-        Modifier.fillMaxWidth(),
+        Modifier
+            .fillMaxWidth()
+            .then(
+                if (!enabled && onDisabledClick != null) {
+                    Modifier.clickable { onDisabledClick() }
+                } else Modifier
+            ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.fillMaxWidth(0.72f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+            )
             if (subtitle != null) {
                 Spacer(Modifier.height(2.dp))
                 Caption(subtitle)
@@ -253,6 +265,7 @@ fun PixelToggleRow(
         }
         Switch(
             checked = checked,
+            enabled = enabled,
             onCheckedChange = {
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 onChange(it)

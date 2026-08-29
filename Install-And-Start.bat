@@ -1,6 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
-title Hilight-Studio-PlusPlusV3.5 [v a1.2.5] - Universal Pixel 11 Pro ADB Control
+title Hilight-Studio-PlusPlusV3.9 [v a1.2.9] - Universal Pixel 11 Pro ADB Control
 
 :: 1. Check standard SDK locations and local folder only
 set "ADB_PATH="
@@ -55,7 +55,7 @@ if "%ADB_PATH%"=="" (
 :MENU
 cls
 echo ======================================================================
-echo    Hilight-Studio-PlusPlusV3.5 [v a1.2.5] - Universal Control Manager
+echo    Hilight-Studio-PlusPlusV3.9 [v a1.2.9] - Universal Control Manager
 echo    Supports: Pixel 11 Pro / Pixel 11 Pro XL / Pixel 11 Pro Fold
 echo ======================================================================
 echo.
@@ -126,7 +126,7 @@ echo ======================================================================
 echo  [4/4] Starting 8-LED Hardware Renderer Daemon
 echo ======================================================================
 "%ADB_PATH%" shell "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'" >nul 2>nul
-"%ADB_PATH%" shell "CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &"
+"%ADB_PATH%" shell "instance=adb-$(cat /proc/sys/kernel/random/uuid); CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper --owner adb --instance $instance --exclusive > /data/local/tmp/hilight.log 2>&1 &"
 timeout /t 2 >nul
 
 echo --- Renderer Log Output ---
@@ -148,7 +148,7 @@ echo Resetting any existing renderers...
 "%ADB_PATH%" shell "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'" >nul 2>nul
 
 echo Starting background AdbHelper daemon...
-"%ADB_PATH%" shell "CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &"
+"%ADB_PATH%" shell "instance=adb-$(cat /proc/sys/kernel/random/uuid); CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper --owner adb --instance $instance --exclusive > /data/local/tmp/hilight.log 2>&1 &"
 timeout /t 2 >nul
 
 echo.

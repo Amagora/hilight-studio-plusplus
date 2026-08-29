@@ -6,6 +6,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
@@ -225,8 +226,8 @@ object Renderer {
             else -> Triple(c, 0f, x)
         }
         return (0xFF shl 24) or
-            (((r + m) * 255).toInt() shl 16) or
-            (((g + m) * 255).toInt() shl 8) or
-            ((b + m) * 255).toInt()
+            (((r + m) * 255f).roundToInt().coerceIn(0, 255) shl 16) or
+            (((g + m) * 255f).roundToInt().coerceIn(0, 255) shl 8) or
+            ((b + m) * 255f).roundToInt().coerceIn(0, 255)
     }
 }

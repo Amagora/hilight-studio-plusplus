@@ -17,6 +17,9 @@
 <resources>
 
     <!-- Hero card: what HiLight is doing right now. %1$s is the pattern name. -->
+    <string name="live_status_clear_test">ライトテストの消灯</string>
+    <string name="live_hint_press_to_clear">ボタンを押してライトテストを消灯します。</string>
+    <string name="live_hint_config_cleared">ライト設定を消灯しました</string>
     <!-- "HiLight not available" — said of a non-Pro Pixel, so it is "unsupported", not "busy" -->
     <string name="live_status_unavailable">HiLight 非対応</string>
     <!-- "Testing · %1$s" -->
@@ -82,12 +85,20 @@
 
     <!-- One-tap effects. The tiles borrow the pattern names from strings_common.xml, except that a
          third of a row is too narrow for ランダムな色. -->
-    <!-- "Try an effect" — エフェクト rather than 効果, which reads as "benefit" for a light -->
     <string name="live_tests_title">エフェクトを試す</string>
-    <!-- "Fires for four seconds on the real LEDs, then returns to your style." -->
-    <string name="live_tests_caption">実際の LED で 4 秒間点灯してから、元のスタイルに戻ります。</string>
+    <!-- "Fires a preview on the real LEDs using your configured timer, then returns to idle." -->
+    <string name="live_tests_caption">設定したタイマー時間で実際の LED を点灯プレビューします。</string>
     <!-- "Random" — the tile is a third of a row wide, so the 色 of pattern_random is dropped -->
     <string name="live_test_random">ランダム</string>
+    <string name="live_test_duration">テスト時間</string>
+    <string name="live_test_duration_format">%1$d秒</string>
+    <string name="test_disable_taper_title">減衰保護を無効化</string>
+    <string name="test_disable_taper_body">このタブでのテストプレビュー中、10秒間の熱保護減衰とデューティ比リミッターを解除します。</string>
+    <string name="test_disable_taper_warn_title">⚠️ テスト中の減衰保護を無効にしますか？</string>
+    <string name="test_disable_taper_warn_body">減衰保護を無効にすると、テスト中の10秒間の熱保護減衰が解除されます。すべての LED が指定された輝度で連続点灯し、発熱が増加します。\n\n本当にテスト中の減衰保護を無効にしますか？</string>
+    <string name="test_disable_taper_enable_btn">減衰を無効化</string>
+    <string name="test_disable_taper_locked_title">最大輝度オーバーライドが有効です</string>
+    <string name="test_disable_taper_locked_body">この設定を個別に変更するには、設定タブで「最大輝度オーバーライド」をオフにしてください。</string>
 
     <!-- The rules list. %1$d is how many rules are on. In the per-rule line %1$s is the colour or
          pattern and %2$s is what sets the rule off; the source order reads naturally in Japanese, so

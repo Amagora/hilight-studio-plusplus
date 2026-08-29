@@ -34,8 +34,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 val PRESET_COLORS = listOf(
-    0xFFFF1744, 0xFFFF6D00, 0xFFFFD600, 0xFF00E676, 0xFF00E5FF,
-    0xFF2979FF, 0xFF7C4DFF, 0xFFFF4081, 0xFFFFFFFF, 0xFFFF80AB,
+    0xFFFF0000, 0xFFFF7F00, 0xFFFFFF00, 0xFF00FF00, 0xFF00FFFF,
+    0xFF0080FF, 0xFF8000FF, 0xFFFF00FF, 0xFFFFFFFF, 0xFFFF007F,
 ).map { it.toInt() }
 
 /**

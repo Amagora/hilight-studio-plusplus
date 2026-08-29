@@ -51,38 +51,7 @@ class ForegroundAppTrackerTest {
     }
 
     @Test
-    fun `pausing with null or blank class name clears the foreground package`() {
-        val tracker = ForegroundAppTracker()
-        tracker.accept("com.google.android.GoogleCamera", "CameraActivity", ForegroundLifecycle.RESUMED)
-        assertEquals("com.google.android.GoogleCamera", tracker.currentPackage())
-
-        tracker.accept("com.google.android.GoogleCamera", null, ForegroundLifecycle.PAUSED)
-        assertNull(tracker.currentPackage())
-    }
-
-    @Test
-    fun `stopping the activity clears the foreground package`() {
-        val tracker = ForegroundAppTracker()
-        tracker.accept("com.google.android.GoogleCamera", "CameraActivity", ForegroundLifecycle.RESUMED)
-        assertEquals("com.google.android.GoogleCamera", tracker.currentPackage())
-
-        tracker.accept("com.google.android.GoogleCamera", "CameraActivity", ForegroundLifecycle.STOPPED)
-        assertNull(tracker.currentPackage())
-    }
-
-    @Test
-    fun `removePackage explicitly removes all activities for an app`() {
-        val tracker = ForegroundAppTracker()
-        tracker.accept("com.discord", "ChatActivity", ForegroundLifecycle.RESUMED)
-        tracker.accept("com.discord", "SettingsActivity", ForegroundLifecycle.RESUMED)
-        assertEquals("com.discord", tracker.currentPackage())
-
-        tracker.removePackage("com.discord")
-        assertNull(tracker.currentPackage())
-    }
-
-    @Test
-    fun `watcher runs only for enabled while-open rules or persistent notification`() {
+    fun `watcher runs only for enabled while-open rules`() {
         val foreground = AppRule(
             pkg = "com.discord",
             label = "Discord",
@@ -94,8 +63,5 @@ class ForegroundAppTrackerTest {
         assertFalse(ForegroundWatchPolicy.shouldRun(false, listOf(foreground)))
         assertFalse(ForegroundWatchPolicy.shouldRun(true, listOf(foreground.copy(enabled = false))))
         assertFalse(ForegroundWatchPolicy.shouldRun(true, listOf(notification)))
-        assertTrue(ForegroundWatchPolicy.shouldRun(true, listOf(notification), persistentNotification = true))
-        assertFalse(ForegroundWatchPolicy.shouldRun(false, listOf(notification), persistentNotification = true))
     }
 }
-

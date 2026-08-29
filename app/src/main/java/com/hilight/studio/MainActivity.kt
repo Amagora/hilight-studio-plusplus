@@ -162,12 +162,20 @@ private fun App(store: Store) {
                             modifier = Modifier.size(32.dp),
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text("HiLight", style = MaterialTheme.typography.titleLarge)
+                        Column {
+                            Text("HiLight", style = MaterialTheme.typography.titleLarge)
+                            Text(
+                                text = "Version: ${BuildConfig.VERSION_NAME}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 },
                 actions = {
+                    val rendererConnected = store.isRendererConnectedForUi(status)
                     LivePill(
-                        text = if (status.alive) {
+                        text = if (rendererConnected) {
                             stringResource(
                                 R.string.main_connected_pill,
                                 status.ledCount,
@@ -176,7 +184,7 @@ private fun App(store: Store) {
                         } else {
                             stringResource(R.string.main_not_connected)
                         },
-                        ok = status.alive,
+                        ok = rendererConnected,
                         modifier = Modifier.padding(end = 16.dp),
                     )
                 },

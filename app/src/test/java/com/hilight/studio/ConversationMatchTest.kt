@@ -453,6 +453,17 @@ class ConversationMatchTest {
     }
 
     @Test
+    fun `catch-all ignores internal system and AI packages but explicit rules match`() {
+        val catchAll = catchAll()
+        val asRule = appRule(pkg = "com.google.android.as")
+        // Catch-all alone does not match Android System Intelligence or AI Core background pings
+        assertNull(ConversationMatch.resolve(listOf(catchAll), notif(pkg = "com.google.android.as")))
+        assertNull(ConversationMatch.resolve(listOf(catchAll), notif(pkg = "com.google.android.aicore")))
+        // Explicit app rule matches
+        assertEquals(asRule.id, ConversationMatch.resolve(listOf(catchAll, asRule), notif(pkg = "com.google.android.as"))?.id)
+    }
+
+    @Test
     fun `a conversation rule with no key and an unmatchable name is rejected`() {
         // A chat named only with an emoji normalises to nothing, so the rule could never fire and
         // must not be created in the first place.

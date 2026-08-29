@@ -23,7 +23,7 @@ Write-Host "[2/3] Resetting any existing renderers..." -ForegroundColor Yellow
 & $adb shell "pkill -f 'com.hilight.(core.AdbHelper|studio:hilight)'" 2>$null
 
 Write-Host "[3/3] Starting HiLight AdbHelper renderer on Pixel 11 Pro..." -ForegroundColor Yellow
-& $adb shell 'CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper > /data/local/tmp/hilight.log 2>&1 &'
+& $adb shell 'instance=adb-$(cat /proc/sys/kernel/random/uuid); CLASSPATH=$(pm path com.hilight.studio | head -1 | cut -d: -f2) nohup app_process / com.hilight.core.AdbHelper --owner adb --instance "$instance" --exclusive > /data/local/tmp/hilight.log 2>&1 &'
 
 Start-Sleep -Seconds 2
 

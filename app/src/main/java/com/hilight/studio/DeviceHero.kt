@@ -55,6 +55,7 @@ enum class DeviceProfile(
     val lensCount: Int,
     val hasHiLight: Boolean,
 ) {
+    PRO_FOLD("Pixel 11 Pro Fold", aspect = 0.465f, lensCount = 3, hasHiLight = true),
     PRO_XL("Pixel 11 Pro XL", aspect = 0.470f, lensCount = 3, hasHiLight = true),
     PRO("Pixel 11 Pro", aspect = 0.455f, lensCount = 3, hasHiLight = true),
     BASE("Pixel 11", aspect = 0.462f, lensCount = 2, hasHiLight = false),
@@ -66,10 +67,17 @@ enum class DeviceProfile(
         fun detect(model: String = Build.MODEL): DeviceProfile {
             val m = model.lowercase()
             return when {
-                !m.contains("pixel") -> GENERIC
-                m.contains("pro xl") -> PRO_XL
+                m.contains("fold") -> PRO_FOLD
+                m.contains("pro xl") || m.contains("pro_xl") -> PRO_XL
                 m.contains("pro") -> PRO
-                m.contains("pixel 11") -> BASE
+                m.contains("pixel 11") || m.contains("pixel_11") -> BASE
+                !m.contains("pixel") -> {
+                    val dev = (Build.DEVICE + " " + Build.PRODUCT).lowercase()
+                    if (dev.contains("fold")) PRO_FOLD
+                    else if (dev.contains("pro xl") || dev.contains("pro_xl")) PRO_XL
+                    else if (dev.contains("pro")) PRO
+                    else GENERIC
+                }
                 else -> GENERIC
             }
         }
@@ -97,11 +105,7 @@ fun DeviceHero(
     heightDp: Int = 190,
 ) {
     val frame = rememberLedFrame(pattern, cfg, active && profile.hasHiLight)
-    val bloom by animateFloatAsState(
-        targetValue = if (active && profile.hasHiLight) 1f else 0f,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow),
-        label = "bloom",
-    )
+    val bloom = if (active && profile.hasHiLight) 1f else 0f
 
     // Assembled before the modifier chain because a semantics block is not a composable scope, so
     // stringResource cannot be called inside it.
