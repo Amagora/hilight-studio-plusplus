@@ -191,7 +191,7 @@ private fun App(store: Store) {
                         )
                         Spacer(Modifier.width(8.dp))
                         Column {
-                            Text("HiLight", style = MaterialTheme.typography.titleLarge)
+                            Text("HiLight-Studio++", style = MaterialTheme.typography.titleLarge)
                             Text(
                                 text = "Version: ${BuildConfig.VERSION_NAME}",
                                 style = MaterialTheme.typography.labelSmall,
