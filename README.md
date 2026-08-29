@@ -38,6 +38,7 @@
   - **Material 3 Palettes**: Dynamic Material You (wallpaper colors), Pixel Indigo, Ocean Blue, Emerald Green, Coral Peach, Amber Gold, Berry Rose, and Monochrome.
 - **Foldable Adaptive Dual-Pane Layout**:
   - Automatically switches between single-column navigation and dual-pane side `NavigationRail` with persistent real-time 8-LED `DeviceHero` when unfolded on the Pixel 11 Pro Fold inner screen (`>= 600dp`).
+  - **Configurable Dock Position**: Position the navigation rail on the **Left** or **Right** side when unfolded for one-handed thumb comfort.
 - **Tabletop Video Fill Light & Emergency SOS Beacon**:
   - Tuned continuous lighting for video calls, selfies, and tabletop shooting with color temperature presets: Warm (2700K), Soft (3800K), Neutral (4500K), and Cool (6500K).
   - High-visibility emergency SOS beacon.
@@ -52,23 +53,37 @@
 - **Hardware & Lifecycle Safety Guards**:
   - Honors Android's "Pause app" and Digital Wellbeing timers, stopping background activity when suspended.
   - `START_NOT_STICKY` service behavior ensures clean force-stops via Android Settings without unwanted respawns.
+  - Live in-app toggle for Background Status Notification persistence with zero background polling or wake locks.
 
 ## Screenshots
 
-### 📱 Android Application (Pixel 11 Pro Series / Fold)
+### 📱 Android Application — True AMOLED Pitch Black (Folded Outer Display)
 
 <table>
 <tr>
-<td width="25%"><img src="docs/media/screen-test.png" alt="Test tab with effects, presets, and live controls"></td>
-<td width="25%"><img src="docs/media/screen-apps.png" alt="Apps tab with per-app and notification rules"></td>
-<td width="25%"><img src="docs/media/screen-setup.png" alt="Setup tab with access and safety controls"></td>
-<td width="25%"><img src="docs/media/screen-info.png" alt="Info tab with disclosures and diagnostics"></td>
+<td width="25%"><img src="docs/media/screen-test.png" alt="Test tab with effects, presets, and live controls in AMOLED Pitch Black"></td>
+<td width="25%"><img src="docs/media/screen-apps.png" alt="Apps tab with per-app and notification rules in AMOLED Pitch Black"></td>
+<td width="25%"><img src="docs/media/screen-setup.png" alt="Setup tab with access, theme, and safety controls in AMOLED Pitch Black"></td>
+<td width="25%"><img src="docs/media/screen-info.png" alt="Info tab with disclosures and diagnostics in AMOLED Pitch Black"></td>
 </tr>
 <tr>
 <td align="center"><sub><b>1. Test &amp; Effects</b></sub></td>
 <td align="center"><sub><b>2. Apps &amp; Triggers</b></sub></td>
 <td align="center"><sub><b>3. Setup &amp; Access</b></sub></td>
 <td align="center"><sub><b>4. Info &amp; Disclosures</b></sub></td>
+</tr>
+</table>
+
+### 📖 Foldable Adaptive Layout (Pixel 11 Pro Fold Unfolded Inner Display)
+
+<table>
+<tr>
+<td width="50%"><img src="docs/media/screen-unfolded-test.png" alt="Unfolded Test tab with centered cards and side navigation rail"></td>
+<td width="50%"><img src="docs/media/screen-unfolded-setup.png" alt="Unfolded Setup tab with dock position and AMOLED controls"></td>
+</tr>
+<tr>
+<td align="center"><sub><b>Unfolded: Test &amp; Controls</b></sub></td>
+<td align="center"><sub><b>Unfolded: Setup &amp; Dock Options</b></sub></td>
 </tr>
 </table>
 
