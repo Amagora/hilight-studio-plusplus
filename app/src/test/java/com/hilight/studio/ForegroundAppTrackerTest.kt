@@ -63,5 +63,10 @@ class ForegroundAppTrackerTest {
         assertFalse(ForegroundWatchPolicy.shouldRun(false, listOf(foreground)))
         assertFalse(ForegroundWatchPolicy.shouldRun(true, listOf(foreground.copy(enabled = false))))
         assertFalse(ForegroundWatchPolicy.shouldRun(true, listOf(notification)))
+
+        // When persistentNotification is true, watcher runs even without foreground rules
+        assertTrue(ForegroundWatchPolicy.shouldRun(true, listOf(notification), persistentNotification = true))
+        assertTrue(ForegroundWatchPolicy.shouldRun(true, emptyList(), persistentNotification = true))
+        assertFalse(ForegroundWatchPolicy.shouldRun(false, emptyList(), persistentNotification = true))
     }
 }

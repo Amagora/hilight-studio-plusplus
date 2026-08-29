@@ -236,7 +236,7 @@ class ForegroundWatcher : Service() {
         private const val BOOTSTRAP_LOOKBACK_MS = 24 * 60 * 60_000L
 
         /** Starts or stops the watcher to match the current rule set, master switch, and notification preference. */
-        fun syncRunning(ctx: Context, rules: List<AppRule>, enabled: Boolean, persistentNotification: Boolean = true) {
+        fun syncRunning(ctx: Context, rules: List<AppRule>, enabled: Boolean, persistentNotification: Boolean = false) {
             val needed = ForegroundWatchPolicy.shouldRun(enabled, rules, persistentNotification)
             val intent = Intent(ctx, ForegroundWatcher::class.java)
             runCatching {

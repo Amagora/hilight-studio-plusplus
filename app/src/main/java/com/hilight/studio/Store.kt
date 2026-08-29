@@ -751,7 +751,7 @@ class Store private constructor(private val app: Context) {
 
     /** Restores or stops the service to match saved rules and the master switch. */
     fun syncForegroundWatcher() =
-        ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value)
+        ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value, _persistentNotificationEnabled.value)
 
     fun setDynamicColor(v: Boolean) {
         _dynamicColor.value = v
@@ -843,6 +843,7 @@ class Store private constructor(private val app: Context) {
     fun setPersistentNotificationEnabled(v: Boolean) {
         _persistentNotificationEnabled.value = v
         prefs.edit().putBoolean("persistentNotificationEnabled", v).apply()
+        syncForegroundWatcher()
     }
 
     fun setRespectDnd(v: Boolean) {
@@ -923,13 +924,13 @@ class Store private constructor(private val app: Context) {
         if (!placed) out += incoming
         _rules.value = out
         saveRules()
-        ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value)
+        syncForegroundWatcher()
     }
 
     fun removeRule(rule: AppRule) {
         _rules.value = _rules.value.filterNot { it.id == rule.id }
         saveRules()
-        ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value)
+        syncForegroundWatcher()
     }
 
     fun upsertPrivacyRule(rule: PrivacyRule, replacing: PrivacyRule? = null) {
