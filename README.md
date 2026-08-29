@@ -19,7 +19,7 @@
 > **Hilight-Studio-PlusPlusV3.9** is an open-source enhancement supporting all devices across the **Pixel 11 Pro line** (Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold) on Android 17 (API 37).
 
 <p align="center">
-  <img src="docs/media/screen-test.png" alt="Test tab controlling the HiLight array on a Pixel 11 Pro Fold" width="380">
+  <img src="docs/media/screen-unfolded-test.png" alt="HiLight Studio PlusPlus Unfolded on Pixel 11 Pro Fold" width="720">
 </p>
 
 ## Features
@@ -79,11 +79,19 @@
 <table>
 <tr>
 <td width="50%"><img src="docs/media/screen-unfolded-test.png" alt="Unfolded Test tab with centered cards and side navigation rail"></td>
-<td width="50%"><img src="docs/media/screen-unfolded-setup.png" alt="Unfolded Setup tab with dock position and AMOLED controls"></td>
+<td width="50%"><img src="docs/media/screen-unfolded-apps.png" alt="Unfolded Apps tab with per-app rules and side dock"></td>
 </tr>
 <tr>
-<td align="center"><sub><b>Unfolded: Test &amp; Controls</b></sub></td>
-<td align="center"><sub><b>Unfolded: Setup &amp; Dock Options</b></sub></td>
+<td align="center"><sub><b>Unfolded: 1. Test &amp; Controls</b></sub></td>
+<td align="center"><sub><b>Unfolded: 2. Apps &amp; Triggers</b></sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/media/screen-unfolded-setup.png" alt="Unfolded Setup tab with dock position and AMOLED controls"></td>
+<td width="50%"><img src="docs/media/screen-unfolded-info.png" alt="Unfolded Info tab with disclosures and diagnostics"></td>
+</tr>
+<tr>
+<td align="center"><sub><b>Unfolded: 3. Setup &amp; Dock Options</b></sub></td>
+<td align="center"><sub><b>Unfolded: 4. Info &amp; Disclosures</b></sub></td>
 </tr>
 </table>
 
