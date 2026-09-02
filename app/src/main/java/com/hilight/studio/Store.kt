@@ -330,6 +330,20 @@ class Store private constructor(private val app: Context) {
     private val _screenOffOnly = MutableStateFlow(prefs.getBoolean("screenOffOnly", false))
     val screenOffOnly: StateFlow<Boolean> = _screenOffOnly.asStateFlow()
 
+    private val _faceDownOnly = MutableStateFlow(prefs.getBoolean("faceDownOnly", false))
+    val faceDownOnly: StateFlow<Boolean> = _faceDownOnly.asStateFlow()
+
+    private val _faceDownNoticeAccepted =
+        MutableStateFlow(prefs.getBoolean("faceDownNoticeAccepted", false))
+    val faceDownNoticeAccepted: StateFlow<Boolean> = _faceDownNoticeAccepted.asStateFlow()
+
+    private val _faceDownState = MutableStateFlow(FaceDownState.INACTIVE)
+    val faceDownState: StateFlow<FaceDownState> = _faceDownState.asStateFlow()
+    @Volatile private var faceDownLastSampleElapsedMs = 0L
+    private var faceDownEffective = false
+    private var activeAlertSource: AlertSource? = null
+    private var activeAlertFaceDownGated = false
+
     private val _aiDisclosureAcknowledged =
         MutableStateFlow(prefs.getBoolean("aiDisclosureAcknowledged", false))
     val aiDisclosureAcknowledged: StateFlow<Boolean> = _aiDisclosureAcknowledged.asStateFlow()
@@ -749,9 +763,66 @@ class Store private constructor(private val app: Context) {
         HiLightTile.refresh(app)
     }
 
-    /** Restores or stops the service to match saved rules and the master switch. */
-    fun syncForegroundWatcher() =
-        ForegroundWatcher.syncRunning(app, _rules.value, _enabled.value, _persistentNotificationEnabled.value)
+    fun foregroundWatchPlan(): ForegroundWatchPlan = ForegroundWatchPolicy.plan(
+        enabled = _enabled.value,
+        rules = _rules.value,
+        globalFaceDownOnly = _faceDownOnly.value,
+    )
+
+    /** Restores or stops the service to match saved rules, face-down, and the master switch. */
+    fun syncForegroundWatcher() {
+        val plan = foregroundWatchPlan()
+        ForegroundWatcher.syncRunning(app, plan)
+        if (plan.trackFaceDown && _faceDownState.value in setOf(FaceDownState.INACTIVE, FaceDownState.START_FAILED)) {
+            updateFaceDownSensorState(FaceDownState.STARTING, 0L)
+        } else if (!plan.trackFaceDown) {
+            updateFaceDownSensorState(FaceDownState.INACTIVE, 0L)
+        }
+    }
+
+    fun acceptFaceDownNotice() {
+        if (_faceDownNoticeAccepted.value) return
+        _faceDownNoticeAccepted.value = true
+        prefs.edit().putBoolean("faceDownNoticeAccepted", true).apply()
+    }
+
+    fun setFaceDownOnly(v: Boolean) {
+        _faceDownOnly.value = v
+        prefs.edit().putBoolean("faceDownOnly", v).apply()
+        syncForegroundWatcher()
+        refreshSuppression(armOnRelease = false)
+        pushCurrent(arm = false)
+    }
+
+    /** Only a recent, stable sensor proof may open either face-down gate. */
+    fun isFaceDownNow(nowElapsedMs: Long = SystemClock.elapsedRealtime()): Boolean =
+        isFreshFaceDown(
+            state = _faceDownState.value,
+            lastSampleElapsedMs = faceDownLastSampleElapsedMs,
+            nowElapsedMs = nowElapsedMs,
+        )
+
+    /** Main-thread sink for the foreground service's sensor and lifecycle states. */
+    fun updateFaceDownSensorState(state: FaceDownState, sampleElapsedMs: Long) {
+        if (Looper.myLooper() != main.looper) {
+            main.post { updateFaceDownSensorState(state, sampleElapsedMs) }
+            return
+        }
+        val wasFaceDown = faceDownEffective
+        if (state == FaceDownState.FACE_DOWN || state == FaceDownState.NOT_FACE_DOWN) {
+            faceDownLastSampleElapsedMs = sampleElapsedMs
+        } else {
+            faceDownLastSampleElapsedMs = 0L
+        }
+        _faceDownState.value = state
+        val nowFaceDown = isFaceDownNow()
+        faceDownEffective = nowFaceDown
+
+        if (!nowFaceDown && activeAlertFaceDownGated) cancelAlert()
+        if (wasFaceDown != nowFaceDown) {
+            refreshSuppression(armOnRelease = !wasFaceDown && nowFaceDown && _faceDownOnly.value)
+        }
+    }
 
     fun setDynamicColor(v: Boolean) {
         _dynamicColor.value = v
@@ -1042,7 +1113,7 @@ class Store private constructor(private val app: Context) {
             it.enabled && it.trigger == trigger && !it.isConversationRule
         }
         return enabled.firstOrNull { it.pkg == pkg }
-            ?: enabled.firstOrNull { it.isCatchAll }
+            ?: if (pkg !in ConversationMatch.INTERNAL_SYSTEM_OR_AI_PKGS) enabled.firstOrNull { it.isCatchAll } else null
     }
 
     // ------------------------------------------------------------------ conversations
@@ -1350,6 +1421,7 @@ class Store private constructor(private val app: Context) {
             return
         }
         if (!_enabled.value) return
+        if (rule.onlyWhenFaceDown && !isFaceDownNow()) return
         // Quiet hours and the battery rules silence a flash; the global "only while the screen is
         // off" switch does not. That switch governs the always-on look, and letting it block here
         // killed every per-app colour for as long as the screen was on. Per-rule
@@ -1374,6 +1446,7 @@ class Store private constructor(private val app: Context) {
             durationMs = rule.durationMs,
             arm = false,               // a notification must not extend the ambient window
             preview = null,
+            faceDownGated = rule.onlyWhenFaceDown,
         )
     }
 
@@ -1385,8 +1458,16 @@ class Store private constructor(private val app: Context) {
      * window as well so an unlock can cut it short and so [pushCurrent] can keep re-sending the layer
      * that should actually be on top.
      */
-    private fun holdAlert(alert: JSONObject, durationMs: Int, arm: Boolean, preview: Ambient?) {
+    private fun holdAlert(
+        alert: JSONObject,
+        durationMs: Int,
+        arm: Boolean,
+        preview: Ambient?,
+        faceDownGated: Boolean = false,
+    ) {
         activeAlert = alert
+        activeAlertSource = if (preview != null) AlertSource.PREVIEW else AlertSource.NOTIFICATION
+        activeAlertFaceDownGated = faceDownGated
         alertIsPreview = preview != null
         _previewLook.value = preview
         // A preview is a deliberate "show me this now", so it lights the array even with the master
@@ -1405,6 +1486,8 @@ class Store private constructor(private val app: Context) {
     /** Drops the top layer and re-pushes whatever sits underneath it. */
     private fun releaseAlert() {
         activeAlert = null
+        activeAlertSource = null
+        activeAlertFaceDownGated = false
         alertIsPreview = false
         _previewLook.value = null
         pushCurrent(arm = false)       // handing the layer back must not extend the ambient window
@@ -1500,6 +1583,7 @@ class Store private constructor(private val app: Context) {
                 speedMs = speedMs,
                 brightness = safeBrightness,
             ),
+            faceDownGated = false,
         )
     }
 
@@ -1507,6 +1591,8 @@ class Store private constructor(private val app: Context) {
         alertExpiry?.let { main.removeCallbacks(it) }
         alertExpiry = null
         activeAlert = null
+        activeAlertSource = null
+        activeAlertFaceDownGated = false
         alertIsPreview = false
         _previewLook.value = null
         foregroundOverride = null
@@ -1571,6 +1657,8 @@ class Store private constructor(private val app: Context) {
     private fun guardState(): GuardState = GuardState(
         screenOffOnly = _screenOffOnly.value,
         screenOn = screenOn(),
+        faceDownOnly = _faceDownOnly.value,
+        faceDown = isFaceDownNow(),
         quietEnabled = _quietEnabled.value,
         quietDim = _quietDim.value,
         inQuietWindow = inQuietWindow(nowMinutes()),
@@ -1672,9 +1760,10 @@ class Store private constructor(private val app: Context) {
         val guards = guardState()
         val suppressed = guards.suppression()
         _suppression.value = suppressed          // the UI still explains the always-on look
-        // Notification alerts, previews, and foreground app looks while screen is on are governed
-        // by quiet hours and battery guards (alertSuppression), rather than the ambient screen-off-only switch.
-        val blocked = if (alert != null) guards.alertSuppression() else suppressed
+        val blocked = guards.outputSuppression(
+            hasTransientAlert = alert != null,
+            activeAlertSource = activeAlertSource,
+        )
         val rendererEnabled = enabled && blocked == null
         val effectiveManualRequestId = coalescedManualCleanupRequestId(
             currentRequestId = pendingManualBlackClearRequestId,

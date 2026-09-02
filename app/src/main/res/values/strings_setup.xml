@@ -38,6 +38,7 @@
          same words said of the same thing. -->
     <string name="setup_dark_title">When to stay dark</string>
     <string name="setup_screen_off_only">Only while the screen is off</string>
+    <string name="setup_face_down_only">Only while the phone is face down</string>
     <!-- Both take a 24-hour clock time, which is formatted in code because it carries no words. -->
     <string name="setup_quiet_from">From %1$s</string>
     <string name="setup_quiet_until">Until %1$s</string>
@@ -191,6 +192,8 @@
     <string name="setup_test_title">Notification Test</string>
     <string name="setup_test_body">Posts a test notification from HiLight Studio to verify your lighting rules.</string>
     <string name="setup_test_button">Post Test Notification</string>
+    <string name="setup_test_delay_button">Post in 5 seconds</string>
+    <string name="setup_test_countdown">Posting in %1$ds…</string>
     <string name="setup_selftest_channel">Notification Test</string>
     <string name="setup_selftest_title">HiLight Test Notification</string>
     <string name="setup_selftest_body">If a rule exists for this app, the LEDs just fired</string>
@@ -222,7 +225,7 @@
 
     <!-- Background Service Notification Settings -->
     <string name="setup_notification_service_title">Background Status Notification</string>
-    <string name="setup_notification_service_body">Shows an ongoing notification when HiLight is active in the background. You can also customize or silence this notification in Android Settings.</string>
+    <string name="setup_notification_service_body">Runs the background watcher service with an ongoing notification. When disabled, the background watcher service and notification are completely turned off.</string>
     <string name="setup_notification_service_toggle">Show background status notification</string>
 
 </resources>

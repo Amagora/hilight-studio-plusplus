@@ -67,7 +67,7 @@ namespace HiLightManager
         private void InitializeDarkUI()
         {
             string versionStr = GetAppVersion();
-            this.Text = $"Hilight-Studio-PlusPlusV3.9 — [Version: {versionStr}]";
+            this.Text = $"Hilight-Studio-PlusPlusV3.9.1 — [Version: {versionStr}]";
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.ClientSize = new Size(1240, 860);
             this.MinimumSize = new Size(1050, 750);
@@ -145,7 +145,7 @@ namespace HiLightManager
 
             lblHeaderTitle = new Label
             {
-                Text = "Hilight-Studio-PlusPlusV3.9",
+                Text = "Hilight-Studio-PlusPlusV3.9.1",
                 Font = new Font("Segoe UI", 16f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(248, 250, 252),
                 AutoSize = true,
@@ -1077,7 +1077,7 @@ Current ADB Executable in Use:
                 }
             }
             catch { }
-            return "a1.2.9";
+            return "a1.3.0";
         }
 
         private string FindApkPath()

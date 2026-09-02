@@ -125,12 +125,14 @@ fun DeviceHero(
             .semantics { contentDescription = description },
     ) {
         Canvas(Modifier.fillMaxWidth().height(heightDp.dp)) {
+            if (size.width <= 0f || size.height <= 0f) return@Canvas
             drawRect(Stage)
+            val bgRadius = (size.width * 0.8f).coerceAtLeast(1f)
             drawRect(
                 brush = Brush.radialGradient(
                     listOf(StageHigh, Stage),
                     center = Offset(size.width / 2f, size.height * 0.30f),
-                    radius = size.width * 0.8f,
+                    radius = bgRadius,
                 ),
             )
 
@@ -252,13 +254,14 @@ private fun DrawScope.drawLens(cx: Float, cy: Float, r: Float) {
  * single diffused disc on the real hardware while still showing pattern movement around it.
  */
 private fun DrawScope.drawHiLightDisc(colors: IntArray, center: Offset, radius: Float, bloom: Float) {
+    if (radius <= 0f) return
     // the dark window the array shines through
     drawCircle(Color(0xFF05070A), radius = radius * 1.12f, center = center)
     drawCircle(
         LensRing.copy(alpha = 0.5f),
         radius = radius * 1.12f,
         center = center,
-        style = Stroke(width = size.height * 0.0025f),
+        style = Stroke(width = (size.height * 0.0025f).coerceAtLeast(1f)),
     )
 
     if (bloom <= 0.01f || colors.isEmpty()) {
@@ -291,42 +294,46 @@ private fun DrawScope.drawHiLightDisc(colors: IntArray, center: Offset, radius: 
                 center.x + cos(angle) * radius * 0.46f,
                 center.y + sin(angle) * radius * 0.46f,
             )
+            val ledRadius = (radius * 0.85f).coerceAtLeast(1f)
             drawCircle(
                 brush = Brush.radialGradient(
                     listOf(c.copy(alpha = 0.75f * bloom), c.copy(alpha = 0f)),
                     center = pos,
-                    radius = radius * 0.85f,
+                    radius = ledRadius,
                 ),
-                radius = radius * 0.85f,
+                radius = ledRadius,
                 center = pos,
             )
         }
         // hot centre
+        val hotCenterRadius = (radius * 0.6f).coerceAtLeast(1f)
         drawCircle(
             brush = Brush.radialGradient(
                 listOf(Color.White.copy(alpha = 0.30f * bloom * lum), Color.Transparent),
                 center = center,
-                radius = radius * 0.6f,
+                radius = hotCenterRadius,
             ),
-            radius = radius * 0.6f,
+            radius = hotCenterRadius,
             center = center,
         )
     }
 
     // bloom outside the window, kept modest so the disc keeps its edge
+    val outerBloomRadius = (radius * 2.5f).coerceAtLeast(1f)
     drawCircle(
         brush = Brush.radialGradient(
             listOf(avg.copy(alpha = 0.34f * bloom * lum), Color.Transparent),
             center = center,
-            radius = radius * 2.5f,
+            radius = outerBloomRadius,
         ),
-        radius = radius * 2.5f,
+        radius = outerBloomRadius,
         center = center,
     )
 }
 
 /** Soft pool of colour under the phone. */
 private fun DrawScope.drawSpill(colors: IntArray, left: Float, top: Float, phoneW: Float, bloom: Float) {
+    if (phoneW <= 0f) return
     var r = 0f
     var g = 0f
     var b = 0f
@@ -339,7 +346,7 @@ private fun DrawScope.drawSpill(colors: IntArray, left: Float, top: Float, phone
     val lum = (avg.red + avg.green + avg.blue) / 3f
     if (lum < 0.02f) return
     val center = Offset(left + phoneW / 2f, top + phoneW * 0.22f)
-    val radius = phoneW * 1.25f
+    val radius = (phoneW * 1.25f).coerceAtLeast(1f)
     drawCircle(
         brush = Brush.radialGradient(
             listOf(avg.copy(alpha = 0.32f * bloom * lum), Color.Transparent),
@@ -357,10 +364,9 @@ private fun DrawScope.drawSpill(colors: IntArray, left: Float, top: Float, phone
  */
 @Composable
 fun rememberLedFrame(pattern: Pattern, cfg: Ambient, active: Boolean = true): IntArray {
-    val dark = IntArray(LED_COUNT) { 0xFF000000.toInt() }
-    val frame by produceState(dark, pattern, cfg, active) {
-        if (!active) {
-            value = dark
+    val frame by produceState(DARK_FRAME, pattern, cfg, active) {
+        if (!active || pattern == Pattern.OFF) {
+            value = DARK_FRAME
             return@produceState
         }
         val start = System.currentTimeMillis()
@@ -392,27 +398,30 @@ fun LedStrip(
             .semantics { contentDescription = label },
     ) {
         val n = frame.size
+        if (n <= 0 || size.width <= 0f || size.height <= 0f) return@Canvas
         val gap = size.width / (n * 3.2f)
         val d = (size.width - gap * (n - 1)) / n
         val r = minOf(d, size.height) / 2.6f
+        if (r <= 0f) return@Canvas
         for (i in 0 until n) {
             val c = Color(frame[i])
             val cx = i * (d + gap) + d / 2f
             val cyc = size.height / 2f
             val lum = (c.red + c.green + c.blue) / 3f
             if (lum > 0.02f) {
+                val glowRadius = (r * 3.4f).coerceAtLeast(1f)
                 drawCircle(
                     brush = Brush.radialGradient(
                         listOf(c.copy(alpha = 0.45f * lum), Color.Transparent),
                         center = Offset(cx, cyc),
-                        radius = r * 3.4f,
+                        radius = glowRadius,
                     ),
-                    radius = r * 3.4f,
+                    radius = glowRadius,
                     center = Offset(cx, cyc),
                 )
             }
-            drawCircle(Color.Black.copy(alpha = 0.14f), radius = r * 1.2f, center = Offset(cx, cyc))
-            drawCircle(c, radius = r, center = Offset(cx, cyc))
+            drawCircle(Color.Black.copy(alpha = 0.14f), radius = (r * 1.2f).coerceAtLeast(0.5f), center = Offset(cx, cyc))
+            drawCircle(c, radius = r.coerceAtLeast(0.5f), center = Offset(cx, cyc))
         }
     }
 }

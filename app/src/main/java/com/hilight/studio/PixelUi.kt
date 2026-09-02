@@ -29,6 +29,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,7 +56,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
@@ -63,14 +69,38 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 
 /**
  * The Pixel-flavoured building blocks: tonal cards, springy presses, pill selectors and the little
  * animated status affordances the system UI uses.
  */
+
+/** First-use acknowledgement shared by global and per-notification face-down controls. */
+@Composable
+fun FaceDownConsentDialog(onAccepted: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
+        title = { Text(stringResource(R.string.face_down_notice_title)) },
+        text = { Text(stringResource(R.string.face_down_notice_body)) },
+        confirmButton = {
+            TextButton(onClick = onAccepted) {
+                ButtonLabel(stringResource(R.string.common_i_understand))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                ButtonLabel(stringResource(R.string.common_cancel))
+            }
+        },
+    )
+}
 
 /** Pixel's system surfaces squash slightly when touched, on a spring rather than a curve. */
 @Composable
@@ -282,16 +312,27 @@ fun PixelToggleRow(
 }
 
 @Composable
-fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+fun ToggleRow(
+    label: String,
+    checked: Boolean,
+    enabled: Boolean = true,
+    onChange: (Boolean) -> Unit,
+) {
     val haptics = LocalHapticFeedback.current
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Switch(
             checked = checked,
+            enabled = enabled,
             onCheckedChange = {
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 onChange(it)
@@ -300,17 +341,22 @@ fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     }
 }
 
-/** Slider with the value shown in a tonal badge that animates as it changes. */
+/** Slider with the value shown in a tonal badge that animates as it changes. Tapping the badge opens a manual number entry dialog. */
 @Composable
 fun PixelSlider(
     label: String,
     value: Float,
     range: ClosedFloatingPointRange<Float>,
     onChange: (Float) -> Unit,
+    /** For millisecond-valued sliders, lets the value pill accept an exact duration in seconds. */
+    typeInSeconds: Boolean = false,
     // Composable because the value badge often shows a duration, and a duration's units come from
     // resources now that they have to be translated.
     format: @Composable (Float) -> String = { "%.0f".format(it) },
 ) {
+    var typing by remember { mutableStateOf(false) }
+    val editLabel = stringResource(R.string.slider_edit_value_title)
+
     Column {
         Row(
             Modifier.fillMaxWidth(),
@@ -319,15 +365,27 @@ fun PixelSlider(
         ) {
             Text(label, style = MaterialTheme.typography.bodyLarge)
             Box(
-                Modifier
-                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
-                    .padding(horizontal = 10.dp, vertical = 3.dp)
+                modifier = Modifier
+                    .sizeIn(minWidth = 48.dp, minHeight = 40.dp)
+                    .clip(CircleShape)
+                    .clickable(
+                        onClickLabel = editLabel,
+                        role = Role.Button,
+                    ) { typing = true },
+                contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    format(value),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
+                Box(
+                    Modifier
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        format(value),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
             }
         }
         Slider(
@@ -340,6 +398,173 @@ fun PixelSlider(
             ),
         )
     }
+
+    if (typing) {
+        SliderValueEditDialog(
+            label = label,
+            value = value,
+            range = range,
+            typeInSeconds = typeInSeconds,
+            onDismiss = { typing = false },
+            onSave = {
+                onChange(it)
+                typing = false
+            },
+        )
+    }
+}
+
+@Composable
+fun SliderValueEditDialog(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    typeInSeconds: Boolean = false,
+    onDismiss: () -> Unit,
+    onSave: (Float) -> Unit,
+) {
+    val isPercentage = !typeInSeconds && range.start >= 0f && range.endInclusive <= 1.05f && range.endInclusive > 0.4f
+    var text by remember {
+        mutableStateOf(
+            when {
+                typeInSeconds -> "%.2f".format(value / 1_000f).trimEnd('0').trimEnd('.', ',')
+                isPercentage -> (value * 100).roundToInt().toString()
+                range.start.toInt().toFloat() == range.start && range.endInclusive.toInt().toFloat() == range.endInclusive ->
+                    value.roundToInt().toString()
+                else -> "%.2f".format(value).trimEnd('0').trimEnd('.', ',')
+            }
+        )
+    }
+
+    val parsedValue = remember(text, range, typeInSeconds, isPercentage) {
+        if (typeInSeconds) {
+            parseDurationSeconds(text, range.start.toInt(), range.endInclusive.toInt())?.toFloat()
+        } else {
+            parseSliderNumber(text, range, isPercentage)
+        }
+    }
+
+    val minLabel = when {
+        typeInSeconds -> "${(range.start / 1000f).toInt()}s"
+        isPercentage -> "${(range.start * 100).roundToInt()}%"
+        range.start.toInt().toFloat() == range.start -> "${range.start.toInt()}"
+        else -> "%.1f".format(range.start)
+    }
+    val maxLabel = when {
+        typeInSeconds -> "${(range.endInclusive / 1000f).toInt()}s"
+        isPercentage -> "${(range.endInclusive * 100).roundToInt()}%"
+        range.endInclusive.toInt().toFloat() == range.endInclusive -> "${range.endInclusive.toInt()}"
+        else -> "%.1f".format(range.endInclusive)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(label, style = MaterialTheme.typography.titleLarge)
+                Text(
+                    stringResource(R.string.slider_range_hint, minLabel, maxLabel),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    singleLine = true,
+                    label = {
+                        Text(
+                            when {
+                                typeInSeconds -> stringResource(R.string.duration_seconds_field)
+                                isPercentage -> stringResource(R.string.slider_value_field) + " (%)"
+                                else -> stringResource(R.string.slider_value_field)
+                            }
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                // Quick Presets
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (isPercentage) {
+                        val minPct = (range.start * 100).roundToInt()
+                        val maxPct = (range.endInclusive * 100).roundToInt()
+                        listOf(
+                            minPct to stringResource(R.string.slider_preset_min),
+                            25 to "25%",
+                            50 to "50%",
+                            75 to "75%",
+                            maxPct to stringResource(R.string.slider_preset_max),
+                        ).filter { it.first in minPct..maxPct }
+                            .distinctBy { it.first }
+                            .forEach { (pct, labelText) ->
+                                AssistChip(
+                                    onClick = { text = pct.toString() },
+                                    label = { Text(labelText) },
+                                )
+                            }
+                    } else if (typeInSeconds) {
+                        val minS = (range.start / 1000f)
+                        val maxS = (range.endInclusive / 1000f)
+                        listOf(
+                            minS to stringResource(R.string.slider_preset_min),
+                            1f to "1s",
+                            2f to "2s",
+                            5f to "5s",
+                            10f to "10s",
+                            30f to "30s",
+                            60f to "1m",
+                            maxS to stringResource(R.string.slider_preset_max),
+                        ).filter { it.first in minS..maxS }
+                            .distinctBy { it.first }
+                            .forEach { (sec, labelText) ->
+                                AssistChip(
+                                    onClick = { text = if (sec % 1f == 0f) sec.toInt().toString() else "%.1f".format(sec) },
+                                    label = { Text(labelText) },
+                                )
+                            }
+                    } else {
+                        val min = range.start
+                        val max = range.endInclusive
+                        val mid = (min + max) / 2f
+                        listOf(
+                            min to stringResource(R.string.slider_preset_min),
+                            mid to "Mid",
+                            max to stringResource(R.string.slider_preset_max),
+                        ).distinctBy { it.first }
+                            .forEach { (v, labelText) ->
+                                AssistChip(
+                                    onClick = { text = if (v.toInt().toFloat() == v) v.toInt().toString() else "%.1f".format(v) },
+                                    label = { Text(labelText) },
+                                )
+                            }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = parsedValue != null,
+                onClick = {
+                    parsedValue?.let { onSave(it) }
+                },
+            ) { ButtonLabel(stringResource(R.string.common_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { ButtonLabel(stringResource(R.string.common_cancel)) }
+        },
+    )
 }
 
 /**
@@ -445,11 +670,18 @@ fun GatedDurationSlider(
     var unlocked by remember(valueMs > safeMaxMs) { mutableStateOf(valueMs > safeMaxMs) }
     var asking by remember { mutableStateOf(false) }
 
+    // Loading a saved long duration must expose its full range, but moving back below the warning
+    // threshold must not revoke consent or collapse the slider in the middle of a drag.
+    LaunchedEffect(valueMs > safeMaxMs) {
+        if (valueMs > safeMaxMs) unlocked = true
+    }
+
     PixelSlider(
         label = label,
         value = valueMs.toFloat(),
         range = minMs.toFloat()..(if (unlocked) extendedMaxMs else safeMaxMs).toFloat(),
         onChange = { onChange(it.toInt()) },
+        typeInSeconds = true,
     ) { formatDuration(it.toInt()) }
 
     ToggleRow(unlockLabel, unlocked) { wanted ->
@@ -543,13 +775,16 @@ fun PerLedEditor(
     thirdColor: Int = 0xFFFF4081.toInt(),
     modifier: Modifier = Modifier,
 ) {
+    val effectivePerLed = if (perLed.size == LED_COUNT) perLed else List(LED_COUNT) { i ->
+        perLed.getOrElse(i) { primaryColor }
+    }
     var editingLed by rememberSaveable { mutableIntStateOf(0) }
-    val safeEditingLed = editingLed.coerceIn(0, (perLed.size - 1).coerceAtLeast(0))
+    val safeEditingLed = editingLed.coerceIn(0, (effectivePerLed.size - 1).coerceAtLeast(0))
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Caption(stringResource(R.string.style_per_led_hint))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            perLed.forEachIndexed { i, c ->
+            effectivePerLed.forEachIndexed { i, c ->
                 LedSwatch(
                     color = c,
                     selected = i == safeEditingLed,
@@ -557,16 +792,14 @@ fun PerLedEditor(
                 ) { editingLed = i }
             }
         }
-        if (perLed.isNotEmpty()) {
-            key("per_led_picker_$safeEditingLed") {
-                ColorPicker(
-                    color = perLed[safeEditingLed],
-                    onColor = { c ->
-                        onChange(perLed.toMutableList().also { it[safeEditingLed] = c })
-                    },
-                    label = stringResource(R.string.style_led_number, safeEditingLed + 1),
-                )
-            }
+        key("per_led_picker_$safeEditingLed") {
+            ColorPicker(
+                color = effectivePerLed[safeEditingLed],
+                onColor = { c ->
+                    onChange(effectivePerLed.toMutableList().also { it[safeEditingLed] = c })
+                },
+                label = stringResource(R.string.style_led_number, safeEditingLed + 1),
+            )
         }
         val wallpaper = wallpaperLedColours()
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -588,7 +821,7 @@ fun PerLedEditor(
             ) { ButtonLabel(stringResource(R.string.style_wallpaper)) }
             FilledTonalButton(
                 onClick = {
-                    val fillCol = if (perLed.isNotEmpty()) perLed[safeEditingLed] else primaryColor
+                    val fillCol = effectivePerLed[safeEditingLed]
                     onChange(List(LED_COUNT) { fillCol })
                 },
                 modifier = Modifier.weight(1f),

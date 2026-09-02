@@ -74,6 +74,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         requestNotificationPermissionIfNeeded()
+        getSystemService(android.app.NotificationManager::class.java)?.cancel(1)
         val store = Store.get(this)
         setContent {
             val themeMode by store.themeMode.collectAsStateWithLifecycle()

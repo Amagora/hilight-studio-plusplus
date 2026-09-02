@@ -52,8 +52,9 @@ class HiLightTile : TileService() {
         // panel calls onStartListening every time it opens, so a language change is picked up the
         // next time the tile is shown.
         tile.label = getString(R.string.tile_label)
+        val supp = store.suppression.value
         tile.subtitle = when {
-            store.suppression.value != null -> getString(store.suppression.value!!.shortRes)
+            supp != null -> getString(supp.shortRes)
             !status.alive -> getString(R.string.tile_no_renderer)
             !on -> getString(R.string.tile_off)
             status.resting -> getString(R.string.tile_resting)

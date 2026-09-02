@@ -45,11 +45,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -159,10 +159,10 @@ fun TestScreen(store: Store) {
 
     // 1. Hardware Hero & Real-time State Card
     PixelCard(tone = 0) {
-        val isTesting = previewLook != null && !isClearedFeedback
-        val heroActive = isTesting && status.alive
-        val heroPattern = if (isTesting) previewLook!!.pattern else Pattern.OFF
-        val heroCfg = if (isTesting) previewLook!! else ambient.copy(pattern = Pattern.OFF)
+        val currentPreview = previewLook?.takeIf { !isClearedFeedback }
+        val heroActive = currentPreview != null && status.alive
+        val heroPattern = currentPreview?.pattern ?: Pattern.OFF
+        val heroCfg = currentPreview ?: ambient.copy(pattern = Pattern.OFF)
 
         DeviceHero(
             pattern = heroPattern,
@@ -236,6 +236,7 @@ fun TestScreen(store: Store) {
                         Suppression.LOW_BATTERY -> R.string.live_suppressed_low_battery
                         Suppression.POWER_SAVER -> R.string.live_suppressed_power_saver
                         Suppression.SCREEN_ON -> R.string.live_suppressed_screen_on
+                        Suppression.NOT_FACE_DOWN -> R.string.live_suppressed_not_face_down
                     }
                 )
             )
@@ -706,10 +707,12 @@ fun TestScreen(store: Store) {
 @Composable
 private fun SavedPresetsCard(store: Store, ambient: Ambient, presets: List<Preset>) {
     val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     var name by remember { mutableStateOf("") }
     var naming by remember { mutableStateOf(false) }
     var importText by remember { mutableStateOf("") }
     var importing by remember { mutableStateOf(false) }
+    var selfTestCountdown by remember { mutableIntStateOf(0) }
 
     PixelCard {
         SectionTitle(
@@ -755,11 +758,42 @@ private fun SavedPresetsCard(store: Store, ambient: Ambient, presets: List<Prese
     PixelCard(tone = 2) {
         SectionTitle(stringResource(R.string.setup_test_title))
         Caption(stringResource(R.string.setup_test_body))
-        FilledTonalButton(
-            onClick = { postSelfTestNotification(ctx) },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            ButtonLabel(stringResource(R.string.setup_test_button))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            FilledTonalButton(
+                onClick = { postSelfTestNotification(ctx.applicationContext) },
+                enabled = selfTestCountdown == 0,
+                modifier = Modifier.weight(1f),
+            ) {
+                ButtonLabel(stringResource(R.string.setup_test_button))
+            }
+            TextButton(
+                onClick = {
+                    if (selfTestCountdown != 0) return@TextButton
+                    selfTestCountdown = 5
+                    val appContext = ctx.applicationContext
+                    scope.launch {
+                        try {
+                            for (remaining in 5 downTo 1) {
+                                selfTestCountdown = remaining
+                                delay(1_000)
+                            }
+                            postSelfTestNotification(appContext)
+                        } finally {
+                            selfTestCountdown = 0
+                        }
+                    }
+                },
+                enabled = selfTestCountdown == 0,
+                modifier = Modifier.weight(1f),
+            ) {
+                ButtonLabel(
+                    if (selfTestCountdown > 0) {
+                        stringResource(R.string.setup_test_countdown, selfTestCountdown)
+                    } else {
+                        stringResource(R.string.setup_test_delay_button)
+                    }
+                )
+            }
         }
     }
 

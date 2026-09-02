@@ -212,6 +212,7 @@ public final class Engine {
                 Log.w("shutdown LED cleanup did not reach a closed terminal state before timeout");
             }
             markReleasedIfTerminal();
+            lock.notifyAll();
         }
     }
 
@@ -227,6 +228,7 @@ public final class Engine {
             return;
         }
         synchronized (lock) {
+            if (stopped) return;
             long elapsedRealtime = elapsedRealtimeClock.nowMs();
             stateGeneration++;
             boolean previouslyEnabled = state.optBoolean("enabled", false) ||
@@ -371,10 +373,9 @@ public final class Engine {
                     if (!running) return;
                     active = tick(elapsedRealtimeClock.nowMs(), true);
                     if (!active && running) {
-                        // When idle and dark, wait on the monitor with a 250ms timeout.
-                        // Any incoming setState(), alert, or privacy trigger calls lock.notifyAll()
-                        // and wakes the thread immediately with 0ms latency.
-                        lock.wait(250);
+                        // When idle and dark, wait indefinitely until an incoming setState(),
+                        // alert, privacy trigger, or stop() calls lock.notifyAll().
+                        lock.wait();
                         continue;
                     }
                 }

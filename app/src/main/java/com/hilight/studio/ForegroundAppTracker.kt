@@ -42,9 +42,33 @@ internal class ForegroundAppTracker {
     fun clear() = resumed.clear()
 }
 
+/** Work the one ongoing watcher service should perform. */
+data class ForegroundWatchPlan(
+    val trackForegroundApps: Boolean,
+    val trackFaceDown: Boolean,
+) {
+    val shouldRun: Boolean get() = trackForegroundApps || trackFaceDown
+}
+
 /** Pure start/stop policy shared by restoration and rule updates. */
-internal object ForegroundWatchPolicy {
-    fun shouldRun(enabled: Boolean, rules: List<AppRule>, persistentNotification: Boolean = false): Boolean =
-        enabled && (persistentNotification || rules.any { it.enabled && it.trigger == Trigger.FOREGROUND })
+object ForegroundWatchPolicy {
+    fun plan(
+        enabled: Boolean,
+        rules: List<AppRule>,
+        globalFaceDownOnly: Boolean = false,
+    ): ForegroundWatchPlan = ForegroundWatchPlan(
+        trackForegroundApps = enabled && rules.any {
+            it.enabled && it.trigger == Trigger.FOREGROUND
+        },
+        trackFaceDown = enabled && (globalFaceDownOnly || rules.any {
+            it.enabled && it.trigger == Trigger.NOTIFICATION && it.onlyWhenFaceDown
+        }),
+    )
+
+    fun shouldRun(
+        enabled: Boolean,
+        rules: List<AppRule>,
+        globalFaceDownOnly: Boolean = false,
+    ): Boolean = plan(enabled, rules, globalFaceDownOnly).shouldRun
 }
 

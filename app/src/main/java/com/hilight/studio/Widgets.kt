@@ -23,6 +23,10 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -75,32 +79,78 @@ fun ColorPicker(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             PRESET_COLORS.forEach { c ->
-                val selected = c == color
-                val scale by animateFloatAsState(
-                    if (selected) 1.16f else 1f,
-                    spring(dampingRatio = 0.42f, stiffness = Spring.StiffnessMedium),
-                    label = "swatch",
-                )
-                Box(
-                    Modifier
-                        .scale(scale)
-                        .size(34.dp)
-                        .background(Color(c), CircleShape)
-                        .border(
-                            if (selected) 3.dp else 1.dp,
-                            if (selected) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                            CircleShape,
-                        )
-                        .clickable {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onColor(c)
-                        }
+                key(c) {
+                    val selected = c == color
+                    val scale by animateFloatAsState(
+                        if (selected) 1.16f else 1f,
+                        spring(dampingRatio = 0.42f, stiffness = Spring.StiffnessMedium),
+                        label = "swatch",
+                    )
+                    Box(
+                        Modifier
+                            .scale(scale)
+                            .size(34.dp)
+                            .background(Color(c), CircleShape)
+                            .border(
+                                if (selected) 3.dp else 1.dp,
+                                if (selected) MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                                CircleShape,
+                            )
+                            .clickable {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onColor(c)
+                            }
+                    )
+                }
+            }
+        }
+
+        val safeHue = hsv[0].coerceIn(0f, 359f)
+        val safeSat = hsv[1].coerceIn(0f, 1f)
+        val safeVal = hsv[2].coerceIn(0.05f, 1f)
+
+        var showHueDialog by remember { mutableStateOf(false) }
+        if (showHueDialog) {
+            SliderValueEditDialog(
+                label = stringResource(R.string.widget_hue),
+                value = safeHue,
+                range = 0f..359f,
+                onDismiss = { showHueDialog = false },
+                onSave = { h ->
+                    onColor(android.graphics.Color.HSVToColor(floatArrayOf(h.coerceIn(0f, 359f), safeSat, safeVal)))
+                },
+            )
+        }
+
+        // hue: header with clickable badge, then gradient track with thumb riding on top
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.widget_hue),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Box(
+                Modifier
+                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
+                    .clickable { showHueDialog = true }
+                    .padding(horizontal = 10.dp, vertical = 2.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "${safeHue.toInt()}°",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
         }
 
-        // hue: the track is the spectrum, the thumb rides on top
         Box(
             Modifier
                 .fillMaxWidth()
@@ -118,10 +168,10 @@ fun ColorPicker(
                     )
             )
             Slider(
-                value = hsv[0],
+                value = safeHue,
                 valueRange = 0f..359f,
                 onValueChange = { h ->
-                    onColor(android.graphics.Color.HSVToColor(floatArrayOf(h, hsv[1], hsv[2])))
+                    onColor(android.graphics.Color.HSVToColor(floatArrayOf(h.coerceIn(0f, 359f), safeSat, safeVal)))
                 },
                 colors = SliderDefaults.colors(
                     thumbColor = Color.White,
@@ -133,11 +183,11 @@ fun ColorPicker(
             )
         }
 
-        PixelSlider(stringResource(R.string.widget_saturation), hsv[1], 0f..1f, { s ->
-            onColor(android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], s, hsv[2])))
+        PixelSlider(stringResource(R.string.widget_saturation), safeSat, 0f..1f, { s ->
+            onColor(android.graphics.Color.HSVToColor(floatArrayOf(safeHue, s.coerceIn(0f, 1f), safeVal)))
         }) { stringResource(R.string.widget_percent, (it * 100).toInt()) }
-        PixelSlider(stringResource(R.string.widget_intensity), hsv[2], 0.05f..1f, { v ->
-            onColor(android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], hsv[1], v)))
+        PixelSlider(stringResource(R.string.widget_intensity), safeVal, 0.05f..1f, { v ->
+            onColor(android.graphics.Color.HSVToColor(floatArrayOf(safeHue, safeSat, v.coerceIn(0f, 1f))))
         }) { stringResource(R.string.widget_percent, (it * 100).toInt()) }
     }
 }

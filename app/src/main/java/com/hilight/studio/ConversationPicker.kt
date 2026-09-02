@@ -332,7 +332,7 @@ fun ConversationPickerDialog(
     fun accept(ref: ConversationRef) {
         val asRule = AppRule(
             pkg = pkg,
-            label = pkg,
+            label = AppNames.resolve(ctx, pkg, appLabel),
             conversationKey = ref.key,
             conversationName = ref.name,
         )
@@ -361,7 +361,7 @@ fun ConversationPickerDialog(
             // could never match anything. Better to say so here than to save a rule that stays dark.
             val ref = name?.let { ConversationRef(pkg = pkg, name = it) }
             if (ref == null || !ConversationMatch.isMatchable(
-                    AppRule(pkg = pkg, label = pkg, conversationName = ref.name)
+                    AppRule(pkg = pkg, label = AppNames.resolve(ctx, pkg, appLabel), conversationName = ref.name)
                 )
             ) {
                 contactFailed = true

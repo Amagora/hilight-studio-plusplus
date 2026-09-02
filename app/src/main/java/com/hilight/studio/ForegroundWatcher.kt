@@ -18,21 +18,21 @@ import android.os.SystemClock
 import android.util.Log
 
 /**
- * Applies FOREGROUND rules: while a chosen app is on screen, HiLight holds that app's look.
+ * Applies FOREGROUND rules (holding looks while an app is active) and tracks phone position
+ * (face-down detection) via low-power sensor monitoring.
  * Also maintains the active background service status notification when enabled.
- *
- * Uses UsageStatsManager event queries (needs Usage access, which the user grants in Settings)
- * because no non-privileged API reports the foreground package directly.
  */
 class ForegroundWatcher : Service() {
 
     private lateinit var thread: HandlerThread
     private lateinit var handler: Handler
+    private lateinit var faceDownTracker: FaceDownSensorTracker
     private val main = Handler(Looper.getMainLooper())
     private val store by lazy { Store.get(this) }
     private var lastPkg: String? = null
     private val foreground = ForegroundAppTracker()
     @Volatile private var forceRefresh = true
+    private var plan = ForegroundWatchPlan(trackForegroundApps = false, trackFaceDown = false)
 
     /**
      * Set on the main thread when the service is going away.
@@ -49,8 +49,10 @@ class ForegroundWatcher : Service() {
             when (intent?.action) {
                 Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> {
                     forceRefresh = true
-                    handler.removeCallbacks(tick)
-                    handler.post(tick)
+                    if (plan.trackForegroundApps) {
+                        handler.removeCallbacks(tick)
+                        handler.post(tick)
+                    }
                 }
                 Intent.ACTION_SCREEN_OFF -> {
                     handler.removeCallbacks(tick)
@@ -67,13 +69,19 @@ class ForegroundWatcher : Service() {
 
     private val tick = object : Runnable {
         override fun run() {
-            if (isPackageSuspended() || !store.enabled.value) {
+            if (isPackageSuspended() || !store.enabled.value || !plan.trackForegroundApps) {
                 main.post {
                     if (!stopped) {
                         store.setForegroundOverride(null, null)
                     }
                 }
-                stopSelf()
+                if (!plan.shouldRun) {
+                    runCatching {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        getSystemService(NotificationManager::class.java)?.cancel(NOTIF_ID)
+                    }
+                    stopSelf()
+                }
                 return
             }
 
@@ -109,7 +117,7 @@ class ForegroundWatcher : Service() {
                     }
                 }
             }
-            handler.postDelayed(this, POLL_MS)
+            if (plan.trackForegroundApps && store.enabled.value) handler.postDelayed(this, POLL_MS)
         }
     }
 
@@ -117,12 +125,17 @@ class ForegroundWatcher : Service() {
         super.onCreate()
         thread = HandlerThread("fg-watch").also { it.start() }
         handler = Handler(thread.looper)
-        val showNotif = store.persistentNotificationEnabled.value
-        if (showNotif) {
-            startForeground(NOTIF_ID, notification())
-        } else {
-            startForeground(NOTIF_ID, notification())
+        faceDownTracker = FaceDownSensorTracker(this, handler) { state, sampleElapsedMs ->
+            main.post {
+                if (!stopped) store.updateFaceDownSensorState(state, sampleElapsedMs)
+            }
+        }
+        val initialPlan = store.foregroundWatchPlan()
+        plan = initialPlan
+        startForeground(NOTIF_ID, notification(initialPlan))
+        runCatching {
             stopForeground(STOP_FOREGROUND_REMOVE)
+            getSystemService(NotificationManager::class.java)?.cancel(NOTIF_ID)
         }
         val filter = android.content.IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_ON)
@@ -130,44 +143,83 @@ class ForegroundWatcher : Service() {
             addAction(Intent.ACTION_USER_PRESENT)
         }
         registerReceiver(screenReceiver, filter)
-        handler.post(tick)
     }
 
     override fun onDestroy() {
         stopped = true
+        faceDownTracker.stop()
         runCatching { unregisterReceiver(screenReceiver) }
         handler.removeCallbacksAndMessages(null)
         thread.quitSafely()
-        main.post { store.setForegroundOverride(null, null) }
+        runCatching {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            getSystemService(NotificationManager::class.java)?.cancel(NOTIF_ID)
+        }
+        main.post {
+            store.setForegroundOverride(null, null)
+            store.updateFaceDownSensorState(FaceDownState.INACTIVE, 0L)
+        }
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (isPackageSuspended() || !store.enabled.value) {
+        if (isPackageSuspended()) {
+            runCatching {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                getSystemService(NotificationManager::class.java)?.cancel(NOTIF_ID)
+            }
             stopSelf()
             return START_NOT_STICKY
         }
-        val showNotif = intent?.getBooleanExtra(
-            EXTRA_PERSISTENT_NOTIF,
-            store.persistentNotificationEnabled.value
-        ) ?: store.persistentNotificationEnabled.value
-
-        updateNotificationState(showNotif)
-        forceRefresh = true
+        val nextPlan = intent?.let(::planFromIntent) ?: store.foregroundWatchPlan()
+        if (!nextPlan.shouldRun) {
+            runCatching {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                getSystemService(NotificationManager::class.java)?.cancel(NOTIF_ID)
+            }
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        applyPlan(nextPlan)
         return START_NOT_STICKY
     }
 
-    private fun updateNotificationState(showNotif: Boolean) {
-        val hasForegroundRules = store.rules.value.any { it.enabled && it.trigger == Trigger.FOREGROUND }
-        if (showNotif) {
-            startForeground(NOTIF_ID, notification())
-        } else {
-            if (!hasForegroundRules) {
-                stopSelf()
-            } else {
-                stopForeground(STOP_FOREGROUND_REMOVE)
+    private fun applyPlan(next: ForegroundWatchPlan) {
+        val prior = plan
+        plan = next
+        startForeground(NOTIF_ID, notification(next))
+        runCatching {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            getSystemService(NotificationManager::class.java)?.cancel(NOTIF_ID)
+        }
+
+        forceRefresh = true
+        handler.removeCallbacks(tick)
+        if (next.trackForegroundApps && store.enabled.value) {
+            handler.post(tick)
+        } else if (prior.trackForegroundApps) {
+            foreground.clear()
+            lastPkg = null
+            lastEventTimeMs = Long.MIN_VALUE
+            main.post { if (!stopped) store.setForegroundOverride(null, null) }
+        }
+
+        if (prior.trackFaceDown != next.trackFaceDown) {
+            handler.post {
+                if (stopped) return@post
+                if (plan.trackFaceDown && store.enabled.value) {
+                    faceDownTracker.start()
+                    if (stopped) faceDownTracker.stop()
+                } else {
+                    faceDownTracker.stop()
+                    main.post {
+                        if (!stopped) {
+                            store.updateFaceDownSensorState(FaceDownState.INACTIVE, 0L)
+                        }
+                    }
+                }
             }
         }
     }
@@ -224,15 +276,16 @@ class ForegroundWatcher : Service() {
         return foreground.currentPackage()
     }
 
-    private fun notification(): Notification {
+    private fun notification(currentPlan: ForegroundWatchPlan): Notification {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(
             NotificationChannel(
                 CHANNEL,
                 getString(R.string.service_watcher_channel_name),
-                NotificationManager.IMPORTANCE_LOW,
+                NotificationManager.IMPORTANCE_MIN,
             ).apply {
                 setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_SECRET
             }
         )
         val openIntent = Intent(this, MainActivity::class.java)
@@ -243,33 +296,45 @@ class ForegroundWatcher : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
+        val text = when {
+            currentPlan.trackForegroundApps && currentPlan.trackFaceDown ->
+                getString(R.string.service_watcher_text_both)
+            currentPlan.trackFaceDown ->
+                getString(R.string.service_watcher_text_face_down)
+            else ->
+                getString(R.string.service_watcher_text)
+        }
+
         return Notification.Builder(this, CHANNEL)
             .setContentTitle(getString(R.string.service_watcher_title))
-            .setContentText(getString(R.string.service_watcher_text))
+            .setContentText(text)
             .setSmallIcon(R.drawable.hilight_logo)
             .setContentIntent(pendingIntent)
-            .setOngoing(true)
+            .setOngoing(false)
             .build()
     }
 
     companion object {
         const val EXTRA_PERSISTENT_NOTIF = "extra_persistent_notif"
+        const val EXTRA_FOREGROUND = "trackForegroundApps"
+        const val EXTRA_FACE_DOWN = "trackFaceDown"
         private const val NOTIF_ID = 1
         private const val CHANNEL = "fg_watch"
         private const val POLL_MS = 1000L
         private const val QUERY_OVERLAP_MS = 2_000L
         private const val BOOTSTRAP_LOOKBACK_MS = 24 * 60 * 60_000L
 
-        /** Starts or stops the watcher to match the current rule set, master switch, and notification preference. */
-        fun syncRunning(ctx: Context, rules: List<AppRule>, enabled: Boolean, persistentNotification: Boolean = false) {
-            val needed = ForegroundWatchPolicy.shouldRun(enabled, rules, persistentNotification)
-            val intent = Intent(ctx, ForegroundWatcher::class.java).apply {
-                putExtra(EXTRA_PERSISTENT_NOTIF, persistentNotification)
-            }
+        /** Starts or stops the watcher to match one authoritative work plan. */
+        fun syncRunning(ctx: Context, plan: ForegroundWatchPlan) {
+            val intent = Intent(ctx, ForegroundWatcher::class.java)
+                .putExtra(EXTRA_FOREGROUND, plan.trackForegroundApps)
+                .putExtra(EXTRA_FACE_DOWN, plan.trackFaceDown)
             runCatching {
-                if (needed) ctx.startForegroundService(intent) else ctx.stopService(intent)
+                if (plan.shouldRun) ctx.startForegroundService(intent) else ctx.stopService(intent)
             }.onFailure { Log.w("HiLightForeground", "could not update foreground watcher", it) }
         }
+
+        fun hasFaceDownSensor(ctx: Context): Boolean = FaceDownSensorTracker.hasSensor(ctx)
 
         fun hasUsageAccess(ctx: Context): Boolean {
             val appOps = ctx.getSystemService(AppOpsManager::class.java) ?: return false
@@ -279,5 +344,10 @@ class ForegroundWatcher : Service() {
                 ctx.packageName,
             ) == AppOpsManager.MODE_ALLOWED
         }
+
+        private fun planFromIntent(intent: Intent): ForegroundWatchPlan = ForegroundWatchPlan(
+            trackForegroundApps = intent.getBooleanExtra(EXTRA_FOREGROUND, false),
+            trackFaceDown = intent.getBooleanExtra(EXTRA_FACE_DOWN, false),
+        )
     }
 }

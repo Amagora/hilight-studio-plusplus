@@ -31,12 +31,25 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,6 +67,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import android.widget.Toast
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -71,26 +85,50 @@ import kotlinx.coroutines.withContext
  * stored label irrelevant for the one rule whose label was never really data.
  */
 @Composable
-fun ruleLabel(rule: AppRule): String =
-    if (rule.isCatchAll) stringResource(R.string.rules_any_app) else rule.label
+fun ruleLabel(rule: AppRule): String {
+    if (rule.isCatchAll) return stringResource(R.string.rules_any_app)
+    val ctx = LocalContext.current
+    return remember(rule.pkg, rule.label) {
+        AppNames.resolve(ctx, rule.pkg, rule.label)
+    }
+}
 
 data class InstalledApp(val pkg: String, val label: String, val info: ApplicationInfo?)
+
+private data class RuleEditorState(val rule: AppRule, val isNew: Boolean)
 
 /** "Show X for app Y" rules, plus the per-chat rules nested under the app they belong to. */
 @Composable
 fun AppRulesScreen(store: Store) {
+    val ctx = LocalContext.current
     val rules by store.rules.collectAsStateWithLifecycle()
     val privacyRules by store.privacyRules.collectAsStateWithLifecycle()
     val conversations by store.conversations.collectAsStateWithLifecycle()
     val lastMatch by store.lastMatch.collectAsStateWithLifecycle()
+    val faceDownNoticeAccepted by store.faceDownNoticeAccepted.collectAsStateWithLifecycle()
+    val faceDownState by store.faceDownState.collectAsStateWithLifecycle()
+    val faceDownSensorAvailable = remember(ctx) { ForegroundWatcher.hasFaceDownSensor(ctx) }
     var picking by remember { mutableStateOf(false) }
     var scoping by remember { mutableStateOf<InstalledApp?>(null) }
     var pickingChatIn by remember { mutableStateOf<InstalledApp?>(null) }
-    var editing by remember { mutableStateOf<AppRule?>(null) }
+    var editing by remember { mutableStateOf<RuleEditorState?>(null) }
+    var copyingFrom by remember { mutableStateOf<AppRule?>(null) }
     var editingPrivacy by remember { mutableStateOf<PrivacyRule?>(null) }
     var choosingPrivacyActivity by remember { mutableStateOf(false) }
     var privacyPrefilledApp by remember { mutableStateOf<InstalledApp?>(null) }
     var pickingPrivacyAppFor by remember { mutableStateOf<PrivacyActivity?>(null) }
+    val learnedPackages = remember(conversations) {
+        conversations.mapTo(mutableSetOf()) { it.pkg }
+    }
+
+    val startWholeAppRule: (InstalledApp) -> Unit = { app ->
+        val draft = RuleDrafts.nextWholeAppRule(app.pkg, app.label, rules)
+        if (draft == null) {
+            Toast.makeText(ctx, R.string.rules_both_triggers_exist, Toast.LENGTH_SHORT).show()
+        } else {
+            editing = RuleEditorState(draft, isNew = true)
+        }
+    }
 
     PixelCard(tone = 2) {
         SectionTitle(stringResource(R.string.rules_section_title))
@@ -129,7 +167,7 @@ fun AppRulesScreen(store: Store) {
                     chat = knownConversation(rule, conversations),
                     lastMatchedMs = lastMatch[rule.id],
                     onToggle = { store.upsertRule(rule.copy(enabled = it)) },
-                    onEdit = { editing = rule },
+                    onEdit = { editing = RuleEditorState(rule, isNew = false) },
                     onTest = {
                         // test what the rule will actually do, including how long it stays lit
                         store.preview(
@@ -166,13 +204,14 @@ fun AppRulesScreen(store: Store) {
 
     if (picking) {
         AppPickerDialog(
+            alsoOffer = learnedPackages,
             onDismiss = { picking = false },
             onPick = { app ->
                 picking = false
                 // The scope step only appears where a per-chat rule could actually fire, so the
                 // ordinary "flash for this app" rule still costs one tap for everything else.
                 if (offersConversations(store, app)) scoping = app
-                else editing = AppRule(pkg = app.pkg, label = app.label)
+                else startWholeAppRule(app)
             },
         )
     }
@@ -184,7 +223,7 @@ fun AppRulesScreen(store: Store) {
             onPick = { scope ->
                 scoping = null
                 when (scope) {
-                    RuleScope.WHOLE_APP -> editing = AppRule(pkg = app.pkg, label = app.label)
+                    RuleScope.WHOLE_APP -> startWholeAppRule(app)
                     RuleScope.ONE_CHAT -> pickingChatIn = app
                 }
             },
@@ -210,14 +249,32 @@ fun AppRulesScreen(store: Store) {
                 )
                 // A chat that already has a rule opens that rule instead of a blank one. Both share
                 // an id, so saving the blank one would overwrite the colour already chosen for them.
-                editing = rules.firstOrNull { it.id == fresh.id } ?: fresh
+                val stored = rules.firstOrNull { it.id == fresh.id }
+                editing = RuleEditorState(stored ?: fresh, isNew = stored == null)
             },
         )
     }
 
-    editing?.let { rule ->
+    copyingFrom?.let { source ->
+        AppPickerDialog(
+            alsoOffer = learnedPackages,
+            excludePackage = source.pkg,
+            onDismiss = { copyingFrom = null },
+            onPick = { app ->
+                copyingFrom = null
+                editing = RuleEditorState(
+                    RuleDrafts.copyWholeAppRule(source, app.pkg, app.label),
+                    isNew = true,
+                )
+            },
+        )
+    }
+
+    editing?.let { editor ->
+        val rule = editor.rule
         RuleEditorDialog(
             rule = rule,
+            isNew = editor.isNew,
             // The whole rule set travels into the editor because rule identity is derived from
             // fields the editor can change, so only the list can say whether the rule being saved
             // is about to land on top of a different one.
@@ -239,6 +296,14 @@ fun AppRulesScreen(store: Store) {
             },
             isTesting = isTesting,
             onStopTest = store::stopPreview,
+            faceDownNoticeAccepted = faceDownNoticeAccepted,
+            faceDownSensorAvailable = faceDownSensorAvailable,
+            faceDownState = faceDownState,
+            onAcceptFaceDownNotice = store::acceptFaceDownNotice,
+            onCopy = if (rule.isCatchAll || rule.isConversationRule) null else ({ ruleToCopy ->
+                editing = null
+                copyingFrom = ruleToCopy
+            }),
             onAddPrivacy = if (rule.isConversationRule || rule.isCatchAll) null else ({
                 editing = null
                 privacyPrefilledApp = InstalledApp(rule.pkg, rule.label, null)
@@ -269,6 +334,7 @@ fun AppRulesScreen(store: Store) {
 
     pickingPrivacyAppFor?.let { activity ->
         AppPickerDialog(
+            alsoOffer = learnedPackages,
             onDismiss = { pickingPrivacyAppFor = null },
             onPick = { app ->
                 pickingPrivacyAppFor = null
@@ -472,20 +538,44 @@ private fun RuleCard(
 }
 
 @Composable
-fun AppPickerDialog(onDismiss: () -> Unit, onPick: (InstalledApp) -> Unit) {
+fun AppPickerDialog(
+    onDismiss: () -> Unit,
+    onPick: (InstalledApp) -> Unit,
+    /** Packages learned from named notifications, beyond those with a launcher activity. */
+    alsoOffer: Set<String> = emptySet(),
+    /** Used by Copy settings so the source cannot be selected as its own destination. */
+    excludePackage: String? = null,
+) {
     val ctx = LocalContext.current
     var query by remember { mutableStateOf("") }
-    val apps by produceState(initialValue = emptyList<InstalledApp>()) {
+    val apps by produceState(initialValue = emptyList<InstalledApp>(), alsoOffer, excludePackage) {
         value = withContext(Dispatchers.IO) {
-            val pm = ctx.packageManager
-            val launchable = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            pm.queryIntentActivities(launchable, 0)
-                .mapNotNull { ri ->
-                    val ai = ri.activityInfo?.applicationInfo ?: return@mapNotNull null
-                    InstalledApp(ai.packageName, pm.getApplicationLabel(ai).toString(), ai)
+            runCatching {
+                val pm = ctx.packageManager
+                val launchable = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                val launcherApps = pm.queryIntentActivities(launchable, 0)
+                    .mapNotNull { ri ->
+                        val ai = ri.activityInfo?.applicationInfo ?: return@mapNotNull null
+                        val pmLabel = runCatching { pm.getApplicationLabel(ai).toString() }
+                            .getOrNull()
+                            ?.takeIf { it.isNotBlank() }
+                        val label = AppNames.resolve(ctx, ai.packageName, pmLabel)
+                        InstalledApp(ai.packageName, label, ai)
+                    }
+                val launcherPackages = launcherApps.mapTo(mutableSetOf()) { it.pkg }
+                val learnedOnly = (alsoOffer - launcherPackages).mapNotNull { pkg ->
+                    runCatching {
+                        val ai = runCatching { pm.getApplicationInfo(pkg, 0) }.getOrNull()
+                        val pmLabel = ai?.let { runCatching { pm.getApplicationLabel(it).toString() }.getOrNull() }
+                        val label = AppNames.resolve(ctx, pkg, pmLabel)
+                        InstalledApp(pkg, label, ai)
+                    }.getOrNull()
                 }
-                .distinctBy { it.pkg }
-                .sortedBy { it.label.lowercase() }
+                (launcherApps + learnedOnly)
+                    .distinctBy { it.pkg }
+                    .filterNot { it.pkg == excludePackage }
+                    .sortedBy { it.label.lowercase() }
+            }.getOrElse { emptyList() }
         }
     }
 
@@ -493,77 +583,211 @@ fun AppPickerDialog(onDismiss: () -> Unit, onPick: (InstalledApp) -> Unit) {
     // something the package manager can be asked for — and it travels into the rule as the label.
     val anyAppLabel = stringResource(R.string.rules_any_app)
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        shape = MaterialTheme.shapes.extraLarge,
-        confirmButton = {
-            TextButton(onClick = onDismiss) { ButtonLabel(stringResource(R.string.common_cancel)) }
-        },
-        title = { Text(stringResource(R.string.rules_picker_title)) },
-        text = {
-            Column {
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.90f),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 6.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 20.dp, bottom = 12.dp),
+            ) {
+                // Header Row
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.rules_picker_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.common_close))
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                // Search Bar
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    label = { Text(stringResource(R.string.rules_picker_search)) },
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                val shown = apps.filter { it.label.contains(query, ignoreCase = true) }
-                LazyColumn(Modifier.heightIn(max = 380.dp)) {
-                    // a rule that covers every app without one of its own
-                    item(key = AppRule.ANY_APP) {
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onPick(InstalledApp(AppRule.ANY_APP, anyAppLabel, null))
-                                }
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                        ) {
-                            Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Rounded.Apps, contentDescription = null)
+                    placeholder = { Text(stringResource(R.string.rules_picker_search)) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Search,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = { query = "" }) {
+                                Icon(Icons.Rounded.Clear, contentDescription = null)
                             }
-                            Column {
-                                Text(anyAppLabel, style = MaterialTheme.typography.bodyLarge)
-                                Caption(stringResource(R.string.rules_any_app_caption))
+                        }
+                    },
+                    singleLine = true,
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                val shown = remember(apps, query) {
+                    if (query.isBlank()) apps else apps.filter {
+                        it.label.contains(query, ignoreCase = true) || it.pkg.contains(query, ignoreCase = true)
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    // Catch-All Featured Card
+                    if (query.isBlank() || anyAppLabel.contains(query, ignoreCase = true)) {
+                        item(key = AppRule.ANY_APP) {
+                            PixelCard(
+                                tone = 2,
+                                onClick = { onPick(InstalledApp(AppRule.ANY_APP, anyAppLabel, null)) },
+                                modifier = Modifier.padding(bottom = 6.dp),
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .size(44.dp)
+                                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.Apps,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                    }
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            anyAppLabel,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Medium,
+                                        )
+                                        Caption(stringResource(R.string.rules_any_app_caption))
+                                    }
+                                }
                             }
                         }
                     }
+
                     items(shown, key = { it.pkg }) { app ->
                         Row(
                             Modifier
                                 .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.medium)
                                 .clickable { onPick(app) }
-                                .padding(vertical = 10.dp),
+                                .padding(horizontal = 12.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            AppIcon(app)
-                            Text(app.label, style = MaterialTheme.typography.bodyLarge)
+                            AppIcon(app, size = 44.dp)
+                            Text(
+                                app.label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
                         }
                     }
                 }
+
+                // Footer with Close Button
+                HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        ButtonLabel(stringResource(R.string.common_cancel))
+                    }
+                }
             }
-        },
-    )
+        }
+    }
+}
+
+private object AppIconCache {
+    private val cache = android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(128)
+    fun get(pkg: String): androidx.compose.ui.graphics.ImageBitmap? = cache.get(pkg)
+    fun put(pkg: String, bmp: androidx.compose.ui.graphics.ImageBitmap) { cache.put(pkg, bmp) }
 }
 
 @Composable
-private fun AppIcon(app: InstalledApp) {
+private fun AppIcon(app: InstalledApp, size: androidx.compose.ui.unit.Dp = 44.dp) {
     val ctx = LocalContext.current
-    val bmp by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, app.pkg) {
+    val cached = remember(app.pkg) { AppIconCache.get(app.pkg) }
+    val bmp by produceState(cached, app.pkg) {
+        if (cached != null) {
+            value = cached
+            return@produceState
+        }
         val info = app.info ?: return@produceState
         value = withContext(Dispatchers.IO) {
             runCatching {
-                ctx.packageManager.getApplicationIcon(info).toBitmap(80, 80).asImageBitmap()
+                val icon = ctx.packageManager.getApplicationIcon(info)
+                val imageBitmap = icon.toBitmap(120, 120).asImageBitmap()
+                AppIconCache.put(app.pkg, imageBitmap)
+                imageBitmap
             }.getOrNull()
         }
     }
-    Box(Modifier.size(32.dp)) {
-        bmp?.let { Image(it, contentDescription = null, modifier = Modifier.size(32.dp)) }
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        val currentBmp = bmp
+        if (currentBmp != null) {
+            Image(
+                currentBmp,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(size)
+                    .clip(CircleShape),
+            )
+        } else {
+            Box(
+                Modifier
+                    .size(size)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.Apps,
+                    contentDescription = null,
+                    modifier = Modifier.size(size * 0.6f),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                )
+            }
+        }
     }
 }
 
@@ -581,324 +805,466 @@ private fun AppIcon(app: InstalledApp) {
 @Composable
 private fun RuleEditorDialog(
     rule: AppRule,
+    isNew: Boolean,
     existing: List<AppRule>,
     chatIsGroup: Boolean,
     onDismiss: () -> Unit,
     onSave: (AppRule) -> Unit,
     onTest: (AppRule) -> Unit,
+    faceDownNoticeAccepted: Boolean,
+    faceDownSensorAvailable: Boolean,
+    faceDownState: FaceDownState,
+    onAcceptFaceDownNotice: () -> Unit,
+    onCopy: ((AppRule) -> Unit)?,
     onAddPrivacy: (() -> Unit)?,
     isTesting: Boolean = false,
     onStopTest: () -> Unit = {},
 ) {
     var r by remember { mutableStateOf(rule) }
+    var confirmingFaceDown by remember { mutableStateOf(false) }
     var confirmingIndefinite by remember { mutableStateOf(false) }
 
     /*
      * Whether saving would land on a rule other than the one being edited.
      *
-     * Compared against [rule] by value rather than by id: the id is precisely what is moving, so an
-     * id test cannot tell "this is still me" from "this is somebody else". Anything in the list that
-     * shares the destination id and is not the rule this dialog opened on is a rule about to be
-     * overwritten — the trigger having been switched to one the app already has, a cleared chat id
-     * colliding with a name-matched rule, or a blank rule opened for an app that already has one.
+     * A new copy has no saved identity of its own, so every occupied destination is a replacement,
+     * even when all of its values happen to equal the saved rule. An edit may still occupy its own
+     * id without warning.
      */
-    val replacesAnother = remember(r.id, rule, existing) {
-        existing.any { it.id == r.id && it != rule }
+    val replacesAnother = remember(r.id, rule, existing, isNew) {
+        RuleDrafts.replacesExistingRule(
+            existing = existing,
+            candidate = r,
+            openedRule = rule,
+            isNew = isNew,
+        )
     }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        shape = MaterialTheme.shapes.extraLarge,
-        title = {
-            Text(
-                if (r.isConversationRule) {
-                    stringResource(
-                        R.string.rules_editor_title_chat,
-                        ruleLabel(r),
-                        r.conversationName.orEmpty(),
-                    )
-                } else {
-                    ruleLabel(r)
-                }
-            )
-        },
-        confirmButton = {
-            Button(onClick = { onSave(r) }) { ButtonLabel(stringResource(R.string.common_save)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { ButtonLabel(stringResource(R.string.common_cancel)) }
-        },
-        text = {
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.96f)
+                .fillMaxHeight(0.94f),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 6.dp,
+        ) {
             Column(
-                Modifier
-                    .heightIn(max = 620.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.fillMaxSize(),
             ) {
-                LedStrip(
-                    r.pattern,
-                    Ambient(
-                        pattern = r.pattern,
-                        color = r.color,
-                        secondColor = r.secondColor,
-                        thirdColor = r.thirdColor,
-                        advancedColors = r.advancedColors,
-                        usePerLed = r.usePerLed,
-                        perLed = r.perLed,
-                        speedMs = r.speedMs,
-                        brightness = r.brightness,
-                    ),
-                    heightDp = 38,
-                )
-
-                if (r.isConversationRule) {
-                    // A per-chat rule is resolved from a posted notification, so "while open" has
-                    // nothing to read a sender out of. Offering it here would only let the user
-                    // build a rule that can never match.
-                    Caption(stringResource(R.string.rules_per_chat_notifications_only))
-                    ConversationMatchNote(
-                        edited = r,
-                        stored = rule,
-                        onForgetKey = { r = r.copy(conversationKey = null) },
-                    )
-                } else {
-                    // Both labels are read before the selector rather than inside its label lambda,
-                    // which is a plain function and so cannot reach a resource itself.
-                    val onNotification = stringResource(R.string.rules_trigger_notification)
-                    val whileOpen = stringResource(R.string.rules_trigger_foreground)
-                    SegmentedSelector(
-                        options = listOf(Trigger.NOTIFICATION, Trigger.FOREGROUND),
-                        selected = r.trigger,
-                        label = { if (it == Trigger.NOTIFICATION) onNotification else whileOpen },
-                        onSelect = { r = r.copy(trigger = it) },
-                    )
-                }
-
-                PatternCarousel(
-                    selected = r.pattern,
-                    options = Pattern.entries.filter { it != Pattern.OFF && it != Pattern.CUSTOM },
-                    onSelect = { r = r.copy(pattern = it) },
-                )
-
-                ToggleRow(
-                    stringResource(R.string.rules_random_colour_each_time), r.randomColor,
-                ) { r = r.copy(randomColor = it) }
-                if (!r.randomColor) {
-                    ToggleRow(
-                        stringResource(R.string.style_customize_per_led), r.usePerLed,
-                    ) { r = r.copy(usePerLed = it) }
-                    if (r.usePerLed) {
-                        androidx.compose.material3.Card(
-                            colors = androidx.compose.material3.CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                            ),
-                            shape = MaterialTheme.shapes.medium,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        ) {
-                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Text(
-                                    stringResource(R.string.style_per_led_colours),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary,
+                // Header Bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 12.dp, top = 16.dp, bottom = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            if (r.isConversationRule) {
+                                stringResource(
+                                    R.string.rules_editor_title_chat,
+                                    ruleLabel(r),
+                                    r.conversationName.orEmpty(),
                                 )
-                                PerLedEditor(
-                                    perLed = r.perLed,
-                                    onChange = { r = r.copy(perLed = it) },
-                                    primaryColor = r.color,
-                                    secondColor = r.secondColor,
-                                    thirdColor = r.thirdColor,
-                                )
-                            }
-                        }
-                    } else if (r.pattern == Pattern.GRADIENT) {
-                        androidx.compose.material3.Card(
-                            colors = androidx.compose.material3.CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                            ),
-                            shape = MaterialTheme.shapes.medium,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        ) {
-                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Text(
-                                    stringResource(R.string.pattern_gradient),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                                key("rule_color_start") {
-                                    ColorPicker(
-                                        r.color,
-                                        {
-                                            val newCol = it
-                                            r = r.copy(
-                                                color = newCol,
-                                                perLed = generateGradient8(newCol, r.secondColor, r.thirdColor),
-                                            )
-                                        },
-                                        stringResource(R.string.style_gradient_start),
-                                    )
-                                }
-                                key("rule_color_middle") {
-                                    ColorPicker(
-                                        r.secondColor,
-                                        {
-                                            val newCol = it
-                                            r = r.copy(
-                                                secondColor = newCol,
-                                                perLed = generateGradient8(r.color, newCol, r.thirdColor),
-                                            )
-                                        },
-                                        stringResource(R.string.style_gradient_middle),
-                                    )
-                                }
-                                key("rule_color_end") {
-                                    ColorPicker(
-                                        r.thirdColor,
-                                        {
-                                            val newCol = it
-                                            r = r.copy(
-                                                thirdColor = newCol,
-                                                perLed = generateGradient8(r.color, r.secondColor, newCol),
-                                            )
-                                        },
-                                        stringResource(R.string.style_gradient_end),
-                                    )
-                                }
-                            }
-                        }
-                    } else if (r.pattern.supportsMultiColor) {
-                        ToggleRow(
-                            stringResource(R.string.style_advanced_colors), r.advancedColors,
-                        ) { r = r.copy(advancedColors = it) }
-                        if (r.advancedColors) {
-                            androidx.compose.material3.Card(
-                                colors = androidx.compose.material3.CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                                ),
-                                shape = MaterialTheme.shapes.medium,
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            ) {
-                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    Text(
-                                        stringResource(R.string.style_advanced_colors),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                    key("rule_color_multi_1") {
-                                        ColorPicker(
-                                            r.color,
-                                            { r = r.copy(color = it) },
-                                            stringResource(R.string.style_color_primary),
-                                        )
-                                    }
-                                    key("rule_color_multi_2") {
-                                        ColorPicker(
-                                            r.secondColor,
-                                            { r = r.copy(secondColor = it) },
-                                            stringResource(R.string.style_color_secondary),
-                                        )
-                                    }
-                                    key("rule_color_multi_3") {
-                                        ColorPicker(
-                                            r.thirdColor,
-                                            { r = r.copy(thirdColor = it) },
-                                            stringResource(R.string.style_color_accent),
-                                        )
-                                    }
-                                }
-                            }
-                        } else {
-                            key("rule_color_single") {
-                                ColorPicker(r.color, { r = r.copy(color = it) })
-                            }
-                        }
-                    } else {
-                        key("rule_color_single") {
-                            ColorPicker(r.color, { r = r.copy(color = it) })
-                        }
+                            } else {
+                                ruleLabel(r)
+                            },
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Caption(
+                            if (r.trigger == Trigger.NOTIFICATION) stringResource(R.string.rules_trigger_notification)
+                            else stringResource(R.string.rules_trigger_foreground)
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.common_close))
                     }
                 }
 
-                if (r.trigger == Trigger.NOTIFICATION) {
-                    if (r.isConversationRule) {
-                        if (chatIsGroup) {
-                            Caption(stringResource(R.string.rules_chat_is_group))
+                HorizontalDivider()
+
+                // Scrollable Content
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    // 1. Live Preview Hero Card
+                    PixelCard(tone = 0) {
+                        LedStrip(
+                            r.pattern,
+                            Ambient(
+                                pattern = r.pattern,
+                                color = r.color,
+                                secondColor = r.secondColor,
+                                thirdColor = r.thirdColor,
+                                advancedColors = r.advancedColors,
+                                usePerLed = r.usePerLed,
+                                perLed = r.perLed,
+                                speedMs = r.speedMs,
+                                brightness = r.brightness,
+                            ),
+                            heightDp = 42,
+                        )
+                    }
+
+                    // 2. Trigger & Behavior Card
+                    PixelCard(tone = 1) {
+                        SectionTitle(stringResource(R.string.rules_section_title))
+                        if (r.isConversationRule) {
+                            Caption(stringResource(R.string.rules_per_chat_notifications_only))
+                            ConversationMatchNote(
+                                edited = r,
+                                stored = rule,
+                                onForgetKey = { r = r.copy(conversationKey = null) },
+                            )
                         } else {
+                            val onNotification = stringResource(R.string.rules_trigger_notification)
+                            val whileOpen = stringResource(R.string.rules_trigger_foreground)
+                            SegmentedSelector(
+                                options = listOf(Trigger.NOTIFICATION, Trigger.FOREGROUND),
+                                selected = r.trigger,
+                                label = { if (it == Trigger.NOTIFICATION) onNotification else whileOpen },
+                                onSelect = { r = r.copy(trigger = it) },
+                            )
+                            val otherTrigger = if (r.trigger == Trigger.NOTIFICATION) Trigger.FOREGROUND else Trigger.NOTIFICATION
+                            val otherExists = existing.any { it.pkg == r.pkg && it.trigger == otherTrigger && !it.isConversationRule }
+                            if (otherExists) {
+                                Caption(stringResource(R.string.rules_trigger_pair_hint))
+                            }
+                        }
+
+                        if (r.trigger == Trigger.NOTIFICATION) {
                             ToggleRow(
-                                stringResource(R.string.rules_include_groups), r.includeGroups,
-                            ) {
-                                r = r.copy(includeGroups = it)
-                            }
-                            Caption(stringResource(R.string.rules_include_groups_hint))
-                        }
-                    }
-                    OutlinedTextField(
-                        value = r.keyword,
-                        onValueChange = { r = r.copy(keyword = it) },
-                        label = { Text(stringResource(R.string.rules_keyword_label)) },
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    GatedDurationSlider(
-                        label = stringResource(R.string.rules_show_for),
-                        valueMs = r.durationMs,
-                        minMs = 2_000,
-                        safeMaxMs = Limits.WARN_ABOVE_MS,
-                        extendedMaxMs = Limits.RULE_MAX_MS,
-                        unlockLabel = stringResource(R.string.rules_allow_one_minute),
-                        warnFirst = stringResource(R.string.rules_duration_warn_first_title) to
-                            stringResource(R.string.rules_duration_warn_first_body),
-                        warnSecond = stringResource(R.string.rules_duration_warn_second_title) to
-                            stringResource(R.string.rules_duration_warn_second_body),
-                        onChange = { r = r.copy(durationMs = it) },
-                    )
-                    ToggleRow(
-                        stringResource(R.string.rules_only_screen_off), r.onlyWhenScreenOff,
-                    ) {
-                        r = r.copy(onlyWhenScreenOff = it)
-                    }
-                } else if (r.trigger == Trigger.FOREGROUND) {
-                    ToggleRow(
-                        stringResource(R.string.rules_foreground_indefinite_title),
-                        r.foregroundIndefinite,
-                    ) { enabling ->
-                        if (enabling) {
-                            confirmingIndefinite = true
-                        } else {
-                            r = r.copy(foregroundIndefinite = false)
-                        }
-                    }
-                    if (r.foregroundIndefinite) {
-                        Caption(stringResource(R.string.rules_foreground_indefinite_hint))
-                    } else {
-                        PixelSlider(
-                            label = stringResource(R.string.rules_stay_lit_for),
-                            value = r.durationMs.toFloat(),
-                            range = 5_000f..300_000f,
-                            onChange = { r = r.copy(durationMs = it.toInt()) },
-                        ) { formatDuration(it.toInt()) }
-                        Caption(stringResource(R.string.rules_foreground_timer_hint))
-                    }
-                }
-                if (r.pattern.usesSpeed) {
-                    PixelSlider(
-                        stringResource(R.string.rules_time_per_cycle),
-                        r.speedMs.toFloat(),
-                        150f..5000f,
-                        { r = r.copy(speedMs = it.toInt()) },
-                    ) { formatDuration(it.toInt()) }
-                    r.pattern.cycleMeaningRes?.let { Caption(stringResource(it)) }
-                }
-                PixelSlider(
-                    stringResource(R.string.rules_brightness), r.brightness, 0.05f..1f,
-                    { r = r.copy(brightness = it) },
-                ) { stringResource(R.string.common_percent, (it * 100).toInt()) }
+                                stringResource(R.string.rules_only_screen_off), r.onlyWhenScreenOff,
+                            ) { r = r.copy(onlyWhenScreenOff = it) }
 
-                if (isTesting) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        FilledTonalButton(onClick = { onTest(r) }, modifier = Modifier.weight(1f)) {
-                            ButtonLabel(stringResource(R.string.rules_test_on_leds))
+                            ToggleRow(
+                                label = stringResource(R.string.rules_only_face_down),
+                                checked = r.onlyWhenFaceDown,
+                                enabled = faceDownSensorAvailable || r.onlyWhenFaceDown,
+                            ) { wanted ->
+                                when {
+                                    !wanted -> r = r.copy(onlyWhenFaceDown = false)
+                                    faceDownNoticeAccepted -> r = r.copy(onlyWhenFaceDown = true)
+                                    else -> confirmingFaceDown = true
+                                }
+                            }
+                            Caption(stringResource(R.string.face_down_caution))
+
+                            if (!faceDownSensorAvailable) {
+                                Caption(stringResource(R.string.face_down_no_sensor))
+                            } else if (r.onlyWhenFaceDown && !isNew) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Caption(stringResource(R.string.face_down_status_label))
+                                    LivePill(
+                                        text = stringResource(
+                                            when (faceDownState) {
+                                                FaceDownState.INACTIVE -> R.string.face_down_state_inactive
+                                                FaceDownState.STARTING -> R.string.face_down_state_starting
+                                                FaceDownState.CHECKING -> R.string.face_down_state_checking
+                                                FaceDownState.FACE_DOWN -> R.string.face_down_state_face_down
+                                                FaceDownState.NOT_FACE_DOWN -> R.string.face_down_state_not_face_down
+                                                FaceDownState.UNAVAILABLE -> R.string.face_down_state_unavailable
+                                                FaceDownState.STALE -> R.string.face_down_state_stale
+                                                FaceDownState.START_FAILED -> R.string.face_down_state_start_failed
+                                            }
+                                        ),
+                                        ok = faceDownState == FaceDownState.FACE_DOWN,
+                                    )
+                                }
+                            }
+                        } else if (r.trigger == Trigger.FOREGROUND) {
+                            ToggleRow(
+                                stringResource(R.string.rules_foreground_indefinite_title),
+                                r.foregroundIndefinite,
+                            ) { enabling ->
+                                if (enabling) {
+                                    confirmingIndefinite = true
+                                } else {
+                                    r = r.copy(foregroundIndefinite = false)
+                                }
+                            }
+                            if (r.foregroundIndefinite) {
+                                Caption(stringResource(R.string.rules_foreground_indefinite_hint))
+                            } else {
+                                PixelSlider(
+                                    label = stringResource(R.string.rules_stay_lit_for),
+                                    value = r.durationMs.toFloat(),
+                                    range = 5_000f..300_000f,
+                                    onChange = { r = r.copy(durationMs = it.toInt()) },
+                                    typeInSeconds = true,
+                                ) { formatDuration(it.toInt()) }
+                                Caption(stringResource(R.string.rules_foreground_timer_hint))
+                            }
                         }
+                    }
+
+                    // 3. Lighting Pattern & Color Card
+                    PixelCard(tone = 1) {
+                        SectionTitle(stringResource(R.string.tab_style))
+                        PatternCarousel(
+                            selected = r.pattern,
+                            options = Pattern.entries.filter { it != Pattern.OFF && it != Pattern.CUSTOM },
+                            onSelect = { r = r.copy(pattern = it) },
+                        )
+
+                        ToggleRow(
+                            stringResource(R.string.rules_random_colour_each_time), r.randomColor,
+                        ) { r = r.copy(randomColor = it) }
+
+                        if (!r.randomColor) {
+                            ToggleRow(
+                                stringResource(R.string.style_customize_per_led), r.usePerLed,
+                            ) { r = r.copy(usePerLed = it) }
+
+                            if (r.usePerLed) {
+                                androidx.compose.material3.Card(
+                                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                    ),
+                                    shape = MaterialTheme.shapes.medium,
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                ) {
+                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        Text(
+                                            stringResource(R.string.style_per_led_colours),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                        PerLedEditor(
+                                            perLed = r.perLed,
+                                            onChange = { r = r.copy(perLed = it) },
+                                            primaryColor = r.color,
+                                            secondColor = r.secondColor,
+                                            thirdColor = r.thirdColor,
+                                        )
+                                    }
+                                }
+                            } else if (r.pattern == Pattern.GRADIENT) {
+                                androidx.compose.material3.Card(
+                                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                    ),
+                                    shape = MaterialTheme.shapes.medium,
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                ) {
+                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        Text(
+                                            stringResource(R.string.pattern_gradient),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                        key("rule_color_start") {
+                                            ColorPicker(
+                                                r.color,
+                                                {
+                                                    val newCol = it
+                                                    r = r.copy(
+                                                        color = newCol,
+                                                        perLed = generateGradient8(newCol, r.secondColor, r.thirdColor),
+                                                    )
+                                                },
+                                                stringResource(R.string.style_gradient_start),
+                                            )
+                                        }
+                                        key("rule_color_middle") {
+                                            ColorPicker(
+                                                r.secondColor,
+                                                {
+                                                    val newCol = it
+                                                    r = r.copy(
+                                                        secondColor = newCol,
+                                                        perLed = generateGradient8(r.color, newCol, r.thirdColor),
+                                                    )
+                                                },
+                                                stringResource(R.string.style_gradient_middle),
+                                            )
+                                        }
+                                        key("rule_color_end") {
+                                            ColorPicker(
+                                                r.thirdColor,
+                                                {
+                                                    val newCol = it
+                                                    r = r.copy(
+                                                        thirdColor = newCol,
+                                                        perLed = generateGradient8(r.color, r.secondColor, newCol),
+                                                    )
+                                                },
+                                                stringResource(R.string.style_gradient_end),
+                                            )
+                                        }
+                                    }
+                                }
+                            } else if (r.pattern.supportsMultiColor) {
+                                ToggleRow(
+                                    stringResource(R.string.style_advanced_colors), r.advancedColors,
+                                ) { r = r.copy(advancedColors = it) }
+                                if (r.advancedColors) {
+                                    androidx.compose.material3.Card(
+                                        colors = androidx.compose.material3.CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                        ),
+                                        shape = MaterialTheme.shapes.medium,
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    ) {
+                                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            Text(
+                                                stringResource(R.string.style_advanced_colors),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                            key("rule_color_multi_1") {
+                                                ColorPicker(
+                                                    r.color,
+                                                    { r = r.copy(color = it) },
+                                                    stringResource(R.string.style_color_primary),
+                                                )
+                                            }
+                                            key("rule_color_multi_2") {
+                                                ColorPicker(
+                                                    r.secondColor,
+                                                    { r = r.copy(secondColor = it) },
+                                                    stringResource(R.string.style_color_secondary),
+                                                )
+                                            }
+                                            key("rule_color_multi_3") {
+                                                ColorPicker(
+                                                    r.thirdColor,
+                                                    { r = r.copy(thirdColor = it) },
+                                                    stringResource(R.string.style_color_accent),
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    key("rule_color_single") {
+                                        ColorPicker(r.color, { r = r.copy(color = it) })
+                                    }
+                                }
+                            } else {
+                                key("rule_color_single") {
+                                    ColorPicker(r.color, { r = r.copy(color = it) })
+                                }
+                            }
+                        }
+                    }
+
+                    // 4. Lighting Tuning & Timing Card
+                    PixelCard(tone = 1) {
+                        SectionTitle(stringResource(R.string.rules_tune_section_title))
+
+                        if (r.trigger == Trigger.NOTIFICATION) {
+                            if (r.isConversationRule) {
+                                if (chatIsGroup) {
+                                    Caption(stringResource(R.string.rules_chat_is_group))
+                                } else {
+                                    ToggleRow(
+                                        stringResource(R.string.rules_include_groups), r.includeGroups,
+                                    ) { r = r.copy(includeGroups = it) }
+                                    Caption(stringResource(R.string.rules_include_groups_hint))
+                                }
+                            }
+
+                            OutlinedTextField(
+                                value = r.keyword,
+                                onValueChange = { r = r.copy(keyword = it) },
+                                label = { Text(stringResource(R.string.rules_keyword_label)) },
+                                singleLine = true,
+                                shape = MaterialTheme.shapes.medium,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+
+                            GatedDurationSlider(
+                                label = stringResource(R.string.rules_show_for),
+                                valueMs = r.durationMs,
+                                minMs = 2_000,
+                                safeMaxMs = Limits.WARN_ABOVE_MS,
+                                extendedMaxMs = Limits.RULE_MAX_MS,
+                                unlockLabel = stringResource(R.string.rules_allow_one_minute),
+                                warnFirst = stringResource(R.string.rules_duration_warn_first_title) to
+                                    stringResource(R.string.rules_duration_warn_first_body),
+                                warnSecond = stringResource(R.string.rules_duration_warn_second_title) to
+                                    stringResource(R.string.rules_duration_warn_second_body),
+                                onChange = { r = r.copy(durationMs = it) },
+                            )
+                        }
+
+                        if (r.pattern.usesSpeed) {
+                            PixelSlider(
+                                stringResource(R.string.rules_time_per_cycle),
+                                r.speedMs.toFloat(),
+                                150f..5000f,
+                                { r = r.copy(speedMs = it.toInt()) },
+                                typeInSeconds = true,
+                            ) { formatDuration(it.toInt()) }
+                            r.pattern.cycleMeaningRes?.let { Caption(stringResource(it)) }
+                        }
+
+                        PixelSlider(
+                            stringResource(R.string.rules_brightness), r.brightness, 0.05f..1f,
+                            { r = r.copy(brightness = it) },
+                        ) { stringResource(R.string.common_percent, (it * 100).toInt()) }
+                    }
+
+                    // Optional Copy / Privacy Shortcuts
+                    if (onCopy != null || onAddPrivacy != null) {
+                        PixelCard(tone = 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                if (onCopy != null) {
+                                    FilledTonalButton(
+                                        onClick = { onCopy(r) },
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        ButtonLabel(stringResource(R.string.rules_copy_settings))
+                                    }
+                                }
+                                if (onAddPrivacy != null) {
+                                    FilledTonalButton(
+                                        onClick = onAddPrivacy,
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        ButtonLabel(stringResource(R.string.privacy_add_for_app))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (replacesAnother) {
+                        PixelCard(tone = 0) {
+                            Caption(stringResource(R.string.rules_replace_warning))
+                        }
+                    }
+                }
+
+                // Sticky Bottom Action Bar
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (isTesting) {
                         FilledTonalButton(
                             onClick = onStopTest,
                             modifier = Modifier.weight(1f),
@@ -909,28 +1275,37 @@ private fun RuleEditorDialog(
                         ) {
                             ButtonLabel(stringResource(R.string.common_stop_test))
                         }
+                    } else {
+                        FilledTonalButton(
+                            onClick = { onTest(r) },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            ButtonLabel(stringResource(R.string.rules_test_on_leds))
+                        }
                     }
-                } else {
-                    FilledTonalButton(onClick = { onTest(r) }, modifier = Modifier.fillMaxWidth()) {
-                        ButtonLabel(stringResource(R.string.rules_test_on_leds))
-                    }
-                }
 
-                if (onAddPrivacy != null) {
-                    TextButton(onClick = onAddPrivacy, modifier = Modifier.fillMaxWidth()) {
-                        ButtonLabel(stringResource(R.string.privacy_add_for_app))
+                    TextButton(onClick = onDismiss) {
+                        ButtonLabel(stringResource(R.string.common_cancel))
                     }
-                }
 
-                // Last in the column, so it is the final thing read before Save. The save is not
-                // blocked: replacing a rule is sometimes exactly what the user means, and there is
-                // no way to keep both while they share an id. Only the silence was the problem.
-                if (replacesAnother) {
-                    Caption(stringResource(R.string.rules_replace_warning))
+                    Button(onClick = { onSave(r) }) {
+                        ButtonLabel(stringResource(R.string.common_save))
+                    }
                 }
             }
-        },
-    )
+        }
+    }
+
+    if (confirmingFaceDown) {
+        FaceDownConsentDialog(
+            onAccepted = {
+                onAcceptFaceDownNotice()
+                r = r.copy(onlyWhenFaceDown = true)
+                confirmingFaceDown = false
+            },
+            onDismiss = { confirmingFaceDown = false },
+        )
+    }
 
     if (confirmingIndefinite) {
         AlertDialog(

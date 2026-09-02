@@ -9,6 +9,8 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
+val DARK_FRAME = IntArray(LED_COUNT) { 0xFF000000.toInt() }
+
 /**
  * On-screen mirror of the helper's renderer, so the UI can show what the LEDs will do without
  * touching the hardware. Kept deliberately in step with HiLightHelper.render().
@@ -16,17 +18,22 @@ import kotlin.math.sin
 object Renderer {
 
     fun frame(pattern: Pattern, tMs: Long, cfg: Ambient, colorOverride: Int? = null): IntArray {
+        if (pattern == Pattern.OFF) return DARK_FRAME
         val n = LED_COUNT
         val out = IntArray(n)
         val base = colorOverride ?: cfg.color
         val speed = max(60, cfg.speedMs).toLong()
         val t = tMs
 
+        val perLedAt = { i: Int ->
+            if (cfg.perLed.isNotEmpty()) cfg.perLed[i % cfg.perLed.size] else base
+        }
+
         when (pattern) {
-            Pattern.OFF -> Unit
+            Pattern.OFF -> return DARK_FRAME
             Pattern.SOLID -> {
                 if (cfg.usePerLed) {
-                    for (i in 0 until n) out[i] = cfg.perLed[i]
+                    for (i in 0 until n) out[i] = perLedAt(i)
                 } else if (cfg.advancedColors) {
                     for (i in 0 until n) {
                         val frac = i.toDouble() / (n - 1)
@@ -40,10 +47,10 @@ object Renderer {
                     for (i in 0 until n) out[i] = base
                 }
             }
-            Pattern.CUSTOM -> for (i in 0 until n) out[i] = cfg.perLed[i % cfg.perLed.size]
+            Pattern.CUSTOM -> for (i in 0 until n) out[i] = perLedAt(i)
             Pattern.GRADIENT -> {
                 if (cfg.usePerLed) {
-                    for (i in 0 until n) out[i] = cfg.perLed[i]
+                    for (i in 0 until n) out[i] = perLedAt(i)
                 } else {
                     val a = base
                     val b = cfg.secondColor
@@ -63,7 +70,7 @@ object Renderer {
                 val phase = (t % speed) / speed.toDouble()
                 val k = (1 - cos(phase * 2 * PI)) / 2
                 if (cfg.usePerLed) {
-                    for (i in 0 until n) out[i] = scale(cfg.perLed[i], 0.05 + 0.95 * k)
+                    for (i in 0 until n) out[i] = scale(perLedAt(i), 0.05 + 0.95 * k)
                 } else if (cfg.advancedColors) {
                     val currentCol = when {
                         phase < 1.0 / 3.0 -> mix(cfg.color, cfg.secondColor, phase * 3.0)
@@ -79,7 +86,7 @@ object Renderer {
             Pattern.BLINK -> {
                 if ((t % speed) < speed / 2) {
                     if (cfg.usePerLed) {
-                        for (i in 0 until n) out[i] = cfg.perLed[i]
+                        for (i in 0 until n) out[i] = perLedAt(i)
                     } else if (cfg.advancedColors) {
                         val blinkIdx = ((t / speed) % 3).toInt()
                         val blinkCol = when (blinkIdx) {
@@ -98,7 +105,7 @@ object Renderer {
                 val phase = (t % speed) / speed.toDouble()
                 val k = if (phase < 0.12) phase / 0.12 else exp(-(phase - 0.12) * 5)
                 if (cfg.usePerLed) {
-                    for (i in 0 until n) out[i] = scale(cfg.perLed[i], k)
+                    for (i in 0 until n) out[i] = scale(perLedAt(i), k)
                 } else if (cfg.advancedColors) {
                     val pulseIdx = ((t / speed) % 3).toInt()
                     val pulseCol = when (pulseIdx) {
@@ -115,7 +122,7 @@ object Renderer {
             Pattern.CHASE -> {
                 val head = ((t / max(1, speed / n)) % n).toInt()
                 if (cfg.usePerLed) {
-                    for (i in 0 until n) out[i] = if (i == head) cfg.perLed[i] else 0xFF000000.toInt()
+                    for (i in 0 until n) out[i] = if (i == head) perLedAt(i) else 0xFF000000.toInt()
                 } else if (cfg.advancedColors) {
                     val frac = head.toDouble() / n
                     val headCol = when {
@@ -137,7 +144,7 @@ object Renderer {
                     if (d <= 3.0) {
                         val tailFrac = d / 3.0
                         val cometCol = if (cfg.usePerLed) {
-                            cfg.perLed[i]
+                            perLedAt(i)
                         } else if (cfg.advancedColors) {
                             if (tailFrac <= 0.5) {
                                 mix(cfg.color, cfg.secondColor, tailFrac * 2.0)
@@ -159,7 +166,7 @@ object Renderer {
                 for (i in 0 until n) {
                     val ledFrac = i.toDouble() / (n - 1)
                     val waveCol = if (cfg.usePerLed) {
-                        cfg.perLed[i]
+                        perLedAt(i)
                     } else if (cfg.advancedColors) {
                         if (ledFrac <= 0.5) {
                             mix(cfg.color, cfg.secondColor, ledFrac * 2.0)
@@ -214,10 +221,13 @@ object Renderer {
     }
 
     fun hsv(h: Float, s: Float = 1f, v: Float = 1f): Int {
-        val c = v * s
-        val x = c * (1 - abs((h / 60f) % 2 - 1))
-        val m = v - c
-        val (r, g, b) = when (((h / 60).toInt()) % 6) {
+        val normalizedHue = ((h % 360f) + 360f) % 360f
+        val clampedS = s.coerceIn(0f, 1f)
+        val clampedV = v.coerceIn(0f, 1f)
+        val c = clampedV * clampedS
+        val x = c * (1 - abs((normalizedHue / 60f) % 2 - 1))
+        val m = clampedV - c
+        val (r, g, b) = when (((normalizedHue / 60).toInt()) % 6) {
             0 -> Triple(c, x, 0f)
             1 -> Triple(x, c, 0f)
             2 -> Triple(0f, c, x)

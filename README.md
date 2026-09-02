@@ -1,8 +1,8 @@
-# Hilight-Studio-PlusPlusV3.9
+# Hilight-Studio-PlusPlusV3.9.1
 
-**Version: `a1.2.9`** — Universal Hardware Lighting Control for Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold devices on Android 17 (API 37).
+**Version: `a1.3.0`** — Universal Hardware Lighting Control for Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold devices on Android 17 (API 37).
 
-[![Build Version](https://img.shields.io/badge/version-a1.2.9-blue.svg)](CHANGELOG.md)
+[![Build Version](https://img.shields.io/badge/version-a1.3.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f81f7.svg)](LICENSE)
 [![Changelog](https://img.shields.io/badge/changelog-custom%20modifications-blue.svg)](CHANGELOG.md)
 
@@ -16,7 +16,7 @@
 > See [CHANGELOG.md](CHANGELOG.md) for the detailed log of custom additions, user requests, architectural enhancements, and privacy guarantees.
 
 > [!IMPORTANT]
-> **Hilight-Studio-PlusPlusV3.9** is an open-source enhancement supporting all devices across the **Pixel 11 Pro line** (Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold) on Android 17 (API 37).
+> **Hilight-Studio-PlusPlusV3.9.1** is an open-source enhancement supporting all devices across the **Pixel 11 Pro line** (Pixel 11 Pro, Pixel 11 Pro XL, and Pixel 11 Pro Fold) on Android 17 (API 37).
 
 <p align="center">
   <img src="docs/media/screen-unfolded-test.png" alt="HiLight Studio PlusPlus Unfolded on Pixel 11 Pro Fold" width="720">
@@ -24,11 +24,19 @@
 
 ## Features
 
-- **Unified Clean UI (V3.9 Navigation)**:
+- **Unified Clean UI (V3.9.1 Navigation)**:
   - **Test Tab**: Combines real-time effects preview, master switch, 12 signature presets/effects, 3-color pattern tuning, individual 8-LED customizations, Tabletop lighting tools (SOS Beacon, Video Fill Light, Fuel Gauge), and instant Notification Tests.
-  - **Apps Tab**: Configure per-app notification colors, keyword triggers, and While-Open indefinite/custom-timer holds.
+  - **Apps Tab**: Configure per-app notification colors, keyword triggers, and While-Open holds with clean human-readable app titles.
   - **Setup Tab**: Background status notification toggle, auto-off protection, Max Brightness Override, Session Priority slider, and Root / Shizuku / ADB access controls.
   - **Info Tab**: AI disclosures, MIT open source license, diagnostic peek inspector, and direct links to original creator and fork source repositories.
+- **Direct Manual Numeric Slider Input**:
+  - Tap any slider's value badge (Duration, Brightness, Saturation, Intensity, Speed, Priority, and Hue 0°..359°) to open a numeric input modal with quick preset chips for instant precision adjustments.
+- **Spacious Full-Height Dialogs & Editor Screens**:
+  - 90–94% expanded modal layouts for App Selection, App Rules, and Privacy Activity Rules featuring live 8-LED hero previews and structured `PixelCard` groups.
+- **Clean App Names & Label Resolver**:
+  - Intelligent app label resolver dynamically translates package names into human-readable titles (e.g., **Spotify**, **YouTube**, **WhatsApp**, **Gmail**, **Google Chat**) without raw package subtitle clutter.
+- **Zero Ongoing Notification Clutter**:
+  - Completely eliminates persistent notifications from your notification shade with silent lifecycle cleanup on launch.
 - **Enhanced "While Open" Controls**:
   - Optional **Stay Lit Indefinitely** toggle (with safety confirmation dialog) or customizable timer slider from 5 seconds up to **5 minutes**.
 - **Max Brightness Override**:
@@ -53,7 +61,7 @@
 - **Hardware & Lifecycle Safety Guards**:
   - Honors Android's "Pause app" and Digital Wellbeing timers, stopping background activity when suspended.
   - `START_NOT_STICKY` service behavior ensures clean force-stops via Android Settings without unwanted respawns.
-  - Live in-app toggle for Background Status Notification persistence with zero background polling or wake locks.
+  - Silent startup cancellation ensures 0 wake-locks and 0 background CPU loops.
 
 ## Screenshots
 
